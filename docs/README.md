@@ -1,129 +1,86 @@
-# Requirements Specification
+# Phase 2: Business Process Mapping
 
-## 1. Functional Requirements
+## 1. Critical Business Process Overview
 
-### User Management and Authentication
-- **FR1:** The system shall allow students to register and log in using their GitHub accounts via OAuth (e.g., NextAuth.js).
-- **FR2.1:** The system shall allow administrators (Admin) to manually register professor accounts.
-- **FR2.2:** The system shall force newly created professor accounts to be redirected to a password reset flow upon their initial login.
-- **FR3:** The system shall be able to generate a one-time-use password reset link for administrators.
-
-### Group, Advisor, and Committee Management
-- **FR4:** The system shall allow students to create groups and must automatically appoint the student who created the group as the team leader for the first sprint.
-- **FR5:** The system shall allow team leaders to send advisee requests to professors, and allow professors to either approve or reject these requests.
-- **FR6:** The system shall allow coordinators to create committees and assign each advisor to these committees.
-- **FR7:** The system shall automatically disband groups that do not have an assigned advisor (Sanitization).
-
-### Deliverables and Grading
-- **FR8:** The system shall allow groups (not individual students) to submit a Proposal and a Statement of Work (SoW) strictly within the active schedule bounds set by the coordinator, and shall explicitly reject any submission attempts made outside this timeframe.
-- **FR9:** The system shall allow committee members to review submitted documents, leave comments, and grade them based on binary (S-100, F-0) or soft (A-100, B-80, etc.) rubric criteria.
-- **FR10:** The system shall allow coordinators to set per-sprint story point requirements and configure the percentage contribution of each sprint to the deliverable grades.
-- **FR11:** The system shall use the ratio of completed story points to the targeted story points to calculate each student's individual allowance from the overall deliverable grade.
-- **FR12:** The system shall provide an embedded Markdown editor with WYSIWYG support, including the ability to insert images, for documents and rubric descriptions.
-
-### Artificial Intelligence (AI) Modules
-- **FR13:** The system shall run an AI module that reads Pull Request comments on GitHub to verify that a code review process has actually occurred.
-- **FR14:** The system shall include an AI module to read file diffs introduced in a PR and validate them against the Issue descriptions on JIRA/GitHub to check implementation accuracy.
+| Process | Description | System Component Involved |
+|---|---|---|
+| **User Authentication & Onboarding** | Coordinators upload valid student IDs. Students log in via GitHub OAuth. Admins manually register professors and explicitly generate a one-time-use password reset link for their first login. | Frontend, Backend, GitHub API, Database |
+| **Group & Advisor Formation** | Students create groups (assigning a team leader) and the leader sets up the JIRA/GitHub integration using a Personal Access Token (PAT). Leaders send advisee requests to professors, who approve or reject them. The system disbands groups without advisors. | Frontend, Backend, Database |
+| **Deliverable Submission** | Team leaders of groups assigned to a committee submit a Proposal, Statement of Work (SoW), and Demonstration strictly within a coordinator-defined schedule using a WYSIWYG Markdown editor with image support. | Frontend, Backend, Database |
+| **Grading & Assessment** | Advisors grade team sprint performance (Point A) and code review (Point B). Committee members review submitted documents and assign rubric-based grades. The system calculates individual student grades based on completed vs. targeted story points and team allowances. | Frontend, Backend, Database |
+| **Daily AI Sync & Audit** | The system runs a daily synchronization with GitHub and JIRA using team tokens. AI modules verify code reviews via PR comments and validate file diffs against JIRA issue descriptions, storing the results. | Backend, AI Module, GitHub API, JIRA API |
+| **Committee Assignment** | The coordinator creates evaluation committees, assigns professors to them, and links these committees to student groups to enable submissions and grading. | Frontend, Backend, Database |
 
 ---
 
-## 2. Non-Functional Requirements
+## 2. Process Details
 
-- **NFR1 (Performance - Response Time):** The system's primary user interfaces (e.g., student and advisor dashboards) must render and become fully interactive within 2.0 seconds for 95% of user requests under normal network conditions.
-- **NFR2 (Latency - AI Processing):** The maximum acceptable latency for completing background AI-based Pull Request and code diff analyses shall be strictly 3 minutes from the moment the synchronization is triggered.
-- **NFR3 (Auditability & Data Retention):** The system must trace log 100% of critical user events (e.g., authentication, grading changes, document uploads) including exact timestamps and user IDs, with a query retrieval time of under 1 second for administrative security audits.
-- **NFR4 (Fault Tolerance & Availability):** The system must maintain 99% availability for local read operations (such as viewing previously fetched grades or dashboard data) even when external third-party services (GitHub/JIRA APIs) experience complete timeouts or 5xx server errors.
-- **NFR5 (Security Enforcement):** The system shall enforce Role-Based Access Control (RBAC) ensuring that any unauthorized data mutation attempt (e.g., a standard student attempting a Team Leader submission) is rejected and logged with a security response time of less than 500 milliseconds.
+### 2.1. User Authentication & Onboarding
 
----
-
-## 3. Integration Requirements
-
-- **IR1:** The system shall integrate with the GitHub OAuth API via NextAuth.js (or a similar framework) to handle user authentication processes.
-- **IR2:** The system shall integrate with the JIRA API to fetch active stories and tasks (including Issue Key, Work, Assignee, Reporter, Resolution, Created, Updated, Description) within team projects to synchronize data.
-- **IR3:** The system shall integrate with the GitHub API to access bound team repositories, check branches corresponding to the teams' tasks (Issue Keys) on JIRA, and verify Pull Request merge statuses.
-- **IR4:** The system shall automatically trigger these integrations once a day (daily) to update the story and task statuses from the teams' external platforms (JIRA/GitHub).
-
-
-# Phase 2
-
-## Critical Business Process
-
-|Process|Description|System Component Involved|
+| Process Step | System Component | Data Required |
 |---|---|---|
-|User Authentication & Onboarding|Students log in via GitHub OAuth. Admins manually register professors, triggering a mandatory password reset flow upon their first login.|Frontend, Backend, GitHub API, Database|
-|Group & Advisor Formation|Students create groups (assigning a team leader), send advisee requests to professors, and professors approve or reject them. The system disbands groups without advisors.|Frontend, Backend, Database|
-|Deliverable Submission|Team leaders submit a Proposal and Statement of Work (SoW) strictly within a coordinator-defined schedule using a WYSIWYG Markdown editor.|Frontend, Backend, Database|
-|Grading & Assessment|Committee members review documents, leave comments, and assign binary or soft grades based on rubrics. The system calculates individual student grades based on completed vs. targeted story points.|Frontend, Backend, Database|
-|Daily AI Sync & Audit|The system runs a daily synchronization with GitHub and JIRA. AI modules verify code reviews via PR comments and validate file diffs against JIRA issue descriptions.|Backend, AI Module, GitHub API, JIRA API|
-|Committee Assignment|The coordinator assigns professors to evaluation committees responsible for reviewing proposals, SoW documents, and grading deliverables.|Frontend, Backend, Database|
+| Coordinator uploads valid student IDs | Backend + Database | Student IDs (List) |
+| Student initiates GitHub login | Frontend | OAuth Request |
+| System redirects to GitHub OAuth | Backend + GitHub API | Client ID, Redirect URI |
+| GitHub returns user profile | Backend | OAuth Token, GitHub Username |
+| Admin registers professor account | Admin Panel + Backend | Professor Email, Role |
+| Admin generates password reset link | Backend | One-time-use Link Request |
+| Professor first login & reset | Frontend + Backend | Reset Token, New Password |
+| System stores user data | Backend + Database | User Profile, Role, Status |
 
----
----
----
+### 2.2. Group & Advisor Formation
 
-## User Authentication & Onboarding
-
-|Process Step|System Component|Data Required|
+| Process Step | System Component | Data Required |
 |---|---|---|
-|Student clicks GitHub login|Frontend|OAuth request|
-|System redirects to GitHub OAuth|Backend + GitHub API|Client ID, redirect URI|
-|GitHub returns user profile|Backend|OAuth token, GitHub profile|
-|Admin registers professor account|Admin Panel + Backend|Professor email, role|
-|Professor first login password reset|Frontend + Backend|User ID, reset token|
-|System stores user data|Backend + Database|User profile, role|
+| Student creates group | Frontend + Backend | Student ID, Group Name |
+| System assigns team leader | Backend | Group ID, Student ID |
+| Team leader sets up JIRA/GitHub Integration | Frontend + Backend | GitHub PAT, JIRA Space URL |
+| Leader sends advisor request | Frontend + Backend | Group ID, Professor ID |
+| Professor approves/rejects request | Frontend + Backend | Request ID, Decision (Approve/Reject) |
+| System disbands groups without advisor | Backend Job | Group ID, Advisor Status |
 
-## Group & Advisor Formation
+### 2.3. Deliverable Submission
 
-|Process Step|System Component|Data Required|
+| Process Step | System Component | Data Required |
 |---|---|---|
-|Student creates group|Frontend + Backend|Student ID, Group name|
-|System assigns team leader|Backend|Group ID, Student ID|
-|Leader sends advisor request|Frontend + Backend|Group ID, Professor ID|
-|Professor approves/rejects request|Frontend + Backend|Request ID, decision|
-|Coordinator manages committees|Frontend + Backend|Advisor IDs, committee ID|
-|System removes groups without advisor|Backend Job|Group ID|
+| Team leader opens submission page | Frontend | Group ID, Committee ID |
+| User writes document in Markdown editor | Frontend | Markdown Content, Image Files |
+| System checks submission schedule | Backend | Current Timestamp, Schedule Window |
+| Group submits Proposal | Frontend + Backend | Group ID, Proposal Data |
+| Group submits SoW | Frontend + Backend | Group ID, SoW Data |
+| Group submits Demonstration | Frontend + Backend | Group ID, Demonstration Files/Links |
+| System saves submission | Backend + Database | Document Metadata, Content |
 
-## Deliverable Submission
+### 2.4. Grading & Assessment
 
-|Process Step|System Component|Data Required|
+| Process Step | System Component | Data Required |
 |---|---|---|
-|Team leader opens submission page|Frontend|Group ID|
-|User writes document in Markdown editor|Frontend|Document content|
-|System checks submission schedule|Backend|Current time, schedule window|
-|Group submits proposal|Frontend + Backend|Group ID, document file|
-|Group submits SoW|Frontend + Backend|Group ID, document file|
-|System saves submission|Backend + Database|Document metadata|
+| Advisor grades team Scrum performance (**Point A**) | Frontend + Backend | Group ID, Soft Grade (A-F) |
+| Advisor grades Work/Code Review (**Point B**) | Frontend + Backend | Group ID, Soft Grade (A-F) |
+| Committee opens submitted document | Frontend + Backend | Document ID |
+| Committee assigns rubric grades to deliverables | Frontend + Backend | Document ID, Rubric Selections |
+| Coordinator sets sprint requirements & weights | Frontend + Backend | Sprint ID, Target Points, Weight % |
+| System calculates individual allowance | Backend | Completed Points, Point A & B Average |
+| System stores final individual grades | Backend + Database | Student ID, Calculated Final Grade |
 
-## Grading & Assessment
+### 2.5. Daily AI Sync & Audit
 
-|Process Step|System Component|Data Required|
+| Process Step | System Component | Data Required |
 |---|---|---|
-|Committee opens submitted document|Frontend + Backend|Document ID|
-|Reviewer adds comment|Frontend + Backend|Document ID, comment|
-|Reviewer assigns grade|Frontend + Backend|Document ID, grade|
-|Coordinator sets sprint requirements|Frontend + Backend|Sprint ID, target points|
-|System calculates individual grade|Backend|Completed points, target points|
-|System stores grade results|Backend + Database|Student ID, final grade|
+| Scheduler triggers daily sync | Backend Scheduler | Current Timestamp |
+| System fetches JIRA issues using tokens | Backend + JIRA API | Project ID, Active Stories |
+| System fetches GitHub PR data using PAT | Backend + GitHub API | Repository ID, Branch/PR Data |
+| AI analyzes PR comments for review verification | AI Module | PR Comment Logs |
+| AI analyzes code diffs against issue descriptions | AI Module | PR Diff Files, JIRA Issue Desc. |
+| System stores AI audit results | Backend + Database | Analysis Summary, Accuracy Score |
 
-## Daily AI Sync & Audit
+### 2.6. Committee Assignment
 
-|Process Step|System Component|Data Required|
+| Process Step | System Component | Data Required |
 |---|---|---|
-|Scheduler triggers daily sync|Backend Scheduler|Timestamp|
-|System fetches JIRA issues|Backend + JIRA API|Project ID|
-|System fetches GitHub PR data|Backend + GitHub API|Repository ID|
-|AI analyzes PR comments|AI Module|PR comment data|
-|AI analyzes code diffs|AI Module|PR diff files|
-|System stores audit results|Backend + Database|Analysis results|
-
-## Committee Assignment
-
-|Process Step|System Component|Data Required|
-|---|---|---|
-|Coordinator opens committee management page|Frontend|Coordinator ID|
-|System retrieves available professors|Backend + Database|Professor list|
-|Coordinator creates new committee|Frontend + Backend|Committee name, semester|
-|Coordinator assigns professors to committee|Frontend + Backend|Professor ID, Committee ID|
-|System stores committee membership|Backend + Database|Committee ID, Professor IDs|
-|System links committee to student groups or submissions|Backend + Database|Committee ID, Group ID / Submission ID|
+| Coordinator opens management page | Frontend | Coordinator ID |
+| System retrieves available professors | Backend + Database | Professor List |
+| Coordinator creates new committee | Frontend + Backend | Committee Name, Semester |
+| Coordinator assigns professors to committee | Frontend + Backend | Professor ID, Committee ID |
+| System links committee to student groups | Backend + Database | Committee ID, Group ID |
+| System stores committee membership | Backend + Database | Committee ID, Professor IDs |
