@@ -1,0 +1,144 @@
+.users-page {
+  padding: 40px;
+}
+
+.users-page h1 {
+  margin: 0 0 24px;
+  font-size: 26px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.users-page h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.users-error {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #fecaca;
+}
+
+.users-loading {
+  padding: 80px 40px;
+  text-align: center;
+  color: #888;
+  font-size: 16px;
+}
+
+.add-user-section {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.add-user-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.add-user-form input,
+.add-user-form select {
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  outline: none;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.add-user-form input:focus,
+.add-user-form select:focus {
+  border-color: #4f46e5;
+}
+
+.add-user-form input[type="email"] {
+  min-width: 220px;
+}
+
+.add-user-form input[type="text"] {
+  min-width: 180px;
+}
+
+.add-user-form button {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #4f46e5;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.add-user-form button:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.add-user-form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.users-table-wrapper {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th {
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #fafafa;
+  border-bottom: 1px solid #eee;
+}
+
+.users-table td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.users-table tr:last-child td {
+  border-bottom: none;
+}
+
+.users-table select {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+
+.users-table select:focus {
+  border-color: #4f46e5;
+  outline: none;
+}

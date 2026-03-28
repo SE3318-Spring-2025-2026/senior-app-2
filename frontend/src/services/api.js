@@ -43,3 +43,21 @@ export function resetPassword(token, newPassword) {
     body: JSON.stringify({ token, newPassword }),
   });
 }
+
+export function getUsers() {
+  return request('/auth/users');
+}
+
+export function changeUserRole(userId, role) {
+  return request('/auth/users/role', {
+    method: 'PUT',
+    body: JSON.stringify({ userId, role }),
+  });
+}
+
+export function registerStaff(email, fullName, role) {
+  return request('/auth/register-staff', {
+    method: 'POST',
+    body: JSON.stringify({ email, fullName, role }),
+  });
+}
