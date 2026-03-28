@@ -124,6 +124,21 @@ senior-app-2/
 
 ---
 
+## Test Accounts
+
+The backend automatically seeds these accounts on first run:
+
+| Role | Email | Password |
+|------|-------|----------|
+| **Admin** | `admin@seniorapp.com` | `admin123` |
+| **Coordinator** | `coordinator@seniorapp.com` | `coord123` |
+| **Professor** | `professor@seniorapp.com` | `prof123` |
+| **Student** | `student@seniorapp.com` | `student123` |
+
+Staff accounts (Admin, Coordinator, Professor) log in via the **Staff** tab on the login page using email and password.
+
+---
+
 ## Troubleshooting
 
 ### `mvn: command not found`

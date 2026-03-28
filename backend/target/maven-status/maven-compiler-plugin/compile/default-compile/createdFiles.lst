@@ -5,10 +5,12 @@ com/seniorapp/dto/PasswordResetRequest.class
 com/seniorapp/dto/LoginRequest.class
 com/seniorapp/config/SecurityConfig.class
 com/seniorapp/dto/RegisterStaffRequest.class
+com/seniorapp/config/DataSeeder.class
 com/seniorapp/entity/Role.class
 com/seniorapp/service/AuthService.class
 com/seniorapp/entity/User.class
 com/seniorapp/repository/UserRepository.class
 com/seniorapp/security/JwtFilter.class
 com/seniorapp/controller/AuthController.class
+com/seniorapp/dto/ChangeRoleRequest.class
 com/seniorapp/security/JwtUtil.class
