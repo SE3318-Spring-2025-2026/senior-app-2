@@ -1,16 +1,36 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { login as loginApi } from '../services/api';
 import './Login.css';
 
 function Login() {
   const [role, setRole] = useState('staff');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { loginUser } = useAuth();
 
   const handleStaffSubmit = (e) => {
     e.preventDefault();
-    navigate('/panel');
+    setError('');
+    setLoading(true);
+
+    try {
+      const data = await loginApi(email, password);
+      loginUser(data.token, data.user);
+      navigate('/panel');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGitHubLogin = () => {
+    window.location.href = 'http://localhost:8080/api/auth/github';
   };
 
   const handleGitHubLogin = () => {

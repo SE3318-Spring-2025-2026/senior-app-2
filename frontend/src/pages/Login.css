@@ -91,7 +91,7 @@
   transition: background 0.2s;
 }
 
-.login-button:hover {
+.login-button:hover:not(:disabled) {
   background: #4338ca;
 }
 
