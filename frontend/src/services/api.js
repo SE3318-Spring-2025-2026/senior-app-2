@@ -17,9 +17,18 @@ async function request(endpoint, options = {}) {
     headers,
   });
 
-  const data = await response.json();
+  const text = await response.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error('Access denied — you do not have permission');
+    }
     throw new Error(data.error || 'Something went wrong');
   }
 
