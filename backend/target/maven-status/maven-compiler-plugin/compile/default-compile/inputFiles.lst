@@ -1,1 +1,14 @@
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/SeniorAppApplication.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/config/DataSeeder.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/config/SecurityConfig.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/controller/AuthController.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/AuthResponse.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/LoginRequest.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/PasswordResetRequest.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/RegisterStaffRequest.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/entity/Role.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/entity/User.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/repository/UserRepository.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/security/JwtFilter.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/security/JwtUtil.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/service/AuthService.java
