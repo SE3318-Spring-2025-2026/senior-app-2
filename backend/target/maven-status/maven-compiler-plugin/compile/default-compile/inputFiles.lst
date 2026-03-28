@@ -1,4 +1,5 @@
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/SeniorAppApplication.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/config/DataSeeder.java
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/config/SecurityConfig.java
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/controller/AuthController.java
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/AuthResponse.java

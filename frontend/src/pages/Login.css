@@ -50,6 +50,16 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.error-message {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  border: 1px solid #fecaca;
+}
+
 .form-group {
   margin-bottom: 20px;
 }
@@ -71,6 +81,8 @@
   outline: none;
   transition: border-color 0.2s;
   box-sizing: border-box;
+  background: #fff;
+  color: #1a1a1a;
 }
 
 .form-group input:focus {
@@ -93,6 +105,11 @@
 
 .login-button:hover:not(:disabled) {
   background: #4338ca;
+}
+
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .github-section {
@@ -127,58 +144,11 @@
   background: #1b1f23;
 }
 
-@media (prefers-color-scheme: dark) {
-  .login-container {
-    background: #111;
-  }
-
-  .login-card {
-    background: #1e1e1e;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  }
-
-  .login-card h1 {
-    color: #f3f4f6;
-  }
-
-  .role-toggle {
-    background: #2a2a2a;
-  }
-
-  .role-option {
-    color: #888;
-  }
-
-  .role-option.active {
-    background: #3a3a3a;
-    color: #f3f4f6;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
-
-  .form-group label {
-    color: #9ca3af;
-  }
-
-  .form-group input {
-    background: #2a2a2a;
-    border-color: #3a3a3a;
-    color: #f3f4f6;
-  }
-
-  .form-group input:focus {
-    border-color: #6366f1;
-  }
-
-  .github-hint {
-    color: #9ca3af;
-  }
-
-  .github-button {
-    background: #f3f4f6;
-    color: #1a1a1a;
-  }
-
-  .github-button:hover {
-    background: #e5e7eb;
-  }
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 18px;
+  color: #888;
 }

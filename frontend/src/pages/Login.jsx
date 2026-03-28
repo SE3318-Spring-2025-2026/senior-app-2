@@ -13,7 +13,7 @@ function Login() {
   const navigate = useNavigate();
   const { loginUser } = useAuth();
 
-  const handleStaffSubmit = (e) => {
+  const handleStaffSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -33,10 +33,6 @@ function Login() {
     window.location.href = 'http://localhost:8080/api/auth/github';
   };
 
-  const handleGitHubLogin = () => {
-    navigate('/panel');
-  };
-
   return (
     <div className="login-container">
       <div className="login-card">
@@ -45,17 +41,19 @@ function Login() {
         <div className="role-toggle">
           <button
             className={`role-option ${role === 'staff' ? 'active' : ''}`}
-            onClick={() => setRole('staff')}
+            onClick={() => { setRole('staff'); setError(''); }}
           >
             Staff
           </button>
           <button
             className={`role-option ${role === 'student' ? 'active' : ''}`}
-            onClick={() => setRole('student')}
+            onClick={() => { setRole('student'); setError(''); }}
           >
             Student
           </button>
         </div>
+
+        {error && <div className="error-message">{error}</div>}
 
         {role === 'staff' ? (
           <form onSubmit={handleStaffSubmit}>
@@ -79,7 +77,9 @@ function Login() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <button type="submit" className="login-button">Log In</button>
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? 'Signing in...' : 'Log In'}
+            </button>
           </form>
         ) : (
           <div className="github-section">
