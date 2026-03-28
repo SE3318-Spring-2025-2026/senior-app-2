@@ -3,6 +3,7 @@
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/config/SecurityConfig.java
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/controller/AuthController.java
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/AuthResponse.java
+/Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/ChangeRoleRequest.java
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/LoginRequest.java
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/PasswordResetRequest.java
 /Users/abt/senior-app-2/backend/src/main/java/com/seniorapp/dto/RegisterStaffRequest.java
