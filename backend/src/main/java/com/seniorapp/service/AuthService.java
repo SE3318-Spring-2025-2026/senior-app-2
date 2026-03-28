@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -87,6 +88,20 @@ public class AuthService {
     public AuthResponse getCurrentUser(User user) {
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
         return new AuthResponse(token, toUserInfo(user));
+    }
+
+    public List<UserInfo> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::toUserInfo)
+                .toList();
+    }
+
+    public UserInfo changeUserRole(Long userId, Role newRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setRole(newRole);
+        userRepository.save(user);
+        return toUserInfo(user);
     }
 
     private UserInfo toUserInfo(User user) {
