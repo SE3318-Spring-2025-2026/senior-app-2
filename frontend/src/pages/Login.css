@@ -50,16 +50,6 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.error-message {
-  background: #fef2f2;
-  color: #dc2626;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 20px;
-  border: 1px solid #fecaca;
-}
-
 .form-group {
   margin-bottom: 20px;
 }
@@ -105,11 +95,6 @@
   background: #4338ca;
 }
 
-.login-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
 .github-section {
   text-align: center;
 }
@@ -142,15 +127,6 @@
   background: #1b1f23;
 }
 
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  font-size: 18px;
-  color: #888;
-}
-
 @media (prefers-color-scheme: dark) {
   .login-container {
     background: #111;
@@ -177,12 +153,6 @@
     background: #3a3a3a;
     color: #f3f4f6;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
-
-  .error-message {
-    background: #451a1a;
-    color: #fca5a5;
-    border-color: #7f1d1d;
   }
 
   .form-group label {
