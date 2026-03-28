@@ -1,6 +1,8 @@
 package com.seniorapp.controller;
 
 import com.seniorapp.dto.AuthResponse;
+import com.seniorapp.dto.AuthResponse.UserInfo;
+import com.seniorapp.dto.ChangeRoleRequest;
 import com.seniorapp.dto.LoginRequest;
 import com.seniorapp.dto.PasswordResetRequest;
 import com.seniorapp.dto.RegisterStaffRequest;
@@ -13,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -59,6 +62,25 @@ public class AuthController {
                 "email", user.getEmail(),
                 "resetLink", "/reset-password?token=" + resetToken
         ));
+    }
+
+    @GetMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserInfo>> getAllUsers() {
+        return ResponseEntity.ok(authService.getAllUsers());
+    }
+
+    @PutMapping("/users/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> changeUserRole(@Valid @RequestBody ChangeRoleRequest request) {
+        Role role;
+        try {
+            role = Role.valueOf(request.getRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid role: " + request.getRole()));
+        }
+        UserInfo updated = authService.changeUserRole(request.getUserId(), role);
+        return ResponseEntity.ok(updated);
     }
 
     @PostMapping("/reset-password")
