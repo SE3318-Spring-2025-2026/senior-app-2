@@ -1,0 +1,50 @@
+.dashboard {
+  padding: 40px;
+}
+
+.dashboard h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.dashboard-subtitle {
+  margin: 0 0 32px;
+  font-size: 15px;
+  color: #666;
+}
+
+.dashboard-cards {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.dashboard-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px;
+  min-width: 200px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.card-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.card-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.role-badge {
+  color: #4f46e5;
+  text-transform: capitalize;
+}
