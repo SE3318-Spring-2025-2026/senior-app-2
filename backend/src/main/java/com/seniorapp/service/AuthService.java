@@ -6,6 +6,7 @@ import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
 import com.seniorapp.repository.UserRepository;
 import com.seniorapp.security.JwtUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,12 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+
+    @Value("${github.client.id}")
+    private String githubClientId;
+
+    @Value("${github.redirect.uri}")
+    private String githubRedirectUri;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
@@ -112,6 +119,13 @@ public class AuthService {
                 user.getRole().name(),
                 user.getGithubUsername(),
                 user.getStudentId()
+        );
+    }
+    public String generateGithubAuthUrl() {
+        String state = UUID.randomUUID().toString();
+        return String.format(
+                "https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:user,user:email&state=%s",
+                githubClientId, githubRedirectUri, state
         );
     }
 }
