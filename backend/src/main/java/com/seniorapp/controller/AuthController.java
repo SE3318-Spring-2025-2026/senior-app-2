@@ -70,6 +70,26 @@ public class AuthController {
         return ResponseEntity.ok(authService.getAllUsers());
     }
 
+
+    @GetMapping("/github/login")
+    public ResponseEntity<Map<String, String>> getGithubLoginUrl() {
+        String authUrl = authService.generateGithubAuthUrl();
+        return ResponseEntity.ok(Map.of("authUrl", authUrl));
+    }
+    /**
+     * GitHub yetkilendirmesi sonrasında yönlendirilen callback endpoint'i.
+     * Dönen JWT token frontend tarafından yakalanıp saklanacaktır.
+     */
+    @GetMapping("/github/callback")
+    public ResponseEntity<AuthResponse> githubCallback(@RequestParam String code,
+                                                       @RequestParam(required = false) String state) {
+
+
+        AuthResponse response = authService.githubLogin(code,state);
+        return ResponseEntity.ok(response);
+    }
+
+
     @PutMapping("/users/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> changeUserRole(@Valid @RequestBody ChangeRoleRequest request) {
