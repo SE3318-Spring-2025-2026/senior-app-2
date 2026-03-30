@@ -7,8 +7,6 @@ import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
 import com.seniorapp.repository.OAuthStateRepository;
 import com.seniorapp.entity.PasswordResetToken;
-import com.seniorapp.entity.Role;
-import com.seniorapp.entity.User;
 import com.seniorapp.repository.PasswordResetTokenRepository;
 import com.seniorapp.repository.UserRepository;
 import com.seniorapp.security.JwtUtil;
@@ -46,11 +44,11 @@ public class AuthService {
     @Value("${github.client.secret}")
     private String githubClientSecret;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, OAuthStateRepository oAuthStateRepository) {
     public AuthService(UserRepository userRepository,
                        PasswordResetTokenRepository resetTokenRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil) {
+                       JwtUtil jwtUtil,
+                       OAuthStateRepository oAuthStateRepository) {
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
