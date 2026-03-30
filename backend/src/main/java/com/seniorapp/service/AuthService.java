@@ -2,8 +2,10 @@ package com.seniorapp.service;
 
 import com.seniorapp.dto.AuthResponse;
 import com.seniorapp.dto.AuthResponse.UserInfo;
+import com.seniorapp.entity.OAuthState;
 import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
+import com.seniorapp.repository.OAuthStateRepository;
 import com.seniorapp.repository.UserRepository;
 import com.seniorapp.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,9 +18,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.core.ParameterizedTypeReference;
-import java.util.Map;
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -27,6 +30,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final OAuthStateRepository oAuthStateRepository;
 
     @Value("${github.client.id}")
     private String githubClientId;
@@ -37,10 +41,11 @@ public class AuthService {
     @Value("${github.client.secret}")
     private String githubClientSecret;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, OAuthStateRepository oAuthStateRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.oAuthStateRepository = oAuthStateRepository;
     }
 
     public AuthResponse staffLogin(String email, String password) {
@@ -131,11 +136,18 @@ public class AuthService {
                 user.getStudentId()
         );
     }
+
     /**
      * GitHub OAuth2 akışını yöneten ana metod.
-     * (Orchestrates the GitHub login process by calling helper methods.)
+     * Gelen state bilgisini güvenlik (CSRF) için veritabanından doğrular.
      */
-    public AuthResponse githubLogin(String code) {
+    public AuthResponse githubLogin(String code, String state) {
+        OAuthState savedState = oAuthStateRepository.findById(state)
+                .orElseThrow(() -> new RuntimeException("Invalid or missing CSRF state token. Security breach detected."));
+
+
+        oAuthStateRepository.delete(savedState);
+
         String accessToken = getGithubAccessToken(code);
         String primaryEmail = getGithubPrimaryEmail(accessToken);
         User user = validateAndGetUserByEmail(primaryEmail);
@@ -143,7 +155,6 @@ public class AuthService {
         String jwtToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
         return new AuthResponse(jwtToken, toUserInfo(user));
     }
-
 
     /**
      * GitHub'dan erişim belirteci (Access Token) alır.
@@ -212,8 +223,16 @@ public class AuthService {
         }
         return user;
     }
+
+    /**
+     * GitHub OAuth2 Authorization URL'ini oluşturur ve state'i DB'ye kaydeder.
+     */
     public String generateGithubAuthUrl() {
         String state = UUID.randomUUID().toString();
+
+
+        oAuthStateRepository.save(new OAuthState(state, LocalDateTime.now()));
+
         return String.format(
                 "https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:user,user:email&state=%s",
                 githubClientId, githubRedirectUri, state
