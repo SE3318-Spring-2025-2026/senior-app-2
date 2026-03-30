@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
+import GitHubCallback from './pages/GitHubCallback';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Layout from './components/Layout';
@@ -9,6 +10,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
+      <Route path="/auth/github/callback" element={<GitHubCallback />} />
       <Route
         path="/panel"
         element={
