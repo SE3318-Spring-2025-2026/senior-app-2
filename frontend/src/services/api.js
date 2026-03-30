@@ -26,8 +26,14 @@ async function request(endpoint, options = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/';
+      throw new Error('Session expired');
+    }
     if (response.status === 403) {
-      throw new Error('Access denied — you do not have permission');
+      window.location.href = '/access-denied';
+      throw new Error('Access denied');
     }
     throw new Error(data.error || 'Something went wrong');
   }
