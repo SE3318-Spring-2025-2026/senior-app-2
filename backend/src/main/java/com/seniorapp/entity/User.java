@@ -27,13 +27,7 @@ public class User {
 
     private Long githubId;
 
-    private String studentId;
-
     private boolean enabled = true;
-
-    private String passwordResetToken;
-
-    private LocalDateTime passwordResetExpiry;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -61,17 +55,8 @@ public class User {
     public Long getGithubId() { return githubId; }
     public void setGithubId(Long githubId) { this.githubId = githubId; }
 
-    public String getStudentId() { return studentId; }
-    public void setStudentId(String studentId) { this.studentId = studentId; }
-
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
-
-    public String getPasswordResetToken() { return passwordResetToken; }
-    public void setPasswordResetToken(String passwordResetToken) { this.passwordResetToken = passwordResetToken; }
-
-    public LocalDateTime getPasswordResetExpiry() { return passwordResetExpiry; }
-    public void setPasswordResetExpiry(LocalDateTime passwordResetExpiry) { this.passwordResetExpiry = passwordResetExpiry; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
