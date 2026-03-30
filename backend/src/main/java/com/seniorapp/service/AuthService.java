@@ -9,7 +9,14 @@ import com.seniorapp.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.core.ParameterizedTypeReference;
+import java.util.Map;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -26,6 +33,9 @@ public class AuthService {
 
     @Value("${github.redirect.uri}")
     private String githubRedirectUri;
+
+    @Value("${github.client.secret}")
+    private String githubClientSecret;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
@@ -120,6 +130,87 @@ public class AuthService {
                 user.getGithubUsername(),
                 user.getStudentId()
         );
+    }
+    /**
+     * GitHub OAuth2 akışını yöneten ana metod.
+     * (Orchestrates the GitHub login process by calling helper methods.)
+     */
+    public AuthResponse githubLogin(String code) {
+        String accessToken = getGithubAccessToken(code);
+        String primaryEmail = getGithubPrimaryEmail(accessToken);
+        User user = validateAndGetUserByEmail(primaryEmail);
+
+        String jwtToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        return new AuthResponse(jwtToken, toUserInfo(user));
+    }
+
+
+    /**
+     * GitHub'dan erişim belirteci (Access Token) alır.
+     */
+    private String getGithubAccessToken(String code) {
+        RestTemplate restTemplate = new RestTemplate();
+        String tokenUrl = "https://github.com/login/oauth/access_token";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+        Map<String, String> body = Map.of(
+                "client_id", githubClientId,
+                "client_secret", githubClientSecret,
+                "code", code,
+                "redirect_uri", githubRedirectUri
+        );
+
+        HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+        ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
+
+        String accessToken = (String) response.getBody().get("access_token");
+        if (accessToken == null) {
+            throw new RuntimeException("Failed to retrieve access token from GitHub.");
+        }
+        return accessToken;
+    }
+
+    /**
+     * Access Token kullanarak kullanıcının birincil (primary) e-posta adresini çeker.
+     */
+    private String getGithubPrimaryEmail(String accessToken) {
+        RestTemplate restTemplate = new RestTemplate();
+        String emailUrl = "https://api.github.com/user/emails";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                emailUrl,
+                HttpMethod.GET,
+                request,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        );
+
+        if (response.getBody() != null) {
+            for (Map<String, Object> emailObj : response.getBody()) {
+                if (Boolean.TRUE.equals(emailObj.get("primary"))) {
+                    return (String) emailObj.get("email");
+                }
+            }
+        }
+        throw new RuntimeException("No valid primary email found in GitHub profile.");
+    }
+
+    /**
+     * E-posta adresinin sistemde kayıtlı ve aktif bir öğrenciye ait olup olmadığını doğrular.
+     */
+    private User validateAndGetUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("No authorized student account found with this email. Please contact your coordinator."));
+
+        if (!user.isEnabled()) {
+            throw new RuntimeException("Student account is currently disabled.");
+        }
+        return user;
     }
     public String generateGithubAuthUrl() {
         String state = UUID.randomUUID().toString();
