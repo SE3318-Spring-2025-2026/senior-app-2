@@ -6,6 +6,10 @@ import com.seniorapp.entity.OAuthState;
 import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
 import com.seniorapp.repository.OAuthStateRepository;
+import com.seniorapp.entity.PasswordResetToken;
+import com.seniorapp.entity.Role;
+import com.seniorapp.entity.User;
+import com.seniorapp.repository.PasswordResetTokenRepository;
 import com.seniorapp.repository.UserRepository;
 import com.seniorapp.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +32,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final OAuthStateRepository oAuthStateRepository;
@@ -42,7 +47,12 @@ public class AuthService {
     private String githubClientSecret;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, OAuthStateRepository oAuthStateRepository) {
+    public AuthService(UserRepository userRepository,
+                       PasswordResetTokenRepository resetTokenRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil) {
         this.userRepository = userRepository;
+        this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.oAuthStateRepository = oAuthStateRepository;
@@ -85,26 +95,36 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = UUID.randomUUID().toString();
-        user.setPasswordResetToken(token);
-        user.setPasswordResetExpiry(LocalDateTime.now().plusHours(24));
-        userRepository.save(user);
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setUser(user);
+        resetToken.setToken(UUID.randomUUID().toString());
+        resetToken.setUsed(false);
+        resetToken.setValidUntil(LocalDateTime.now().plusHours(24));
+        resetTokenRepository.save(resetToken);
 
-        return token;
+        return resetToken.getToken();
+    }
+
+    public boolean isResetTokenValid(String token) {
+        return resetTokenRepository.findByTokenAndUsedFalse(token)
+                .map(rt -> rt.getValidUntil().isAfter(LocalDateTime.now()))
+                .orElse(false);
     }
 
     public void resetPassword(String token, String newPassword) {
-        User user = userRepository.findByPasswordResetToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid reset token"));
+        PasswordResetToken resetToken = resetTokenRepository.findByTokenAndUsedFalse(token)
+                .orElseThrow(() -> new RuntimeException("Invalid or already used reset token"));
 
-        if (user.getPasswordResetExpiry().isBefore(LocalDateTime.now())) {
+        if (resetToken.getValidUntil().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Reset token has expired");
         }
 
+        User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.setPasswordResetToken(null);
-        user.setPasswordResetExpiry(null);
         userRepository.save(user);
+
+        resetToken.setUsed(true);
+        resetTokenRepository.save(resetToken);
     }
 
     public AuthResponse getCurrentUser(User user) {
@@ -132,8 +152,7 @@ public class AuthService {
                 user.getEmail(),
                 user.getFullName(),
                 user.getRole().name(),
-                user.getGithubUsername(),
-                user.getStudentId()
+                user.getGithubUsername()
         );
     }
 

@@ -2,13 +2,16 @@ import { Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import AccessDenied from './pages/AccessDenied';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
+      <Route path="/access-denied" element={<AccessDenied />} />
       <Route
         path="/panel"
         element={
@@ -18,7 +21,14 @@ function App() {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="users" element={<Users />} />
+        <Route
+          path="users"
+          element={
+            <AdminRoute>
+              <Users />
+            </AdminRoute>
+          }
+        />
       </Route>
     </Routes>
   );

@@ -19,16 +19,14 @@ public class AuthResponse {
         private String fullName;
         private String role;
         private String githubUsername;
-        private String studentId;
 
         public UserInfo(Long id, String email, String fullName, String role,
-                        String githubUsername, String studentId) {
+                        String githubUsername) {
             this.id = id;
             this.email = email;
             this.fullName = fullName;
             this.role = role;
             this.githubUsername = githubUsername;
-            this.studentId = studentId;
         }
 
         public Long getId() { return id; }
@@ -36,6 +34,5 @@ public class AuthResponse {
         public String getFullName() { return fullName; }
         public String getRole() { return role; }
         public String getGithubUsername() { return githubUsername; }
-        public String getStudentId() { return studentId; }
     }
 }
