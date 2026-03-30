@@ -70,6 +70,14 @@ public class AuthController {
         return ResponseEntity.ok(authService.getAllUsers());
     }
 
+
+    @GetMapping("/github/login")
+    public ResponseEntity<Map<String, String>> getGithubLoginUrl() {
+        String authUrl = authService.generateGithubAuthUrl();
+        return ResponseEntity.ok(Map.of("authUrl", authUrl));
+    }
+
+
     @PutMapping("/users/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> changeUserRole(@Valid @RequestBody ChangeRoleRequest request) {
