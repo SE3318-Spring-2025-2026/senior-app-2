@@ -85,7 +85,7 @@ public class AuthController {
                                                        @RequestParam(required = false) String state) {
 
 
-        AuthResponse response = authService.githubLogin(code);
+        AuthResponse response = authService.githubLogin(code,state);
         return ResponseEntity.ok(response);
     }
 
