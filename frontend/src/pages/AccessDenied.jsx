@@ -10,7 +10,7 @@ function AccessDenied() {
         <div className="access-denied-icon">403</div>
         <h1>Access Denied</h1>
         <p>You do not have permission to view this page.</p>
-        <button className="access-denied-button" onClick={() => navigate('/')}>
+        <button className="access-denied-button" onClick={() => navigate('/panel')}>
           Go to Homepage
         </button>
       </div>
