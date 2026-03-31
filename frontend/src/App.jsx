@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
+import GitHubCallback from './pages/GitHubCallback';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import AccessDenied from './pages/AccessDenied';
@@ -12,6 +13,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Login />} />
       <Route path="/access-denied" element={<AccessDenied />} />
+      <Route path="/auth/github/callback" element={<GitHubCallback />} />
       <Route
         path="/panel"
         element={
