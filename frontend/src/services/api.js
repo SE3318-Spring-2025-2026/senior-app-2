@@ -75,4 +75,15 @@ export function registerStaff(email, fullName, role) {
     method: 'POST',
     body: JSON.stringify({ email, fullName, role }),
   });
+  
+}
+export function uploadStudentWhitelist(studentIds) {
+  return request('/coordinator/whitelist', {
+    method: 'POST',
+    body: JSON.stringify({ studentIds }),
+  });
+}
+
+export function getGitHubAuthUrl() {
+  return 'http://localhost:8080/api/auth/github';
 }

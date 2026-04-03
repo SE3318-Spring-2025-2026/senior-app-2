@@ -7,6 +7,7 @@ import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
 import com.seniorapp.repository.PasswordResetTokenRepository;
 import com.seniorapp.repository.UserRepository;
+import com.seniorapp.repository.StudentWhitelistRepository; // Import eklendi
 import com.seniorapp.security.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,15 +23,18 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final StudentWhitelistRepository whitelistRepository; // Değişken eklendi
 
     public AuthService(UserRepository userRepository,
                        PasswordResetTokenRepository resetTokenRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil) {
+                       JwtUtil jwtUtil,
+                       StudentWhitelistRepository whitelistRepository) { // Parametre eklendi
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.whitelistRepository = whitelistRepository; // Atama eklendi
     }
 
     public AuthResponse staffLogin(String email, String password) {
@@ -119,6 +123,10 @@ public class AuthService {
         user.setRole(newRole);
         userRepository.save(user);
         return toUserInfo(user);
+    }
+
+    public boolean isStudentWhitelisted(String studentId) { // Berat'ın istediği kontrol metodu
+        return whitelistRepository.existsByStudentId(studentId);
     }
 
     private UserInfo toUserInfo(User user) {
