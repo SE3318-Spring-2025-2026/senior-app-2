@@ -87,3 +87,7 @@ export function uploadStudentWhitelist(studentIds) {
 export function getGitHubAuthUrl() {
   return 'http://localhost:8080/api/auth/github';
 }
+
+export function getLogs(page = 0, size = 20) {
+  return request(`/logs?page=${page}&size=${size}`);
+}

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import AuditLogs from './pages/AuditLogs';
 import AccessDenied from './pages/AccessDenied';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -34,6 +35,14 @@ function App() {
           element={
             <AdminRoute>
               <Users />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="logs"
+          element={
+            <AdminRoute>
+              <AuditLogs />
             </AdminRoute>
           }
         />

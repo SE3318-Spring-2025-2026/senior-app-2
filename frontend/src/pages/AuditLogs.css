@@ -1,0 +1,113 @@
+.logs-page {
+  padding: 2rem;
+  background-color: var(--color-background);
+  min-height: 100vh;
+}
+
+.logs-page h1 {
+  margin-bottom: 1.5rem;
+  color: var(--color-text-dark);
+}
+
+.logs-error {
+  background-color: #fee2e2;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.logs-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  font-size: 1.2rem;
+  color: var(--color-text-light);
+}
+
+.logs-table-wrapper {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.logs-table th,
+.logs-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.logs-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.logs-table tbody tr:hover {
+  background-color: #f3f4f6;
+}
+
+/* Severity Badges */
+.severity-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-badge.info {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.severity-badge.warning {
+  background-color: #fef08a;
+  color: #854d0e;
+}
+
+.severity-badge.critical {
+  background-color: #fecaca;
+  color: #991b1b;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1.5rem;
+  gap: 1rem;
+}
+
+.pagination button {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.pagination button:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.pagination button:not(:disabled):hover {
+  background-color: var(--color-primary-dark);
+}
+
+.pagination span {
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+}
