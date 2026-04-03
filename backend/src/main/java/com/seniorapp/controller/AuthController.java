@@ -6,11 +6,14 @@ import com.seniorapp.dto.ChangeRoleRequest;
 import com.seniorapp.dto.LoginRequest;
 import com.seniorapp.dto.PasswordResetRequest;
 import com.seniorapp.dto.RegisterStaffRequest;
+import com.seniorapp.dto.UserResponseDTO;
 import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
 import com.seniorapp.service.AuthService;
 import com.seniorapp.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -68,12 +71,49 @@ public class AuthController {
     }
 
     // -------------------------------------------------------
-    // GET /api/auth/me
+    // GET /api/auth/me  (legacy – returns AuthResponse with a refreshed token)
     // -------------------------------------------------------
     @GetMapping("/me")
     public ResponseEntity<AuthResponse> getCurrentUser(@AuthenticationPrincipal User user) {
         AuthResponse response = authService.getCurrentUser(user);
         return ResponseEntity.ok(response);
+    }
+
+    // -------------------------------------------------------
+    // GET /api/auth/profile  (new – returns lightweight UserResponseDTO)
+    // -------------------------------------------------------
+
+    /**
+     * Returns the currently authenticated user's profile as a lightweight DTO.
+     * Does NOT issue a new JWT — intended for "who am I?" checks.
+     *
+     * @param user the principal injected by the JWT filter
+     * @return 200 OK with {@link UserResponseDTO}
+     */
+    @GetMapping("/profile")
+    public ResponseEntity<UserResponseDTO> getProfile(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(UserResponseDTO.from(user));
+    }
+
+    // -------------------------------------------------------
+    // GET /api/auth/logout
+    // -------------------------------------------------------
+
+    /**
+     * Invalidates the current HTTP session (if any) and clears the security
+     * context.  The client is responsible for discarding its JWT.
+     *
+     * @return 200 OK with a confirmation message
+     */
+    @GetMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request,
+                                                      HttpServletResponse response) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully. Please discard your token."));
     }
 
     // -------------------------------------------------------

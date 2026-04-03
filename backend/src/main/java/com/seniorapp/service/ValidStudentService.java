@@ -1,7 +1,6 @@
 package com.seniorapp.service;
 
 import com.seniorapp.entity.ValidStudentId;
-import com.seniorapp.repository.UserRepository;
 import com.seniorapp.repository.ValidStudentIdRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,12 +19,9 @@ import java.util.List;
 public class ValidStudentService {
 
     private final ValidStudentIdRepository validStudentIdRepository;
-    private final UserRepository userRepository;
 
-    public ValidStudentService(ValidStudentIdRepository validStudentIdRepository,
-                               UserRepository userRepository) {
+    public ValidStudentService(ValidStudentIdRepository validStudentIdRepository) {
         this.validStudentIdRepository = validStudentIdRepository;
-        this.userRepository = userRepository;
     }
 
     // -------------------------------------------------------
