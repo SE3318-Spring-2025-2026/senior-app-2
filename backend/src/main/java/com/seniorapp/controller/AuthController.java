@@ -76,17 +76,30 @@ public class AuthController {
         String authUrl = authService.generateGithubAuthUrl();
         return ResponseEntity.ok(Map.of("authUrl", authUrl));
     }
+
     /**
      * GitHub yetkilendirmesi sonrasında yönlendirilen callback endpoint'i.
-     * Dönen JWT token frontend tarafından yakalanıp saklanacaktır.
+     * Kullanıcıyı frontend'e (Port 3000) token ve isNewUser bilgisiyle yönlendirir.
      */
     @GetMapping("/github/callback")
-    public ResponseEntity<AuthResponse> githubCallback(@RequestParam String code,
-                                                       @RequestParam(required = false) String state) {
+    public ResponseEntity<Void> githubCallback(@RequestParam String code,
+                                               @RequestParam String state) {
 
 
-        AuthResponse response = authService.githubLogin(code,state);
-        return ResponseEntity.ok(response);
+        Map<String, Object> authData = authService.githubLogin(code, state);
+        String token = (String) authData.get("token");
+        boolean isNewUser = (boolean) authData.get("isNewUser");
+
+
+        String redirectUrl = String.format(
+                "http://localhost:3000/oauth/callback?token=%s&isNewUser=%b",
+                token, isNewUser
+        );
+
+        // HTTP 302
+        return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                .location(java.net.URI.create(redirectUrl))
+                .build();
     }
 
 

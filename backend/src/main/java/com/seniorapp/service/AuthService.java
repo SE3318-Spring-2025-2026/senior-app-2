@@ -154,23 +154,30 @@ public class AuthService {
         );
     }
 
+
     /**
      * GitHub OAuth2 akışını yöneten ana metod.
-     * Gelen state bilgisini güvenlik (CSRF) için veritabanından doğrular.
+     * Kullanıcının ilk kez girip girmediğini kontrol eder.
      */
-    public AuthResponse githubLogin(String code, String state) {
+    public Map<String, Object> githubLogin(String code, String state) {
         OAuthState savedState = oAuthStateRepository.findById(state)
-                .orElseThrow(() -> new RuntimeException("Invalid or missing CSRF state token. Security breach detected."));
-
-
+                .orElseThrow(() -> new RuntimeException("Geçersiz state parametresi."));
         oAuthStateRepository.delete(savedState);
 
         String accessToken = getGithubAccessToken(code);
         String primaryEmail = getGithubPrimaryEmail(accessToken);
         User user = validateAndGetUserByEmail(primaryEmail);
 
+        boolean isNewUser = (user.getGithubUsername() == null);
+
+
         String jwtToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
-        return new AuthResponse(jwtToken, toUserInfo(user));
+
+
+        return Map.of(
+                "token", jwtToken,
+                "isNewUser", isNewUser
+        );
     }
 
     /**
