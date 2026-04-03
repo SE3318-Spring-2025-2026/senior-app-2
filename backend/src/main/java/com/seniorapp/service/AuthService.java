@@ -2,17 +2,28 @@ package com.seniorapp.service;
 
 import com.seniorapp.dto.AuthResponse;
 import com.seniorapp.dto.AuthResponse.UserInfo;
-import com.seniorapp.entity.PasswordResetToken;
+import com.seniorapp.entity.OAuthState;
 import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
+import com.seniorapp.repository.OAuthStateRepository;
+import com.seniorapp.entity.PasswordResetToken;
 import com.seniorapp.repository.PasswordResetTokenRepository;
 import com.seniorapp.repository.UserRepository;
 import com.seniorapp.security.JwtUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.core.ParameterizedTypeReference;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -22,15 +33,27 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final OAuthStateRepository oAuthStateRepository;
+
+    @Value("${github.client.id}")
+    private String githubClientId;
+
+    @Value("${github.redirect.uri}")
+    private String githubRedirectUri;
+
+    @Value("${github.client.secret}")
+    private String githubClientSecret;
 
     public AuthService(UserRepository userRepository,
                        PasswordResetTokenRepository resetTokenRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil) {
+                       JwtUtil jwtUtil,
+                       OAuthStateRepository oAuthStateRepository) {
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.oAuthStateRepository = oAuthStateRepository;
     }
 
     public AuthResponse staffLogin(String email, String password) {
@@ -128,6 +151,115 @@ public class AuthService {
                 user.getFullName(),
                 user.getRole().name(),
                 user.getGithubUsername()
+        );
+    }
+
+
+    /**
+     * GitHub OAuth2 akışını yöneten ana metod.
+     * Kullanıcının ilk kez girip girmediğini kontrol eder.
+     */
+    public Map<String, Object> githubLogin(String code, String state) {
+        OAuthState savedState = oAuthStateRepository.findById(state)
+                .orElseThrow(() -> new RuntimeException("Geçersiz state parametresi."));
+        oAuthStateRepository.delete(savedState);
+
+        String accessToken = getGithubAccessToken(code);
+        String primaryEmail = getGithubPrimaryEmail(accessToken);
+        User user = validateAndGetUserByEmail(primaryEmail);
+
+        boolean isNewUser = (user.getGithubUsername() == null);
+
+
+        String jwtToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+
+
+        return Map.of(
+                "token", jwtToken,
+                "isNewUser", isNewUser
+        );
+    }
+
+    /**
+     * GitHub'dan erişim belirteci (Access Token) alır.
+     */
+    private String getGithubAccessToken(String code) {
+        RestTemplate restTemplate = new RestTemplate();
+        String tokenUrl = "https://github.com/login/oauth/access_token";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+        Map<String, String> body = Map.of(
+                "client_id", githubClientId,
+                "client_secret", githubClientSecret,
+                "code", code,
+                "redirect_uri", githubRedirectUri
+        );
+
+        HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+        ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
+
+        String accessToken = (String) response.getBody().get("access_token");
+        if (accessToken == null) {
+            throw new RuntimeException("Failed to retrieve access token from GitHub.");
+        }
+        return accessToken;
+    }
+
+    /**
+     * Access Token kullanarak kullanıcının birincil (primary) e-posta adresini çeker.
+     */
+    private String getGithubPrimaryEmail(String accessToken) {
+        RestTemplate restTemplate = new RestTemplate();
+        String emailUrl = "https://api.github.com/user/emails";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                emailUrl,
+                HttpMethod.GET,
+                request,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        );
+
+        if (response.getBody() != null) {
+            for (Map<String, Object> emailObj : response.getBody()) {
+                if (Boolean.TRUE.equals(emailObj.get("primary"))) {
+                    return (String) emailObj.get("email");
+                }
+            }
+        }
+        throw new RuntimeException("No valid primary email found in GitHub profile.");
+    }
+
+    /**
+     * E-posta adresinin sistemde kayıtlı ve aktif bir öğrenciye ait olup olmadığını doğrular.
+     */
+    private User validateAndGetUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("No authorized student account found with this email. Please contact your coordinator."));
+
+        if (!user.isEnabled()) {
+            throw new RuntimeException("Student account is currently disabled.");
+        }
+        return user;
+    }
+
+    /**
+     * GitHub OAuth2 Authorization URL'ini oluşturur ve state'i DB'ye kaydeder.
+     */
+    public String generateGithubAuthUrl() {
+        String state = UUID.randomUUID().toString();
+
+
+        oAuthStateRepository.save(new OAuthState(state, LocalDateTime.now()));
+
+        return String.format(
+                "https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:user,user:email&state=%s",
+                githubClientId, githubRedirectUri, state
         );
     }
 }

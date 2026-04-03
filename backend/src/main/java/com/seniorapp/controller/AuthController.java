@@ -70,6 +70,39 @@ public class AuthController {
         return ResponseEntity.ok(authService.getAllUsers());
     }
 
+
+    @GetMapping("/github/login")
+    public ResponseEntity<Map<String, String>> getGithubLoginUrl() {
+        String authUrl = authService.generateGithubAuthUrl();
+        return ResponseEntity.ok(Map.of("authUrl", authUrl));
+    }
+
+    /**
+     * GitHub yetkilendirmesi sonrasında yönlendirilen callback endpoint'i.
+     * Kullanıcıyı frontend'e (Port 3000) token ve isNewUser bilgisiyle yönlendirir.
+     */
+    @GetMapping("/github/callback")
+    public ResponseEntity<Void> githubCallback(@RequestParam String code,
+                                               @RequestParam String state) {
+
+
+        Map<String, Object> authData = authService.githubLogin(code, state);
+        String token = (String) authData.get("token");
+        boolean isNewUser = (boolean) authData.get("isNewUser");
+
+
+        String redirectUrl = String.format(
+                "http://localhost:3000/oauth/callback?token=%s&isNewUser=%b",
+                token, isNewUser
+        );
+
+        // HTTP 302
+        return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                .location(java.net.URI.create(redirectUrl))
+                .build();
+    }
+
+
     @PutMapping("/users/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> changeUserRole(@Valid @RequestBody ChangeRoleRequest request) {
