@@ -56,6 +56,26 @@ function Users() {
     }
   }
 
+  // Sends a password reset link from the admin panel
+  async function handleSendResetLink(accountId) {
+    try {
+      const response = await fetch('http://localhost:8080/auth/reset-password/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accountId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send reset link');
+      }
+      alert('Password reset link sent successfully!');
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   if (loading) return <div className="users-loading">Loading users...</div>;
 
   return (
@@ -101,6 +121,7 @@ function Users() {
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -118,6 +139,25 @@ function Users() {
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
+                </td>
+                <td>
+                  {/* Show the reset button only for staff members since students use GitHub OAuth */}
+                  {u.role !== 'STUDENT' && (
+                    <button 
+                      onClick={() => handleSendResetLink(u.id)}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        backgroundColor: '#4f46e5',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Send Reset Link
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

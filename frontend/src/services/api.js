@@ -59,6 +59,15 @@ export function resetPassword(token, newPassword) {
   });
 }
 
+export async function getGithubLoginUrl() {
+  const data = await request('/auth/github/login');
+  return data.authUrl;
+}
+
+export function githubCallback(code, state) {
+  return request(`/auth/github/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
+}
+
 export function getUsers() {
   return request('/auth/users');
 }
@@ -86,4 +95,8 @@ export function uploadStudentWhitelist(studentIds) {
 
 export function getGitHubAuthUrl() {
   return 'http://localhost:8080/api/auth/github';
+}
+
+export function getLogs(page = 0, size = 20) {
+  return request(`/logs?page=${page}&size=${size}`);
 }

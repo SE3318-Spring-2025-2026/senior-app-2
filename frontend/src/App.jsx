@@ -1,13 +1,16 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import GitHubCallback from './pages/GitHubCallback';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import AuditLogs from './pages/AuditLogs';
 import AccessDenied from './pages/AccessDenied';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement'; // Yeni ekledik
 import GitHubCallback from './pages/GitHubCallback';       // Yeni ekledik
+import ResetPassword from './pages/ResetPassword'; 
 
 function App() {
   return (
@@ -16,6 +19,9 @@ function App() {
       <Route path="/auth/callback" element={<GitHubCallback />} />
       <Route path="/access-denied" element={<AccessDenied />} />
       
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      <Route path="/auth/github/callback" element={<GitHubCallback />} />
       <Route
         path="/panel"
         element={
@@ -37,6 +43,14 @@ function App() {
             </AdminRoute>
           }
         />
+        <Route
+          path="logs"
+          element={
+            <AdminRoute>
+              <AuditLogs />
+            </AdminRoute>
+          }
+        />
       </Route>
       
       <Route path="*" element={<Navigate to="/" />} />
@@ -45,3 +59,4 @@ function App() {
 }
 
 export default App; 
+export default App;

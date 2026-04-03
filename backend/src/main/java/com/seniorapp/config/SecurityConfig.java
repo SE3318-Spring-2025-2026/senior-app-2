@@ -40,7 +40,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
+                // ADDED: "/auth/reset-password/**" to allow unauthenticated access to password reset endpoints
+                .requestMatchers("/api/auth/**", "/auth/reset-password/**").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler()))
