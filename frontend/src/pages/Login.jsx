@@ -41,6 +41,32 @@ function Login() {
     }
   };
 
+  // Handles the forgot password request
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please enter your email address in the field above to reset your password.');
+      return;
+    }
+    
+    try {
+      const response = await fetch('http://localhost:8080/auth/reset-password/forgot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate password reset process');
+      }
+      
+      alert('If the email exists in our system, a reset link has been sent to it.');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="login-container">
       <div className="login-card">
@@ -75,7 +101,7 @@ function Login() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: '8px' }}>
               <label htmlFor="password">Password</label>
               <input
                 id="password"
@@ -85,6 +111,25 @@ function Login() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            
+            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+              <button 
+                type="button" 
+                onClick={handleForgotPassword}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#4f46e5',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  padding: 0,
+                  textDecoration: 'underline'
+                }}
+              >
+                Forgot Password?
+              </button>
+            </div>
+
             <button type="submit" className="login-button" disabled={loading}>
               {loading ? 'Signing in...' : 'Log In'}
             </button>

@@ -7,12 +7,15 @@ import AccessDenied from './pages/AccessDenied';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import ResetPassword from './pages/ResetPassword'; 
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
       <Route path="/access-denied" element={<AccessDenied />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
       <Route path="/auth/github/callback" element={<GitHubCallback />} />
       <Route
         path="/panel"
