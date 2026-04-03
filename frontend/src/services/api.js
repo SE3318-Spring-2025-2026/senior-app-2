@@ -85,3 +85,7 @@ export function registerStaff(email, fullName, role) {
     body: JSON.stringify({ email, fullName, role }),
   });
 }
+
+export function getLogs(page = 0, size = 20) {
+  return request(`/logs?page=${page}&size=${size}`);
+}

@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import GitHubCallback from './pages/GitHubCallback';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import AuditLogs from './pages/AuditLogs';
 import AccessDenied from './pages/AccessDenied';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -31,6 +32,14 @@ function App() {
           element={
             <AdminRoute>
               <Users />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="logs"
+          element={
+            <AdminRoute>
+              <AuditLogs />
             </AdminRoute>
           }
         />
