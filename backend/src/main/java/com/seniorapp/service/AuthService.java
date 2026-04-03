@@ -9,6 +9,7 @@ import com.seniorapp.repository.OAuthStateRepository;
 import com.seniorapp.entity.PasswordResetToken;
 import com.seniorapp.repository.PasswordResetTokenRepository;
 import com.seniorapp.repository.UserRepository;
+import com.seniorapp.repository.StudentWhitelistRepository; // Import eklendi
 import com.seniorapp.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +34,7 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final StudentWhitelistRepository whitelistRepository; // Değişken eklendi
     private final OAuthStateRepository oAuthStateRepository;
 
     @Value("${github.client.id}")
@@ -48,11 +50,13 @@ public class AuthService {
                        PasswordResetTokenRepository resetTokenRepository,
                        PasswordEncoder passwordEncoder,
                        JwtUtil jwtUtil,
+                       StudentWhitelistRepository whitelistRepository) { // Parametre eklendi
                        OAuthStateRepository oAuthStateRepository) {
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.whitelistRepository = whitelistRepository; // Atama eklendi
         this.oAuthStateRepository = oAuthStateRepository;
     }
 
@@ -142,6 +146,10 @@ public class AuthService {
         user.setRole(newRole);
         userRepository.save(user);
         return toUserInfo(user);
+    }
+
+    public boolean isStudentWhitelisted(String studentId) { // Berat'ın istediği kontrol metodu
+        return whitelistRepository.existsByStudentId(studentId);
     }
 
     private UserInfo toUserInfo(User user) {

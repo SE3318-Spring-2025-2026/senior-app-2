@@ -142,3 +142,18 @@
   border-color: #4f46e5;
   outline: none;
 }
+.add-user-section textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.add-user-section textarea:focus {
+  border-color: #4f46e5;
+  outline: none;
+}
