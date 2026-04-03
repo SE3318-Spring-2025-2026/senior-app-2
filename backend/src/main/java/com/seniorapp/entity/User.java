@@ -3,6 +3,11 @@ package com.seniorapp.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * Sistemdeki tüm kullanıcıları temsil eden ana entity.
+ * Hem GitHub üzerinden giriş yapan öğrencileri hem de
+ * e-posta/şifre ile giriş yapan personel rollerini kapsar.
+ */
 @Entity
 @Table(name = "users")
 public class User {
@@ -28,6 +33,14 @@ public class User {
     private Long githubId;
 
     private boolean enabled = true;
+
+    /**
+     * Hesabın yaşam döngüsü durumu. GitHub ile oluşturulan hesaplarda
+     * varsayılan olarak {@link UserStatus#ACTIVE} atanır.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status = UserStatus.ACTIVE;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -60,4 +73,7 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public UserStatus getStatus() { return status; }
+    public void setStatus(UserStatus status) { this.status = status; }
 }
