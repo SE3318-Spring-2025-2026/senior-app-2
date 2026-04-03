@@ -42,10 +42,16 @@ function Layout() {
               Users
             </NavLink>
             <>
-              <NavLink to="/panel/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <NavLink 
+                to="/panel/users" 
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
                 Users
               </NavLink>
-              <NavLink to="/panel/logs" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <NavLink 
+                to="/panel/logs" 
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
                 Audit Logs
               </NavLink>
             </>

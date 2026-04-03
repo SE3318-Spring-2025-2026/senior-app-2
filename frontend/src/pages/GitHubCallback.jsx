@@ -33,6 +33,7 @@ function GitHubCallback() {
 }
 
 export default GitHubCallback;
+export default GitHubCallback;
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
