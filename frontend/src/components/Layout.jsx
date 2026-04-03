@@ -17,11 +17,28 @@ function Layout() {
         <div className="sidebar-logo">SeniorApp</div>
 
         <nav className="sidebar-nav">
-          <NavLink to="/panel" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink 
+            to="/panel" 
+            end 
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
             Dashboard
           </NavLink>
+
+          {user?.role === 'COORDINATOR' && (
+            <NavLink 
+              to="/panel/whitelist" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              Student Whitelist
+            </NavLink>
+          )}
+
           {user?.role === 'ADMIN' && (
-            <NavLink to="/panel/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink 
+              to="/panel/users" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
               Users
             </NavLink>
           )}
