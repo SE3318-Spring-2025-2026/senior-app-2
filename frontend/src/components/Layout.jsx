@@ -35,12 +35,6 @@ function Layout() {
           )}
 
           {user?.role === 'ADMIN' && (
-            <NavLink 
-              to="/panel/users" 
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            >
-              Users
-            </NavLink>
             <>
               <NavLink 
                 to="/panel/users" 

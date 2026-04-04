@@ -9,7 +9,6 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement'; // Yeni ekledik
-import GitHubCallback from './pages/GitHubCallback';       // Yeni ekledik
 import ResetPassword from './pages/ResetPassword'; 
 
 function App() {
@@ -58,6 +57,4 @@ function App() {
   );
 }
 
-export default App; 
-export default App; 
 export default App;

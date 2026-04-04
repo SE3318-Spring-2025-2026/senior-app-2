@@ -50,7 +50,7 @@ public class AuthService {
                        PasswordResetTokenRepository resetTokenRepository,
                        PasswordEncoder passwordEncoder,
                        JwtUtil jwtUtil,
-                       StudentWhitelistRepository whitelistRepository) { // Parametre eklendi
+                       StudentWhitelistRepository whitelistRepository,
                        OAuthStateRepository oAuthStateRepository) {
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
