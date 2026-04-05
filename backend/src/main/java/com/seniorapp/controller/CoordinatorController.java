@@ -38,6 +38,43 @@ public class CoordinatorController {
     }
 
     // -------------------------------------------------------
+    // GET /api/coordinator/valid-students  — list all (newest first)
+    // -------------------------------------------------------
+    @GetMapping("/valid-students")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
+    public ResponseEntity<?> listValidStudents() {
+        return ResponseEntity.ok(validStudentService.listAllWhitelistEntries());
+    }
+
+    // -------------------------------------------------------
+    // DELETE /api/coordinator/valid-students/{id}
+    // -------------------------------------------------------
+    @DeleteMapping("/valid-students/{id}")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> deleteValidStudent(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User principal,
+            HttpServletRequest httpRequest) {
+        validStudentService.deleteWhitelistEntry(id);
+        log.info("Whitelist entry deleted id={} by {}", id, principal != null ? principal.getEmail() : "system");
+        try {
+            logService.saveLog(
+                    principal != null ? principal.getId() : null,
+                    principal != null ? principal.getRole().name() : "COORDINATOR",
+                    "coordinator",
+                    "whitelist_delete",
+                    "success",
+                    "info",
+                    "Removed whitelist entry id=" + id,
+                    httpRequest
+            );
+        } catch (Exception e) {
+            log.warn("Could not persist whitelist delete audit", e);
+        }
+        return ResponseEntity.ok(Map.of("message", "Whitelist entry removed.", "id", id));
+    }
+
+    // -------------------------------------------------------
     // POST /api/coordinator/valid-students
     // -------------------------------------------------------
 

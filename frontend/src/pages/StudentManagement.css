@@ -1,0 +1,130 @@
+.student-mgmt-dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 112px;
+  box-sizing: border-box;
+  border: 2px dashed #c4c4c4;
+  border-radius: 10px;
+  padding: 20px 16px;
+  margin-bottom: 16px;
+  background: #fafafa;
+  color: #444;
+  font-size: 14px;
+  line-height: 1.45;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  cursor: pointer;
+  outline: none;
+}
+
+.student-mgmt-dropzone:hover,
+.student-mgmt-dropzone:focus-visible,
+.student-mgmt-dropzone.student-mgmt-dropzone--active {
+  border-color: #4f46e5;
+  background: #f5f3ff;
+}
+
+.student-mgmt-dropzone-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.student-mgmt-dropzone-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+.student-mgmt-dropzone-inner strong {
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.student-mgmt-table-wrap {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+
+.student-mgmt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.student-mgmt-table th,
+.student-mgmt-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.student-mgmt-table th {
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.student-mgmt-table tr:hover td {
+  background: #fafafa;
+}
+
+.student-mgmt-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.student-mgmt-badge--linked {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.student-mgmt-badge--pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.student-mgmt-btn-delete {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.student-mgmt-btn-delete:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.student-mgmt-btn-delete:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.student-mgmt-muted {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
+}
+
+.student-mgmt-intro {
+  margin: 0 0 12px;
+}

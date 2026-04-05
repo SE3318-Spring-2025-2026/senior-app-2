@@ -1,6 +1,7 @@
 package com.seniorapp.service;
 
 import com.seniorapp.dto.StudentIdValidityResponse;
+import com.seniorapp.dto.ValidStudentListItemResponse;
 import com.seniorapp.entity.ValidStudentId;
 import com.seniorapp.repository.ValidStudentIdRepository;
 import org.slf4j.Logger;
@@ -8,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.Set;
 public class ValidStudentService {
 
     private static final Logger log = LoggerFactory.getLogger(ValidStudentService.class);
+    private static final DateTimeFormatter ADDED_DATE_JSON = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final ValidStudentIdRepository validStudentIdRepository;
 
@@ -80,6 +83,20 @@ public class ValidStudentService {
         return count;
     }
 
+    /**
+     * Removes a whitelist row only if no user account is linked yet.
+     */
+    @Transactional
+    public void deleteWhitelistEntry(Long entryId) {
+        ValidStudentId row = validStudentIdRepository.findById(entryId)
+                .orElseThrow(() -> new RuntimeException("Whitelist entry not found."));
+        if (row.getAccount() != null) {
+            throw new RuntimeException("Cannot remove: this student ID is already linked to an account.");
+        }
+        validStudentIdRepository.delete(row);
+        log.info("Whitelist entry removed id={} studentId={}", entryId, row.getStudentId());
+    }
+
     // -------------------------------------------------------
     // Read operations
     // -------------------------------------------------------
@@ -130,5 +147,27 @@ public class ValidStudentService {
      */
     public List<ValidStudentId> getRegisteredEntries() {
         return validStudentIdRepository.findByAccountIsNotNull();
+    }
+
+    /**
+     * All whitelist rows for coordinator UI, newest first.
+     */
+    @Transactional(readOnly = true)
+    public List<ValidStudentListItemResponse> listAllWhitelistEntries() {
+        return validStudentIdRepository.findAllWhitelistWithAccountOrderByAddedDateDesc().stream()
+                .map(v -> {
+                    boolean linked = v.getAccount() != null;
+                    Long accId = linked ? v.getAccount().getId() : null;
+                    String added = v.getAddedDate() != null ? ADDED_DATE_JSON.format(v.getAddedDate()) : null;
+                    return new ValidStudentListItemResponse(
+                            v.getId(),
+                            v.getStudentId(),
+                            linked,
+                            accId,
+                            added,
+                            v.getAddedBy()
+                    );
+                })
+                .toList();
     }
 }

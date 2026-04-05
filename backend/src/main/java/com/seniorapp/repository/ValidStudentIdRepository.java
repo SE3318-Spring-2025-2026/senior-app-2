@@ -2,6 +2,7 @@ package com.seniorapp.repository;
 
 import com.seniorapp.entity.ValidStudentId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,4 +25,7 @@ public interface ValidStudentIdRepository extends JpaRepository<ValidStudentId, 
 
     /** Return all entries that have already been linked to a User account. */
     List<ValidStudentId> findByAccountIsNotNull();
+
+    @Query("SELECT v FROM ValidStudentId v LEFT JOIN FETCH v.account ORDER BY v.addedDate DESC")
+    List<ValidStudentId> findAllWhitelistWithAccountOrderByAddedDateDesc();
 }

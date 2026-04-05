@@ -108,6 +108,16 @@ export function uploadStudentWhitelist(studentIds) {
   });
 }
 
+export function getStudentWhitelist() {
+  return request('/coordinator/valid-students');
+}
+
+export function deleteStudentWhitelistEntry(id) {
+  return request(`/coordinator/valid-students/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export function getGitHubAuthUrl() {
   return 'http://localhost:8080/api/auth/github';
 }
