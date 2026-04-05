@@ -3,6 +3,8 @@ package com.seniorapp.service;
 import com.seniorapp.dto.StudentIdValidityResponse;
 import com.seniorapp.entity.ValidStudentId;
 import com.seniorapp.repository.ValidStudentIdRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,8 @@ import java.util.Set;
  */
 @Service
 public class ValidStudentService {
+
+    private static final Logger log = LoggerFactory.getLogger(ValidStudentService.class);
 
     private final ValidStudentIdRepository validStudentIdRepository;
 
@@ -70,7 +74,10 @@ public class ValidStudentService {
                 .toList();
 
         validStudentIdRepository.saveAll(newEntries);
-        return newEntries.size();
+        int count = newEntries.size();
+        log.info("Whitelist persisted: {} new unique row(s), {} candidate id(s) in request, addedBy={}",
+                count, normalized.size(), addedBy != null ? addedBy : "system");
+        return count;
     }
 
     // -------------------------------------------------------

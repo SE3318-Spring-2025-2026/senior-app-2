@@ -1,6 +1,9 @@
 package com.seniorapp.exception;
 
+import com.seniorapp.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -31,6 +34,14 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final LogService logService;
+
+    public GlobalExceptionHandler(LogService logService) {
+        this.logService = logService;
+    }
+
     // -------------------------------------------------------
     // 403 – Student not on the whitelist
     // -------------------------------------------------------
@@ -43,6 +54,7 @@ public class GlobalExceptionHandler {
             StudentNotWhitelistedException ex,
             HttpServletRequest request) {
 
+        log.info("Student not whitelisted: path={} message={}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
@@ -58,6 +70,7 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex,
             HttpServletRequest request) {
 
+        log.warn("Access denied: {} {}", request.getMethod(), request.getRequestURI());
         return buildResponse(HttpStatus.FORBIDDEN,
                 "You do not have permission to access this resource.", request);
     }
@@ -78,6 +91,7 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining("; "));
 
+        log.debug("Validation failed {}: {}", request.getRequestURI(), details);
         return buildResponse(HttpStatus.BAD_REQUEST, details, request);
     }
 
@@ -94,6 +108,7 @@ public class GlobalExceptionHandler {
             RuntimeException ex,
             HttpServletRequest request) {
 
+        log.debug("Client error {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
@@ -109,6 +124,13 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
+        log.error("Unhandled exception {} {}", request.getMethod(), request.getRequestURI(), ex);
+        try {
+            logService.saveErrorLog(null, null, "api", "unhandled_exception",
+                    ex.getClass().getSimpleName() + ": " + ex.getMessage(), request);
+        } catch (Exception auditEx) {
+            log.warn("Could not persist error audit log", auditEx);
+        }
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred. Please try again later.", request);
     }

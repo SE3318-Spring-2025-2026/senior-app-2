@@ -16,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -108,11 +109,24 @@ public class AuthController {
     @GetMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request,
                                                       HttpServletResponse response) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = null;
+        String role = null;
+        if (authentication != null && authentication.getPrincipal() instanceof User u) {
+            userId = u.getId();
+            role = u.getRole().name();
+        }
         HttpSession session = request.getSession(false);
         if (session != null) {
             session.invalidate();
         }
-        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        SecurityContextHolder.clearContext();
+        try {
+            logService.saveAuthLog(userId, role, "logout", "success",
+                    "Client logout / session cleared", request);
+        } catch (Exception ignored) {
+            // avoid masking logout success if audit write fails
+        }
         return ResponseEntity.ok(Map.of("message", "Logged out successfully. Please discard your token."));
     }
 
@@ -185,8 +199,30 @@ public class AuthController {
      */
     @GetMapping("/github/callback")
     public ResponseEntity<AuthResponse> githubCallback(@RequestParam String code,
-                                                       @RequestParam String state) {
-        return ResponseEntity.ok(authService.githubLogin(code, state));
+                                                       @RequestParam String state,
+                                                       HttpServletRequest httpRequest) {
+        try {
+            AuthResponse response = authService.githubLogin(code, state);
+            logService.saveAuthLog(
+                    response.getUser().getId(),
+                    response.getUser().getRole(),
+                    "github_oauth_callback",
+                    "success",
+                    "GitHub OAuth completed for userId=" + response.getUser().getId(),
+                    httpRequest
+            );
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            logService.saveAuthLog(
+                    null,
+                    null,
+                    "github_oauth_callback",
+                    "failed",
+                    e.getMessage() != null ? e.getMessage() : "GitHub OAuth failed",
+                    httpRequest
+            );
+            throw e;
+        }
     }
 
 

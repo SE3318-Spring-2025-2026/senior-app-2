@@ -4,6 +4,8 @@ import com.seniorapp.entity.PasswordResetToken;
 import com.seniorapp.entity.User;
 import com.seniorapp.repository.PasswordResetTokenRepository;
 import com.seniorapp.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder; 
@@ -16,6 +18,8 @@ import java.util.UUID;
 
 @Service
 public class PasswordResetService {
+
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
@@ -82,7 +86,13 @@ public class PasswordResetService {
         message.setTo(user.getEmail());
         message.setSubject("Password Reset Request");
         message.setText("To reset your password, please click the link below:\n\n" + resetLink);
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+            log.info("Password reset email sent userId={}", user.getId());
+        } catch (Exception e) {
+            log.error("Failed to send password reset email userId={}", user.getId(), e);
+            throw new RuntimeException("Failed to send password reset email.", e);
+        }
     }
 
     public boolean isTokenValid(String tokenStr) {

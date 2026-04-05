@@ -7,11 +7,15 @@ import com.seniorapp.entity.User;
 import com.seniorapp.repository.StudentWhitelistRepository;
 import com.seniorapp.repository.UserRepository;
 import com.seniorapp.security.JwtUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Service
 public class GitHubService {
+
+    private static final Logger log = LoggerFactory.getLogger(GitHubService.class);
 
     private final UserRepository userRepository;
     private final StudentWhitelistRepository whitelistRepository;
@@ -35,10 +39,14 @@ public class GitHubService {
         
         GitHubUserResponse ghUser = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, entity, GitHubUserResponse.class).getBody();
 
-        if (ghUser == null) throw new RuntimeException("GitHub authentication failed");
+        if (ghUser == null) {
+            log.warn("GitHub /user returned null (legacy flow)");
+            throw new RuntimeException("GitHub authentication failed");
+        }
 
         // 2. Whitelist Kontrolü (Berat'ın istediği kritik nokta)
         if (!whitelistRepository.existsByStudentId(studentId)) {
+            log.warn("Legacy GitHub login blocked: studentId not on whitelist");
             throw new RuntimeException("Access Denied: Student ID " + studentId + " is not whitelisted by coordinator.");
         }
 
@@ -55,6 +63,7 @@ public class GitHubService {
                 });
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        log.info("Legacy GitHub login succeeded userId={}", user.getId());
         return new AuthResponse(token, new AuthResponse.UserInfo(
                 user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(), user.getGithubUsername()
         ));

@@ -2,6 +2,8 @@ package com.seniorapp.service;
 
 import com.seniorapp.entity.AuditLog;
 import com.seniorapp.repository.AuditLogRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,6 +21,8 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 @Service
 public class LogService {
+
+    private static final Logger log = LoggerFactory.getLogger(LogService.class);
 
     private final AuditLogRepository auditLogRepository;
 
@@ -40,8 +44,10 @@ public class LogService {
                             String status,
                             String severity,
                             String message) {
-        AuditLog log = new AuditLog(userId, userRole, module, action, status, severity, message);
-        return auditLogRepository.save(log);
+        AuditLog audit = new AuditLog(userId, userRole, module, action, status, severity, message);
+        AuditLog saved = auditLogRepository.save(audit);
+        log.debug("Audit persisted: module={} action={} status={}", module, action, status);
+        return saved;
     }
 
     /**
@@ -55,27 +61,31 @@ public class LogService {
                             String severity,
                             String message,
                             HttpServletRequest request) {
-        AuditLog log = new AuditLog(userId, userRole, module, action, status, severity, message);
+        AuditLog audit = new AuditLog(userId, userRole, module, action, status, severity, message);
         if (request != null) {
-            log.setIpAddress(extractIp(request));
-            log.setUserAgent(request.getHeader("User-Agent"));
-            log.setHttpMethod(request.getMethod());
-            log.setEndpoint(request.getRequestURI());
+            audit.setIpAddress(extractIp(request));
+            audit.setUserAgent(request.getHeader("User-Agent"));
+            audit.setHttpMethod(request.getMethod());
+            audit.setEndpoint(request.getRequestURI());
         }
-        return auditLogRepository.save(log);
+        AuditLog saved = auditLogRepository.save(audit);
+        log.debug("Audit persisted: module={} action={} status={}", module, action, status);
+        return saved;
     }
 
     /**
      * Basit log — sadece modül, action ve mesaj (anonim/sistem logu).
      */
     public AuditLog saveLog(String module, String action, String message) {
-        AuditLog log = new AuditLog();
-        log.setModule(module);
-        log.setAction(action);
-        log.setMessage(message);
-        log.setStatus("success");
-        log.setSeverity("info");
-        return auditLogRepository.save(log);
+        AuditLog audit = new AuditLog();
+        audit.setModule(module);
+        audit.setAction(action);
+        audit.setMessage(message);
+        audit.setStatus("success");
+        audit.setSeverity("info");
+        AuditLog saved = auditLogRepository.save(audit);
+        log.debug("Audit persisted: module={} action={}", module, action);
+        return saved;
     }
 
     /**
@@ -87,23 +97,25 @@ public class LogService {
                                     String status,
                                     String message,
                                     HttpServletRequest request) {
-        AuditLog log = new AuditLog();
-        log.setUserId(userId);
-        log.setUserRole(userRole);
-        log.setModule("security");
-        log.setAction(action);
-        log.setStatus(status);
-        log.setSeverity("blocked".equals(status) ? "high" : "warning");
-        log.setMessage(message);
-        log.setSecurityEvent(true);
-        log.setCriticalEvent(true);
+        AuditLog audit = new AuditLog();
+        audit.setUserId(userId);
+        audit.setUserRole(userRole);
+        audit.setModule("security");
+        audit.setAction(action);
+        audit.setStatus(status);
+        audit.setSeverity("blocked".equals(status) ? "high" : "warning");
+        audit.setMessage(message);
+        audit.setSecurityEvent(true);
+        audit.setCriticalEvent(true);
         if (request != null) {
-            log.setIpAddress(extractIp(request));
-            log.setUserAgent(request.getHeader("User-Agent"));
-            log.setHttpMethod(request.getMethod());
-            log.setEndpoint(request.getRequestURI());
+            audit.setIpAddress(extractIp(request));
+            audit.setUserAgent(request.getHeader("User-Agent"));
+            audit.setHttpMethod(request.getMethod());
+            audit.setEndpoint(request.getRequestURI());
         }
-        return auditLogRepository.save(log);
+        AuditLog saved = auditLogRepository.save(audit);
+        log.info("Security audit: action={} status={}", action, status);
+        return saved;
     }
 
     /**
@@ -116,14 +128,16 @@ public class LogService {
                                 String message,
                                 HttpServletRequest request) {
         String severity = "failed".equals(status) || "blocked".equals(status) ? "warning" : "info";
-        AuditLog log = new AuditLog(userId, userRole, "authentication", action, status, severity, message);
+        AuditLog audit = new AuditLog(userId, userRole, "authentication", action, status, severity, message);
         if (request != null) {
-            log.setIpAddress(extractIp(request));
-            log.setUserAgent(request.getHeader("User-Agent"));
-            log.setHttpMethod(request.getMethod());
-            log.setEndpoint(request.getRequestURI());
+            audit.setIpAddress(extractIp(request));
+            audit.setUserAgent(request.getHeader("User-Agent"));
+            audit.setHttpMethod(request.getMethod());
+            audit.setEndpoint(request.getRequestURI());
         }
-        return auditLogRepository.save(log);
+        AuditLog saved = auditLogRepository.save(audit);
+        log.debug("Auth audit: action={} status={}", action, status);
+        return saved;
     }
 
     /**
@@ -135,15 +149,17 @@ public class LogService {
                                  String action,
                                  String message,
                                  HttpServletRequest request) {
-        AuditLog log = new AuditLog(userId, userRole, module, action, "failed", "high", message);
-        log.setCriticalEvent(true);
+        AuditLog audit = new AuditLog(userId, userRole, module, action, "failed", "high", message);
+        audit.setCriticalEvent(true);
         if (request != null) {
-            log.setIpAddress(extractIp(request));
-            log.setUserAgent(request.getHeader("User-Agent"));
-            log.setHttpMethod(request.getMethod());
-            log.setEndpoint(request.getRequestURI());
+            audit.setIpAddress(extractIp(request));
+            audit.setUserAgent(request.getHeader("User-Agent"));
+            audit.setHttpMethod(request.getMethod());
+            audit.setEndpoint(request.getRequestURI());
         }
-        return auditLogRepository.save(log);
+        AuditLog saved = auditLogRepository.save(audit);
+        log.warn("Error audit: module={} action={}", module, action);
+        return saved;
     }
 
     // -------------------------------------------------------

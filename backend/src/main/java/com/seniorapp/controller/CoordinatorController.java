@@ -2,8 +2,12 @@ package com.seniorapp.controller;
 
 import com.seniorapp.dto.ValidStudentUploadRequest;
 import com.seniorapp.entity.User;
+import com.seniorapp.service.LogService;
 import com.seniorapp.service.ValidStudentService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,10 +27,14 @@ import java.util.Map;
 @RequestMapping("/api/coordinator")
 public class CoordinatorController {
 
-    private final ValidStudentService validStudentService;
+    private static final Logger log = LoggerFactory.getLogger(CoordinatorController.class);
 
-    public CoordinatorController(ValidStudentService validStudentService) {
+    private final ValidStudentService validStudentService;
+    private final LogService logService;
+
+    public CoordinatorController(ValidStudentService validStudentService, LogService logService) {
         this.validStudentService = validStudentService;
+        this.logService = logService;
     }
 
     // -------------------------------------------------------
@@ -54,10 +62,27 @@ public class CoordinatorController {
     @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> uploadValidStudents(
             @Valid @RequestBody ValidStudentUploadRequest request,
-            @AuthenticationPrincipal User principal) {
+            @AuthenticationPrincipal User principal,
+            HttpServletRequest httpRequest) {
 
         String uploadedBy = principal != null ? principal.getEmail() : "system";
         int added = validStudentService.uploadStudentIds(request.getStudentIds(), uploadedBy);
+
+        log.info("Whitelist upload: added={} batchSize={} by={}", added, request.getStudentIds().size(), uploadedBy);
+        try {
+            logService.saveLog(
+                    principal != null ? principal.getId() : null,
+                    principal != null ? principal.getRole().name() : "COORDINATOR",
+                    "coordinator",
+                    "whitelist_upload",
+                    "success",
+                    "info",
+                    "Added " + added + " new whitelist row(s); batch size " + request.getStudentIds().size(),
+                    httpRequest
+            );
+        } catch (Exception e) {
+            log.warn("Could not persist whitelist upload audit entry", e);
+        }
 
         return ResponseEntity.ok(Map.of(
                 "message", added + " new student ID(s) added to the whitelist.",

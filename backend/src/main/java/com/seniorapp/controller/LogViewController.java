@@ -2,13 +2,19 @@ package com.seniorapp.controller;
 
 import com.seniorapp.dto.LogResponse;
 import com.seniorapp.entity.AuditLog;
+import com.seniorapp.entity.User;
 import com.seniorapp.repository.AuditLogRepository;
+import com.seniorapp.service.LogService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -26,10 +32,14 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('ADMIN', 'ADVISOR')")
 public class LogViewController {
 
-    private final AuditLogRepository auditLogRepository;
+    private static final Logger log = LoggerFactory.getLogger(LogViewController.class);
 
-    public LogViewController(AuditLogRepository auditLogRepository) {
+    private final AuditLogRepository auditLogRepository;
+    private final LogService logService;
+
+    public LogViewController(AuditLogRepository auditLogRepository, LogService logService) {
         this.auditLogRepository = auditLogRepository;
+        this.logService = logService;
     }
 
     // -------------------------------------------------------
@@ -175,10 +185,28 @@ public class LogViewController {
     @DeleteMapping("/cleanup")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> cleanupOldLogs(
-            @RequestParam(defaultValue = "90") int days) {
+            @RequestParam(defaultValue = "90") int days,
+            @AuthenticationPrincipal User adminUser,
+            HttpServletRequest httpRequest) {
 
         LocalDateTime cutoff = LocalDateTime.now().minusDays(days);
         int deleted = auditLogRepository.deleteOlderThan(cutoff);
+
+        log.warn("Audit log cleanup: deleted {} row(s) older than {} days", deleted, days);
+        try {
+            logService.saveLog(
+                    adminUser != null ? adminUser.getId() : null,
+                    adminUser != null ? adminUser.getRole().name() : "ADMIN",
+                    "log_management",
+                    "audit_cleanup",
+                    "success",
+                    "info",
+                    "Purged " + deleted + " audit row(s) older than " + days + " days",
+                    httpRequest
+            );
+        } catch (Exception e) {
+            log.warn("Could not persist cleanup audit row", e);
+        }
 
         return ResponseEntity.ok(Map.of(
                 "message", "Cleanup completed",
