@@ -59,9 +59,24 @@ export function resetPassword(token, newPassword) {
   });
 }
 
-export async function getGithubLoginUrl() {
-  const data = await request('/auth/github/login');
+/**
+ * @param {string} [studentId] - required for student whitelist flow
+ * @param {'link'|'login'} [flow] - LINK = first-time GitHub link; LOGIN = existing linked account
+ */
+export async function getGithubLoginUrl(studentId, flow) {
+  const qs = new URLSearchParams();
+  if (studentId) qs.set('studentId', studentId);
+  if (flow) qs.set('flow', flow);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  const data = await request(`/auth/github/login${suffix}`);
   return data.authUrl;
+}
+
+export function checkStudentIdValidity(studentId) {
+  return request('/students/student-ids/check-id-validity', {
+    method: 'POST',
+    body: JSON.stringify({ studentId }),
+  });
 }
 
 export function githubCallback(code, state) {

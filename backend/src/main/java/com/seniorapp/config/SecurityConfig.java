@@ -41,7 +41,11 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // ADDED: "/auth/reset-password/**" to allow unauthenticated access to password reset endpoints
-                .requestMatchers("/api/auth/**", "/auth/reset-password/**").permitAll()
+                .requestMatchers(
+                        "/api/auth/**",
+                        "/auth/reset-password/**",
+                        "/api/students/student-ids/check-id-validity"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler()))

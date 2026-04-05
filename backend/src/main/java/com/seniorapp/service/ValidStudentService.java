@@ -1,5 +1,6 @@
 package com.seniorapp.service;
 
+import com.seniorapp.dto.StudentIdValidityResponse;
 import com.seniorapp.entity.ValidStudentId;
 import com.seniorapp.repository.ValidStudentIdRepository;
 import org.springframework.stereotype.Service;
@@ -65,6 +66,24 @@ public class ValidStudentService {
      */
     public boolean isWhitelisted(String studentId) {
         return validStudentIdRepository.existsByStudentId(studentId);
+    }
+
+    /**
+     * Public student-login step: validates ID and reports whether a user account is linked.
+     */
+    @Transactional(readOnly = true)
+    public StudentIdValidityResponse checkStudentIdValidity(String studentId) {
+        if (studentId == null || studentId.isBlank()) {
+            return new StudentIdValidityResponse("", false, false, null);
+        }
+        String sid = studentId.trim();
+        return validStudentIdRepository.findByStudentId(sid)
+                .map(v -> {
+                    boolean linked = v.getAccount() != null;
+                    Long accountId = linked ? v.getAccount().getId() : null;
+                    return new StudentIdValidityResponse(sid, true, linked, accountId);
+                })
+                .orElseGet(() -> new StudentIdValidityResponse(sid, false, false, null));
     }
 
     /**

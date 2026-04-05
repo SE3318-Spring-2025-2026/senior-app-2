@@ -5,15 +5,18 @@ import com.seniorapp.dto.AuthResponse.UserInfo;
 import com.seniorapp.entity.OAuthState;
 import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
+import com.seniorapp.entity.ValidStudentId;
 import com.seniorapp.repository.OAuthStateRepository;
 import com.seniorapp.entity.PasswordResetToken;
 import com.seniorapp.repository.PasswordResetTokenRepository;
 import com.seniorapp.repository.UserRepository;
-import com.seniorapp.repository.StudentWhitelistRepository; // Import eklendi
+import com.seniorapp.repository.StudentWhitelistRepository;
+import com.seniorapp.repository.ValidStudentIdRepository;
 import com.seniorapp.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpEntity;
@@ -22,6 +25,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.core.ParameterizedTypeReference;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -34,8 +39,9 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
-    private final StudentWhitelistRepository whitelistRepository; // Değişken eklendi
+    private final StudentWhitelistRepository whitelistRepository;
     private final OAuthStateRepository oAuthStateRepository;
+    private final ValidStudentIdRepository validStudentIdRepository;
 
     @Value("${github.client.id}")
     private String githubClientId;
@@ -51,13 +57,15 @@ public class AuthService {
                        PasswordEncoder passwordEncoder,
                        JwtUtil jwtUtil,
                        StudentWhitelistRepository whitelistRepository,
-                       OAuthStateRepository oAuthStateRepository) {
+                       OAuthStateRepository oAuthStateRepository,
+                       ValidStudentIdRepository validStudentIdRepository) {
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
-        this.whitelistRepository = whitelistRepository; // Atama eklendi
+        this.whitelistRepository = whitelistRepository;
         this.oAuthStateRepository = oAuthStateRepository;
+        this.validStudentIdRepository = validStudentIdRepository;
     }
 
     public AuthResponse staffLogin(String email, String password) {
@@ -164,29 +172,112 @@ public class AuthService {
 
 
     /**
-     * GitHub OAuth2 akışını yöneten ana metod.
-     * Kullanıcının ilk kez girip girmediğini kontrol eder.
+     * GitHub OAuth callback: legacy email-based flow (no student context) or
+     * student LINK / LOGIN flow using {@link OAuthState} context.
      */
-    public Map<String, Object> githubLogin(String code, String state) {
+    @Transactional
+    public AuthResponse githubLogin(String code, String state) {
         OAuthState savedState = oAuthStateRepository.findById(state)
-                .orElseThrow(() -> new RuntimeException("Geçersiz state parametresi."));
+                .orElseThrow(() -> new RuntimeException("Invalid or expired OAuth state."));
         oAuthStateRepository.delete(savedState);
 
         String accessToken = getGithubAccessToken(code);
         String primaryEmail = getGithubPrimaryEmail(accessToken);
-        User user = validateAndGetUserByEmail(primaryEmail);
+        GithubProfile gh = fetchGithubProfile(accessToken);
 
-        boolean isNewUser = (user.getGithubUsername() == null);
+        if (savedState.getContextStudentId() == null || savedState.getOauthFlow() == null) {
+            User user = validateAndGetUserByEmail(primaryEmail);
+            String jwtToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+            return new AuthResponse(jwtToken, toUserInfo(user));
+        }
 
-
-        String jwtToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
-
-
-        return Map.of(
-                "token", jwtToken,
-                "isNewUser", isNewUser
-        );
+        return completeStudentGithubFlow(savedState, primaryEmail, gh);
     }
+
+    private AuthResponse completeStudentGithubFlow(OAuthState savedState, String primaryEmail, GithubProfile gh) {
+        String studentId = savedState.getContextStudentId();
+        String flow = savedState.getOauthFlow().trim().toUpperCase();
+
+        ValidStudentId entry = validStudentIdRepository.findByStudentId(studentId)
+                .orElseThrow(() -> new RuntimeException("Student ID is no longer valid."));
+
+        if ("LINK".equals(flow)) {
+            if (entry.getAccount() != null) {
+                throw new RuntimeException("This student ID already has a linked account. Sign in with GitHub instead.");
+            }
+            if (userRepository.findByGithubId(gh.githubId()).isPresent()) {
+                throw new RuntimeException("This GitHub account is already linked to another user.");
+            }
+            if (userRepository.findByEmail(primaryEmail).isPresent()) {
+                throw new RuntimeException("This email is already registered. Use a different GitHub account or contact support.");
+            }
+
+            User newUser = new User();
+            newUser.setEmail(primaryEmail);
+            newUser.setFullName(gh.displayName() != null ? gh.displayName() : gh.login());
+            newUser.setRole(Role.STUDENT);
+            newUser.setGithubId(gh.githubId());
+            newUser.setGithubUsername(gh.login());
+            newUser.setEnabled(true);
+            newUser.setPassword(null);
+
+            User saved = userRepository.save(newUser);
+            entry.setAccount(saved);
+            validStudentIdRepository.save(entry);
+
+            String jwt = jwtUtil.generateToken(saved.getId(), saved.getEmail(), saved.getRole().name());
+            return new AuthResponse(jwt, toUserInfo(saved));
+        }
+
+        if ("LOGIN".equals(flow)) {
+            User linked = entry.getAccount();
+            if (linked == null) {
+                throw new RuntimeException("This student ID is not linked yet. Match your GitHub account first.");
+            }
+            if (linked.getGithubId() == null) {
+                linked.setGithubId(gh.githubId());
+                linked.setGithubUsername(gh.login());
+                userRepository.save(linked);
+            } else if (!linked.getGithubId().equals(gh.githubId())) {
+                throw new RuntimeException("Wrong GitHub account for this student ID. Use the account you linked when registering.");
+            }
+            if (!linked.isEnabled()) {
+                throw new RuntimeException("Student account is currently disabled.");
+            }
+            String jwt = jwtUtil.generateToken(linked.getId(), linked.getEmail(), linked.getRole().name());
+            return new AuthResponse(jwt, toUserInfo(linked));
+        }
+
+        throw new RuntimeException("Invalid OAuth flow.");
+    }
+
+    private GithubProfile fetchGithubProfile(String accessToken) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                "https://api.github.com/user",
+                HttpMethod.GET,
+                request,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+
+        Map<String, Object> body = response.getBody();
+        if (body == null || body.get("id") == null) {
+            throw new RuntimeException("Could not read GitHub user profile.");
+        }
+        long id = ((Number) body.get("id")).longValue();
+        String login = (String) body.get("login");
+        if (login == null) {
+            throw new RuntimeException("Could not read GitHub username.");
+        }
+        String name = body.get("name") instanceof String s ? s : null;
+        return new GithubProfile(id, login, name);
+    }
+
+    private record GithubProfile(long githubId, String login, String displayName) {}
 
     /**
      * GitHub'dan erişim belirteci (Access Token) alır.
@@ -257,17 +348,36 @@ public class AuthService {
     }
 
     /**
-     * GitHub OAuth2 Authorization URL'ini oluşturur ve state'i DB'ye kaydeder.
+     * GitHub OAuth authorize URL. Optional {@code studentId} + {@code flow} ({@code LINK} / {@code LOGIN})
+     * enable the student whitelist flow; omit both for legacy staff-style GitHub (email must exist in DB).
      */
-    public String generateGithubAuthUrl() {
+    public String generateGithubAuthUrl(String studentId, String flow) {
         String state = UUID.randomUUID().toString();
+        LocalDateTime now = LocalDateTime.now();
 
+        if (studentId == null || studentId.isBlank() || flow == null || flow.isBlank()) {
+            oAuthStateRepository.save(new OAuthState(state, now));
+        } else {
+            String f = flow.trim().toUpperCase();
+            if (!"LINK".equals(f) && !"LOGIN".equals(f)) {
+                throw new RuntimeException("flow must be LINK or LOGIN");
+            }
+            String sid = studentId.trim();
+            ValidStudentId entry = validStudentIdRepository.findByStudentId(sid)
+                    .orElseThrow(() -> new RuntimeException("Invalid student ID."));
+            if ("LINK".equals(f) && entry.getAccount() != null) {
+                throw new RuntimeException("This student ID already has a linked account. Sign in with GitHub instead.");
+            }
+            if ("LOGIN".equals(f) && entry.getAccount() == null) {
+                throw new RuntimeException("This student ID is not linked yet. Match your GitHub account first.");
+            }
+            oAuthStateRepository.save(new OAuthState(state, now, sid, f));
+        }
 
-        oAuthStateRepository.save(new OAuthState(state, LocalDateTime.now()));
-
+        String encodedRedirect = URLEncoder.encode(githubRedirectUri, StandardCharsets.UTF_8);
         return String.format(
                 "https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:user,user:email&state=%s",
-                githubClientId, githubRedirectUri, state
+                githubClientId, encodedRedirect, state
         );
     }
 }

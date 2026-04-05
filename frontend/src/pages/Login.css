@@ -144,6 +144,16 @@
   background: #1b1f23;
 }
 
+.login-button.secondary-outline {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.login-button.secondary-outline:hover {
+  background: #f9fafb;
+}
+
 .loading {
   display: flex;
   align-items: center;
