@@ -6,7 +6,10 @@ import com.seniorapp.repository.ValidStudentIdRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Service responsible for managing the pre-approved student whitelist
@@ -40,12 +43,28 @@ public class ValidStudentService {
      */
     @Transactional
     public int uploadStudentIds(List<String> studentIds, String addedBy) {
-        List<ValidStudentId> newEntries = studentIds.stream()
+        if (studentIds == null || studentIds.isEmpty()) {
+            return 0;
+        }
+        Set<String> seenInRequest = new LinkedHashSet<>();
+        List<String> normalized = new ArrayList<>();
+        for (String raw : studentIds) {
+            if (raw == null) {
+                continue;
+            }
+            String id = raw.trim();
+            if (id.isEmpty() || !seenInRequest.add(id)) {
+                continue;
+            }
+            normalized.add(id);
+        }
+
+        List<ValidStudentId> newEntries = normalized.stream()
                 .filter(id -> !validStudentIdRepository.existsByStudentId(id))
                 .map(id -> {
                     ValidStudentId entry = new ValidStudentId();
                     entry.setStudentId(id);
-                    entry.setAddedBy(addedBy);
+                    entry.setAddedBy(addedBy != null ? addedBy : "system");
                     return entry;
                 })
                 .toList();

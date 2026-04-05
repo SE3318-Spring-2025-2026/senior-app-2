@@ -14,7 +14,9 @@ import com.seniorapp.repository.StudentWhitelistRepository;
 import com.seniorapp.repository.ValidStudentIdRepository;
 import com.seniorapp.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -42,6 +44,7 @@ public class AuthService {
     private final StudentWhitelistRepository whitelistRepository;
     private final OAuthStateRepository oAuthStateRepository;
     private final ValidStudentIdRepository validStudentIdRepository;
+    private final Environment environment;
 
     @Value("${github.client.id}")
     private String githubClientId;
@@ -58,7 +61,8 @@ public class AuthService {
                        JwtUtil jwtUtil,
                        StudentWhitelistRepository whitelistRepository,
                        OAuthStateRepository oAuthStateRepository,
-                       ValidStudentIdRepository validStudentIdRepository) {
+                       ValidStudentIdRepository validStudentIdRepository,
+                       Environment environment) {
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -66,6 +70,27 @@ public class AuthService {
         this.whitelistRepository = whitelistRepository;
         this.oAuthStateRepository = oAuthStateRepository;
         this.validStudentIdRepository = validStudentIdRepository;
+        this.environment = environment;
+    }
+
+    /**
+     * Resolves credentials: {@code github.client.*} first, then {@code github.internal.default-*}
+     * when env vars {@code GITHUB_CLIENT_ID} / {@code GITHUB_CLIENT_SECRET} are set but empty (common in IDE run configs).
+     */
+    private String resolvedGithubClientId() {
+        if (StringUtils.hasText(githubClientId) && !"placeholder".equalsIgnoreCase(githubClientId.trim())) {
+            return githubClientId.trim();
+        }
+        String fb = environment.getProperty("github.internal.default-client-id");
+        return fb != null ? fb.trim() : "";
+    }
+
+    private String resolvedGithubClientSecret() {
+        if (StringUtils.hasText(githubClientSecret) && !"placeholder".equalsIgnoreCase(githubClientSecret.trim())) {
+            return githubClientSecret.trim();
+        }
+        String fb = environment.getProperty("github.internal.default-client-secret");
+        return fb != null ? fb.trim() : "";
     }
 
     public AuthResponse staffLogin(String email, String password) {
@@ -181,6 +206,7 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Invalid or expired OAuth state."));
         oAuthStateRepository.delete(savedState);
 
+        assertGithubOAuthConfigured();
         String accessToken = getGithubAccessToken(code);
         String primaryEmail = getGithubPrimaryEmail(accessToken);
         GithubProfile gh = fetchGithubProfile(accessToken);
@@ -290,8 +316,8 @@ public class AuthService {
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
         Map<String, String> body = Map.of(
-                "client_id", githubClientId,
-                "client_secret", githubClientSecret,
+                "client_id", resolvedGithubClientId(),
+                "client_secret", resolvedGithubClientSecret(),
                 "code", code,
                 "redirect_uri", githubRedirectUri
         );
@@ -352,6 +378,8 @@ public class AuthService {
      * enable the student whitelist flow; omit both for legacy staff-style GitHub (email must exist in DB).
      */
     public String generateGithubAuthUrl(String studentId, String flow) {
+        assertGithubOAuthConfigured();
+
         String state = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
@@ -377,7 +405,23 @@ public class AuthService {
         String encodedRedirect = URLEncoder.encode(githubRedirectUri, StandardCharsets.UTF_8);
         return String.format(
                 "https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:user,user:email&state=%s",
-                githubClientId, encodedRedirect, state
+                resolvedGithubClientId(), encodedRedirect, state
         );
+    }
+
+    /**
+     * GitHub returns 404 on /login/oauth/authorize when {@code client_id} is invalid (e.g. default {@code placeholder}).
+     */
+    private void assertGithubOAuthConfigured() {
+        String id = resolvedGithubClientId();
+        String secret = resolvedGithubClientSecret();
+        boolean badId = id.isBlank() || "placeholder".equalsIgnoreCase(id);
+        boolean badSecret = secret.isBlank() || "placeholder".equalsIgnoreCase(secret);
+        if (badId || badSecret) {
+            throw new RuntimeException(
+                    "GitHub OAuth is not configured: set environment variables GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET "
+                            + "from a GitHub OAuth App (Settings → Developer settings → OAuth Apps). "
+                            + "Authorization callback URL must be exactly: " + githubRedirectUri);
+        }
     }
 }

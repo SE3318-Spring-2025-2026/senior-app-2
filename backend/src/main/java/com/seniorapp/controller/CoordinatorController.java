@@ -49,7 +49,8 @@ public class CoordinatorController {
      * @param principal the authenticated coordinator performing the upload
      * @return 200 OK with the count of newly added entries
      */
-    @PostMapping("/valid-students")
+    /** Legacy path {@code /whitelist} kept for older clients; prefer {@code /valid-students}. */
+    @PostMapping({"/valid-students", "/whitelist"})
     @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> uploadValidStudents(
             @Valid @RequestBody ValidStudentUploadRequest request,

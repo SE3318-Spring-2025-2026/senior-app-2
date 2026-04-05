@@ -35,7 +35,7 @@ async function request(endpoint, options = {}) {
       window.location.href = '/access-denied';
       throw new Error('Access denied');
     }
-    throw new Error(data.error || 'Something went wrong');
+    throw new Error(data.message || data.error || 'Something went wrong');
   }
 
   return data;
@@ -102,7 +102,7 @@ export function registerStaff(email, fullName, role) {
   
 }
 export function uploadStudentWhitelist(studentIds) {
-  return request('/coordinator/whitelist', {
+  return request('/coordinator/valid-students', {
     method: 'POST',
     body: JSON.stringify({ studentIds }),
   });
