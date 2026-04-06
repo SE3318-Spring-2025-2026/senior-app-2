@@ -7,19 +7,25 @@ import {
 import './Users.css';
 import './StudentManagement.css';
 
-/** Parse CSV / plain text: one ID per line or comma-separated; first column only; skip common header row. */
+/**
+ * CSV / metin: her satırdan yalnızca öğrenci numarası (ilk sütun).
+ * Yeni yüklemede GitHub durumu CSV’de yok; ek sütunlar varsa yok sayılır.
+ */
 function parseStudentIdsFromFileText(text) {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
   const ids = [];
   let isFirstData = true;
+  const headerCells = new Set([
+    'studentid', 'student_id', 'id', 'öğrenci no', 'ogrenci_no', 'ogrenci no',
+    'student no', 'student_no', 'numara', 'ogrencino',
+  ]);
   for (const line of lines) {
-    const rawCell = line.split(',')[0];
+    const rawCell = line.split(/[,;]/)[0];
     const cell = rawCell.replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim();
     if (!cell) continue;
     if (isFirstData) {
       const lower = cell.toLowerCase();
-      if (lower === 'studentid' || lower === 'student_id' || lower === 'id' || lower === 'öğrenci no'
-          || lower === 'ogrenci_no' || lower === 'ogrenci no') {
+      if (headerCells.has(lower)) {
         isFirstData = false;
         continue;
       }
@@ -140,7 +146,8 @@ function StudentManagement() {
       <h1>Koordinatör: Öğrenci beyaz liste</h1>
       <div className="add-user-section">
         <p className="student-mgmt-muted student-mgmt-intro">
-          Öğrenci numaralarını aşağıya yazın, CSV ile sürükleyip bırakın veya dosya seçin.
+          CSV yalnızca öğrenci numarası içerir (tek sütun veya satır başına bir numara); yeni eklenenlerde GitHub girişi listede otomatik <strong>Yapılmadı</strong> görünür.
+          Metin kutusuna da yapıştırabilirsiniz.
         </p>
 
         <div
@@ -174,7 +181,7 @@ function StudentManagement() {
           />
           <div className="student-mgmt-dropzone-inner">
             <strong>CSV sürükleyip bırakın</strong>
-            <span className="student-mgmt-muted">veya tıklayıp .csv seçin — ilk sütun öğrenci numarası</span>
+            <span className="student-mgmt-muted">veya tıklayıp .csv seçin — sadece öğrenci no (tek sütun)</span>
           </div>
         </div>
 
@@ -190,7 +197,7 @@ function StudentManagement() {
               display: 'block',
               fontFamily: 'inherit',
             }}
-            placeholder="Öğrenci numaraları (ör. 210101001, 210101002 veya satır satır)..."
+            placeholder="Öğrenci numaraları: virgül, boşluk veya satır satır (CSV ile aynı mantık)..."
             value={ids}
             onChange={(e) => setIds(e.target.value)}
           />

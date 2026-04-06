@@ -2,20 +2,18 @@
 
 ## Örnek dosya
 
-Repoda örnek şablon: [`ornek-ogrenci-beyaz-liste.csv`](./ornek-ogrenci-beyaz-liste.csv).
+Repoda şablon: [`ornek-ogrenci-beyaz-liste.csv`](./ornek-ogrenci-beyaz-liste.csv).
 
-| Sütun | Açıklama |
-|--------|-----------|
-| `ogrenci_no` | Zorunlu (içe aktarımda kullanılan tek sütun). Öğrenci numarası veya benzersiz kimlik metni. |
-| `githuba_giris` | **Yalnızca örnek / takip.** `yapıldı` veya `yapılmadı` yazabilirsiniz; uygulama yüklerken bu sütunu **yok sayar**. Gerçek durum SeniorApp’te **Koordinatör → Student Whitelist** ekranında listelenir: öğrenci GitHub ile ilk kez giriş yaptığında satır **Yapıldı** olarak görünür. |
+CSV’de **yalnızca öğrenci numarası** olmalı: tercihen tek sütun (`ogrenci_no` başlığı veya başlıksız, her satırda bir numara). Yeni eklenen kayıtlarda GitHub henüz yoktur; **GitHub girişi: Yapıldı / Yapılmadı** bilgisi yalnızca uygulamadaki listede, öğrenci giriş yaptıkça güncellenir — CSV’ye ayrıca yazılmaz.
 
-## İçe aktarma kuralları
+## Kurallar
 
-- Dosya **UTF-8** `.csv` olmalı.
-- İlk satır başlık olabilir (`ogrenci_no`, `student_id`, `id` vb. tanınır ve atlanır).
-- Her satırda **ilk sütun** öğrenci numarası olarak okunur; virgülden sonraki sütunlar içe aktarımda kullanılmaz.
-- Aynı dosyada tekrarlayan numaralar tekilleştirilir; zaten listede olanlar atlanır.
+- Dosya **UTF-8** ve uzantı **`.csv`**.
+- İsteğe bağlı ilk satır başlık: `ogrenci_no`, `student_id`, `studentid`, `id`, `numara` vb. tanınıp atlanır.
+- Her satırda **sadece ilk sütun** okunur; yanlışlıkla eklenmiş ek sütunlar yok sayılır.
+- Tek sütunlu dosyada tüm satırlar öğrenci numarasıdır.
+- Aynı dosyada tekrarlayan numaralar tekilleştirilir; zaten beyaz listede olanlar atlanır.
 
-## GitHub girişi
+## Liste ekranı
 
-Öğrenci beyaz listedeyken GitHub OAuth ile hesap oluşturup bağladığında kayıt sistemde **hesaba bağlı** olur. Arayüzde bu, **GitHub girişi: Yapıldı** olarak gösterilir; henüz giriş yapmamışsa **Yapılmadı**. Bağlı kayıtlar güvenlik nedeniyle silinemez.
+Koordinatör panelindeki tabloda **GitHub girişi** sütunu canlı durumu gösterir. Bağlı (giriş yapılmış) satırlar güvenlik nedeniyle silinemez.
