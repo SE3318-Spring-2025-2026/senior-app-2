@@ -1,0 +1,262 @@
+openapi: 3.0.0
+info:
+  title: Process 2 - Group & Advisor Formation API
+  version: 1.2.0
+  description: >
+    This API manages the processes of students selecting a General Project (Template), 
+    forming groups, setting up tool integrations, and sending advisee requests to professors 
+    assigned to the project's committee.
+servers:
+  - url: http://localhost:3000
+    description: Local Development Server
+
+paths:
+  /api/projects:
+    get:
+      summary: 1.0 List All General Projects (Templates)
+      description: >
+        Created by coordinators. Students browse this list to see available course templates 
+        (e.g., SE 1111) before forming or assigning their group to a project.
+      tags:
+        - Project Templates
+      responses:
+        "200":
+          description: A list of available general project templates.
+          content:
+            application/json:
+              example:
+                - projectId: "proj-se1111"
+                  name: "SE 1111 Graduation Project"
+                  sprintCount: 4
+                  deliverables: ["Analysis", "Design", "Implementation"]
+
+  /api/groups:
+    post:
+      summary: 2.0 Create a New Group & Select Project
+      description: >
+        Triggered by a student. The student MUST select a General Project (Template) during 
+        creation. Once successfully created, the requesting student is assigned as 'Team Leader', 
+        and an 'Actual Project' instance is generated for this group.
+      tags:
+        - Group Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentId:
+                  type: string
+                groupName:
+                  type: string
+                projectId:
+                  type: string
+                  description: The ID of the General Project (Template) selected by the group.
+            example:
+              studentId: "std-12345"
+              groupName: "Tech Titans"
+              projectId: "proj-se1111"
+      responses:
+        "201":
+          description: Group and Actual Project instance created successfully.
+          content:
+            application/json:
+              example:
+                message: "Group created and linked to project successfully."
+                groupId: "grp-98765"
+                teamLeader: "std-12345"
+                projectId: "proj-se1111"
+        "400":
+          description: Missing or invalid data provided.
+          content:
+            application/json:
+              example:
+                error: "Bad Request: 'groupName', 'studentId', and 'projectId' fields are strictly required."
+        "409":
+          description: Conflict. Group name is taken or student is already in a group.
+
+  /api/groups/{groupId}/members:
+    put:
+      summary: 2.1 Add or Remove Group Member
+      description: >
+        Allows the Team Leader to manage their group. The system checks if the student 
+        to be added is already a member of another group.
+      tags:
+        - Group Management
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentId:
+                  type: string
+                action:
+                  type: string
+                  enum: [add, remove]
+            example:
+              studentId: "std-54321"
+              action: "add"
+      responses:
+        "200":
+          description: Member successfully added or removed.
+          content:
+            application/json:
+              example:
+                message: "Student std-54321 successfully added to the group."
+                currentMembers: ["std-12345", "std-54321"]
+        "403":
+          description: Unauthorized action.
+        "404":
+          description: Student not found.
+
+  /api/groups/{groupId}/integrations:
+    post:
+      summary: 2.2 Setup GitHub and JIRA Integration
+      description: >
+        The Team Leader saves the GitHub PAT and JIRA Workspace URL required for the daily AI Sync.
+      tags:
+        - Integrations
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                githubPat:
+                  type: string
+                jiraSpaceUrl:
+                  type: string
+            example:
+              githubPat: "ghp_abc123def456ghi789..."
+              jiraSpaceUrl: "https://myuni.atlassian.net/wiki/spaces/TECH"
+      responses:
+        "201":
+          description: Tokens saved successfully.
+        "400":
+          description: Invalid token or URL format.
+
+  /api/groups/{groupId}/advisor-requests:
+    post:
+      summary: 2.3 Send Advisee Request to Professor
+      description: >
+        The Team Leader sends an advisee request to a professor. The selected professor MUST 
+        be a member of the Committee assigned to the group's chosen General Project (Template).
+      tags:
+        - Advisor Association
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                professorId:
+                  type: string
+            example:
+              professorId: "prof-404"
+      responses:
+        "201":
+          description: Request successfully sent.
+          content:
+            application/json:
+              example:
+                message: "Advisor request sent successfully to Professor prof-404."
+                requestId: "req-888"
+        "403":
+          description: Professor is not in the project's committee.
+          content:
+            application/json:
+              example:
+                error: "Forbidden: This professor is not assigned to the committee for your selected project template."
+        "404":
+          description: Professor not found.
+        "409":
+          description: Group already in the advisor assignment process.
+
+  /api/groups/{groupId}/advisor-requests/{requestId}:
+    put:
+      summary: 2.3 Approve/Decline Advisor Request
+      description: >
+        Can only be used by the target Professor to approve or decline the group's request.
+      tags:
+        - Advisor Association
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                decision:
+                  type: string
+                  enum: [approve, decline]
+            example:
+              decision: "approve"
+      responses:
+        "200":
+          description: Decision processed successfully.
+        "403":
+          description: Unauthorized action (Wrong professor).
+
+  /api/admin/groups/{groupId}/transfer:
+    put:
+      summary: 2.3 (Admin) Transfer Group to Another Advisor
+      description: >
+        The system coordinator (Admin) can manually transfer a group to another professor.
+      tags:
+        - Advisor Association (Admin)
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newProfessorId:
+                  type: string
+            example:
+              newProfessorId: "prof-505"
+      responses:
+        "200":
+          description: Transfer successful.
+        "401":
+          description: Missing admin privileges.
