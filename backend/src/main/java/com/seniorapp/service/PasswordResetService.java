@@ -6,8 +6,6 @@ import com.seniorapp.repository.PasswordResetTokenRepository;
 import com.seniorapp.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder; 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,17 +21,16 @@ public class PasswordResetService {
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
-    private final JavaMailSender mailSender;
-    private final PasswordEncoder passwordEncoder; 
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
-    // Constructor updated to include PasswordEncoder
-    public PasswordResetService(UserRepository userRepository, 
-                                PasswordResetTokenRepository tokenRepository, 
-                                JavaMailSender mailSender,
+    public PasswordResetService(UserRepository userRepository,
+                                PasswordResetTokenRepository tokenRepository,
+                                EmailService emailService,
                                 PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
-        this.mailSender = mailSender;
+        this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -80,18 +77,13 @@ public class PasswordResetService {
         tokenRepository.save(newToken);
 
         String resetLink = "http://localhost:5173/reset-password?token=" + newToken.getToken();
-        
-        // Actual email sending process
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(user.getEmail());
-        message.setSubject("Password Reset Request");
-        message.setText("To reset your password, please click the link below:\n\n" + resetLink);
+        String body = "To reset your password, please click the link below:\n\n" + resetLink;
         try {
-            mailSender.send(message);
+            emailService.sendPlainText(user.getEmail(), "Password Reset Request", body);
             log.info("Password reset email sent userId={}", user.getId());
-        } catch (Exception e) {
-            log.error("Failed to send password reset email userId={}", user.getId(), e);
-            throw new RuntimeException("Failed to send password reset email.", e);
+        } catch (RuntimeException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            throw new RuntimeException("Failed to send password reset email.", cause);
         }
     }
 

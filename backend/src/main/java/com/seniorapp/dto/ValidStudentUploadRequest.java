@@ -5,21 +5,21 @@ import java.util.List;
 
 /**
  * Request body for {@code POST /api/coordinator/valid-students}.
- * Contains a list of student e-mail addresses (or ID strings) that the
- * Coordinator wants to pre-approve for GitHub-based account creation.
+ * List of student identifiers to pre-approve (typically numeric student IDs;
+ * e-mail strings are also allowed). New rows are not linked to GitHub until
+ * the student completes OAuth; the SPA parses CSV as student numbers only (first column).
  *
  * <p>Example JSON:</p>
  * <pre>{@code
  * {
- *   "studentIds": ["std001@uni.edu", "std002@uni.edu"]
+ *   "studentIds": ["210101001", "210101002"]
  * }
  * }</pre>
  */
 public class ValidStudentUploadRequest {
 
     /**
-     * Non-empty list of student e-mail addresses or student ID strings
-     * to add to the whitelist.
+     * Non-empty list of student ID strings (or e-mails) to whitelist.
      */
     @NotEmpty(message = "studentIds list must not be empty")
     private List<String> studentIds;
