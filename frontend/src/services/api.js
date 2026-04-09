@@ -125,3 +125,18 @@ export function getGitHubAuthUrl() {
 export function getLogs(page = 0, size = 20) {
   return request(`/logs?page=${page}&size=${size}`);
 }
+
+// Group Integration APIs
+export function setupIntegrations(groupId, githubPat, jiraSpaceUrl) {
+  return request(`/groups/${groupId}/integrations`, {
+    method: 'POST',
+    body: JSON.stringify({ 
+      githubPat, 
+      jiraSpaceUrl 
+    }),
+  });
+}
+
+export function getGroupIntegrations(groupId) {
+  return request(`/groups/${groupId}/integrations`);
+}
