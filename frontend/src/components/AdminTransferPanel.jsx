@@ -10,12 +10,15 @@ function AdminTransferPanel() {
       return;
     }
     try {
-      await fetch(`http://localhost:3000/api/admin/groups/${groupId}/transfer`, {
+      const response = await fetch(`http://localhost:3000/api/admin/groups/${groupId}/transfer`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newProfessorId })
       });
-      alert(`Transfer request sent! Target Professor: ${newProfessorId}`);
+
+      if (response.status === 200) alert(`Transfer successful! Target Professor: ${newProfessorId}`);
+      else if (response.status === 401) alert("Error: Missing admin privileges.");
+      else alert("Transfer failed.");
     } catch (error) {
       alert("Backend is unreachable, but admin transfer logic works!");
     }
@@ -34,22 +37,20 @@ function AdminTransferPanel() {
           type="text" 
           value={groupId} 
           onChange={(e) => setGroupId(e.target.value)} 
-          placeholder="e.g., grp-12345"
+          placeholder="e.g., grp-98765"
           style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #fdba74', outline: 'none', backgroundColor: '#fff' }}
         />
       </div>
 
       <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', fontSize: '14px', color: '#9a3412', marginBottom: '8px', fontWeight: '500' }}>New Professor</label>
-        <select 
+        <label style={{ display: 'block', fontSize: '14px', color: '#9a3412', marginBottom: '8px', fontWeight: '500' }}>New Professor ID</label>
+        <input 
+          type="text" 
           value={newProfessorId} 
           onChange={(e) => setNewProfessorId(e.target.value)}
+          placeholder="e.g., prof-505"
           style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #fdba74', outline: 'none', backgroundColor: '#fff' }}
-        >
-          <option value="">Select a Professor...</option>
-          <option value="prof-505">Dr. Ayse Yilmaz (prof-505)</option>
-          <option value="prof-606">Dr. Mehmet Demir (prof-606)</option>
-        </select>
+        />
       </div>
 
       <button 
