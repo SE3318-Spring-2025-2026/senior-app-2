@@ -9,7 +9,8 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement';
-import ResetPassword from './pages/ResetPassword'; 
+import ResetPassword from './pages/ResetPassword';
+import GroupManagement from './pages/GroupManagement'; 
 
 function App() {
   return (
@@ -33,6 +34,9 @@ function App() {
         
         {/* Koordinatör rotası */}
         <Route path="whitelist" element={<StudentManagement />} />
+        
+        {/* Grup Yönetimi - Team Leader */}
+        <Route path="group" element={<GroupManagement />} />
         
         <Route
           path="users"
