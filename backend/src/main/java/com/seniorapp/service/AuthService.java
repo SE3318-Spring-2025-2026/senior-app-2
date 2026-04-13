@@ -377,28 +377,30 @@ public class AuthService {
      * GitHub OAuth authorize URL. Optional {@code studentId} + {@code flow} ({@code LINK} / {@code LOGIN})
      * enable the student whitelist flow; omit both for legacy staff-style GitHub (email must exist in DB).
      */
-    public String generateGithubAuthUrl(String studentId, String flow) {
+   public String generateGithubAuthUrl(String studentId, String flow) {
         assertGithubOAuthConfigured();
 
         String state = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
-        if (studentId == null || studentId.isBlank() || flow == null || flow.isBlank()) {
+        // EĞER PARAMETRELER EKSİKSE VEYA HATALIYSA SİSTEM KENDİ KARAR VERSİN
+        if (studentId == null || studentId.isBlank()) {
             oAuthStateRepository.save(new OAuthState(state, now));
         } else {
-            String f = flow.trim().toUpperCase();
-            if (!"LINK".equals(f) && !"LOGIN".equals(f)) {
-                throw new RuntimeException("flow must be LINK or LOGIN");
-            }
             String sid = studentId.trim();
             ValidStudentId entry = validStudentIdRepository.findByStudentId(sid)
                     .orElseThrow(() -> new RuntimeException("Invalid student ID."));
-            if ("LINK".equals(f) && entry.getAccount() != null) {
-                throw new RuntimeException("This student ID already has a linked account. Sign in with GitHub instead.");
+
+            // BURASI KRİTİK: Eğer flow boşsa veya "undefined" gibi saçma bir şey geldiyse 
+            // veritabanına bakıp kararı biz verelim.
+            String f;
+            if (flow == null || flow.isBlank() || "undefined".equalsIgnoreCase(flow) || "null".equalsIgnoreCase(flow)) {
+                f = (entry.getAccount() == null) ? "LINK" : "LOGIN";
+            } else {
+                f = flow.trim().toUpperCase();
             }
-            if ("LOGIN".equals(f) && entry.getAccount() == null) {
-                throw new RuntimeException("This student ID is not linked yet. Match your GitHub account first.");
-            }
+
+            // Artık hata fırlatmak yerine güvenli bir şekilde kaydediyoruz
             oAuthStateRepository.save(new OAuthState(state, now, sid, f));
         }
 
