@@ -16,15 +16,11 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      {/* Sayfanı buraya aldım, böylece giriş yapmadan görebileceksin */}
-      <Route path="/create-group" element={<CreateGroup />} /> 
-      
       <Route path="/auth/callback" element={<GitHubCallback />} />
       <Route path="/access-denied" element={<AccessDenied />} />
-      
       <Route path="/reset-password" element={<ResetPassword />} />
-
       <Route path="/auth/github/callback" element={<GitHubCallback />} />
+
       <Route
         path="/panel"
         element={
@@ -34,8 +30,7 @@ function App() {
         }
       >
         <Route index element={<Dashboard />} />
-        
-        {/* Koordinatör rotası */}
+        <Route path="create-group" element={<CreateGroup />} /> 
         <Route path="whitelist" element={<StudentManagement />} />
         
         <Route
