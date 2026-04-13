@@ -10,11 +10,15 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement';
 import ResetPassword from './pages/ResetPassword'; 
+import CreateGroup from './pages/CreateGroup'; 
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
+      {/* Sayfanı buraya aldım, böylece giriş yapmadan görebileceksin */}
+      <Route path="/create-group" element={<CreateGroup />} /> 
+      
       <Route path="/auth/callback" element={<GitHubCallback />} />
       <Route path="/access-denied" element={<AccessDenied />} />
       
