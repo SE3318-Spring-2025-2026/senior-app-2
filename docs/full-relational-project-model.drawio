@@ -1,0 +1,86 @@
+<mxfile host="app.diagrams.net" modified="2026-04-14T12:40:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="project-er" name="Project ER">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="project_templates" value="project_templates&#xa;-----------------------------&#xa;PK id&#xa;name&#xa;description&#xa;term&#xa;created_by&#xa;created_by_user_id&#xa;project_start_date&#xa;version&#xa;active&#xa;template_json&#xa;created_at&#xa;updated_at" style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="280" height="310" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="projects" value="projects&#xa;-----------------------------&#xa;PK id&#xa;FK template_id -&gt; project_templates.id&#xa;title&#xa;term&#xa;status&#xa;created_by_user_id&#xa;created_at&#xa;updated_at" style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="420" y="40" width="320" height="240" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="project_sprints" value="project_sprints&#xa;-----------------------------&#xa;PK id&#xa;FK project_id -&gt; projects.id&#xa;sprint_no (unique with project_id)&#xa;title&#xa;start_date&#xa;end_date" style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="840" y="40" width="320" height="220" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="project_deliverables" value="project_deliverables&#xa;-----------------------------&#xa;PK id&#xa;FK project_sprint_id -&gt; project_sprints.id&#xa;type&#xa;title&#xa;description&#xa;weight&#xa;file_upload_deliverable&#xa;auto_add_to_all_sprints" style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="20" width="360" height="260" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="project_evaluations" value="project_evaluations&#xa;-----------------------------&#xa;PK id&#xa;FK project_sprint_id -&gt; project_sprints.id&#xa;title&#xa;weight&#xa;auto_add_to_all_sprints" style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="320" width="360" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="project_deliverable_rubrics" value="project_deliverable_rubrics&#xa;-----------------------------&#xa;PK id&#xa;FK project_deliverable_id -&gt; project_deliverables.id&#xa;title&#xa;criteria_type&#xa;display_order" style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="20" width="360" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="project_evaluation_rubrics" value="project_evaluation_rubrics&#xa;-----------------------------&#xa;PK id&#xa;FK project_evaluation_id -&gt; project_evaluations.id&#xa;title&#xa;criteria_type&#xa;display_order" style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="320" width="360" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="project_group_assignments" value="project_group_assignments&#xa;-----------------------------&#xa;PK id&#xa;FK project_id -&gt; projects.id&#xa;group_id&#xa;assigned_by_user_id&#xa;assigned_at&#xa;active" style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="420" y="340" width="320" height="210" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="users" value="users&#xa;-----------------------------&#xa;PK id&#xa;email&#xa;full_name&#xa;role&#xa;status&#xa;..." style="shape=swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=26;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="280" height="170" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_template_project" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="project_templates" target="projects">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_project_sprints" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="projects" target="project_sprints">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_sprint_deliverables" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="project_sprints" target="project_deliverables">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_sprint_evaluations" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="project_sprints" target="project_evaluations">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_deliverable_rubrics" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="project_deliverables" target="project_deliverable_rubrics">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_evaluation_rubrics" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="project_evaluations" target="project_evaluation_rubrics">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_project_assignments" value="1:N (history)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="projects" target="project_group_assignments">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_createdby_project" value="created_by_user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=open;" edge="1" parent="1" source="users" target="projects">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_createdby_template" value="created_by_user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=open;" edge="1" parent="1" source="users" target="project_templates">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_assignedby" value="assigned_by_user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=open;" edge="1" parent="1" source="users" target="project_group_assignments">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

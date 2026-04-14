@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement';
 import ResetPassword from './pages/ResetPassword'; 
+import TemplateBuilder from './pages/TemplateBuilder';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         
         {/* Koordinatör rotası */}
         <Route path="whitelist" element={<StudentManagement />} />
+        <Route path="template-builder" element={<TemplateBuilder />} />
         
         <Route
           path="users"
