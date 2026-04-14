@@ -6,10 +6,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.seniorapp.dto.projecttemplate.CreateProjectTemplateRequest;
+import com.seniorapp.dto.projecttemplate.ProjectTemplateResponses.ProfessorOptionDto;
 import com.seniorapp.dto.projecttemplate.ProjectTemplateResponses.ProjectTemplateDetail;
 import com.seniorapp.dto.projecttemplate.ProjectTemplateResponses.ProjectTemplateSummary;
+import com.seniorapp.dto.projecttemplate.ProjectTemplateResponses.TemplateCommitteeDto;
 import com.seniorapp.entity.ProjectTemplate;
+import com.seniorapp.entity.Role;
+import com.seniorapp.entity.TemplateCommittee;
+import com.seniorapp.entity.TemplateCommitteeProfessor;
+import com.seniorapp.entity.User;
 import com.seniorapp.repository.ProjectTemplateRepository;
+import com.seniorapp.repository.TemplateCommitteeProfessorRepository;
+import com.seniorapp.repository.TemplateCommitteeRepository;
+import com.seniorapp.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,10 +45,22 @@ public class ProjectTemplateService {
     );
 
     private final ProjectTemplateRepository repository;
+    private final TemplateCommitteeProfessorRepository templateCommitteeProfessorRepository;
+    private final TemplateCommitteeRepository templateCommitteeRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
-    public ProjectTemplateService(ProjectTemplateRepository repository, ObjectMapper objectMapper) {
+    public ProjectTemplateService(
+            ProjectTemplateRepository repository,
+            TemplateCommitteeProfessorRepository templateCommitteeProfessorRepository,
+            TemplateCommitteeRepository templateCommitteeRepository,
+            UserRepository userRepository,
+            ObjectMapper objectMapper
+    ) {
         this.repository = repository;
+        this.templateCommitteeProfessorRepository = templateCommitteeProfessorRepository;
+        this.templateCommitteeRepository = templateCommitteeRepository;
+        this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -75,18 +96,115 @@ public class ProjectTemplateService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectTemplateSummary> listTemplates() {
-        return repository.findAll().stream()
+    public List<ProjectTemplateSummary> listTemplates(Long requesterUserId, boolean professorOnlyAssigned) {
+        List<ProjectTemplate> templates;
+        if (professorOnlyAssigned) {
+            Long safeUserId = Objects.requireNonNull(requesterUserId, "Authenticated professor id is required.");
+            List<Long> templateIds = templateCommitteeProfessorRepository.findDistinctTemplateIdsByProfessorUserId(safeUserId);
+            templates = templateIds.isEmpty()
+                    ? List.of()
+                    : repository.findAllById(templateIds);
+        } else {
+            templates = repository.findAll();
+        }
+        return templates.stream()
                 .map(this::toSummary)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ProjectTemplateDetail getTemplate(Long templateId) {
+    public ProjectTemplateDetail getTemplate(Long templateId, Long requesterUserId, boolean professorOnlyAssigned) {
+        if (professorOnlyAssigned) {
+            ensureProfessorTemplateAccess(templateId, requesterUserId);
+        }
         Long safeTemplateId = Objects.requireNonNull(templateId, "templateId cannot be null.");
         ProjectTemplate template = repository.findById(safeTemplateId)
                 .orElseThrow(() -> new NoSuchElementException("Project template not found: " + templateId));
         return toDetail(template);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TemplateCommitteeDto> listTemplateCommittees(Long templateId, Long requesterUserId, boolean professorOnlyAssigned) {
+        if (professorOnlyAssigned) {
+            ensureProfessorTemplateAccess(templateId, requesterUserId);
+        }
+        Long safeTemplateId = Objects.requireNonNull(templateId, "templateId cannot be null.");
+        if (!repository.existsById(safeTemplateId)) {
+            throw new NoSuchElementException("Project template not found: " + templateId);
+        }
+        return templateCommitteeRepository.findByTemplateIdOrderByIdAsc(safeTemplateId).stream()
+                .map(this::toTemplateCommitteeDto)
+                .toList();
+    }
+
+    @Transactional
+    public TemplateCommitteeDto createTemplateCommittee(Long templateId, String name) {
+        Long safeTemplateId = Objects.requireNonNull(templateId, "templateId cannot be null.");
+        ProjectTemplate template = repository.findById(safeTemplateId)
+                .orElseThrow(() -> new NoSuchElementException("Project template not found: " + templateId));
+        String resolvedName = name == null || name.isBlank()
+                ? "Committee " + (templateCommitteeRepository.findByTemplateIdOrderByIdAsc(safeTemplateId).size() + 1)
+                : name.trim();
+
+        TemplateCommittee committee = new TemplateCommittee();
+        committee.setTemplate(template);
+        committee.setName(resolvedName);
+        return toTemplateCommitteeDto(templateCommitteeRepository.save(committee));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProfessorOptionDto> listProfessors() {
+        return userRepository.findByRole(Role.PROFESSOR).stream()
+                .map(this::toProfessorOptionDto)
+                .toList();
+    }
+
+    @Transactional
+    public TemplateCommitteeDto addProfessorToTemplateCommittee(Long templateId, Long committeeId, Long professorUserId) {
+        if (professorUserId == null) {
+            throw new IllegalArgumentException("professorUserId is required.");
+        }
+        TemplateCommittee committee = getCommitteeBelongsToTemplate(templateId, committeeId);
+        User professor = userRepository.findById(professorUserId)
+                .orElseThrow(() -> new NoSuchElementException("Professor not found: " + professorUserId));
+        if (professor.getRole() != Role.PROFESSOR) {
+            throw new IllegalArgumentException("Selected user is not a professor.");
+        }
+        boolean exists = committee.getProfessors().stream()
+                .anyMatch(member -> Objects.equals(member.getProfessor().getId(), professorUserId));
+        if (!exists) {
+            TemplateCommitteeProfessor member = new TemplateCommitteeProfessor();
+            member.setCommittee(committee);
+            member.setProfessor(professor);
+            committee.getProfessors().add(member);
+            committee = templateCommitteeRepository.save(committee);
+        }
+        return toTemplateCommitteeDto(committee);
+    }
+
+    @Transactional
+    public void deleteTemplateCommittee(Long templateId, Long committeeId) {
+        TemplateCommittee committee = getCommitteeBelongsToTemplate(templateId, committeeId);
+        templateCommitteeRepository.delete(Objects.requireNonNull(committee));
+    }
+
+    @Transactional
+    public TemplateCommitteeDto removeProfessorFromTemplateCommittee(Long templateId, Long committeeId, Long professorUserId) {
+        TemplateCommittee committee = getCommitteeBelongsToTemplate(templateId, committeeId);
+        committee.getProfessors().removeIf(member ->
+                Objects.equals(member.getProfessor().getId(), professorUserId)
+        );
+        return toTemplateCommitteeDto(templateCommitteeRepository.save(committee));
+    }
+
+    private void ensureProfessorTemplateAccess(Long templateId, Long requesterUserId) {
+        Long safeTemplateId = Objects.requireNonNull(templateId, "templateId cannot be null.");
+        Long safeUserId = Objects.requireNonNull(requesterUserId, "Authenticated professor id is required.");
+        boolean assigned = templateCommitteeProfessorRepository
+                .existsByCommittee_Template_IdAndProfessor_Id(safeTemplateId, safeUserId);
+        if (!assigned) {
+            throw new NoSuchElementException("Project template not found: " + templateId);
+        }
     }
 
     private void validateRequest(CreateProjectTemplateRequest request) {
@@ -260,5 +378,36 @@ public class ProjectTemplateService {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Stored project template payload is invalid JSON.", e);
         }
+    }
+
+    private TemplateCommittee getCommitteeBelongsToTemplate(Long templateId, Long committeeId) {
+        Long safeTemplateId = Objects.requireNonNull(templateId, "templateId cannot be null.");
+        Long safeCommitteeId = Objects.requireNonNull(committeeId, "committeeId cannot be null.");
+        TemplateCommittee committee = templateCommitteeRepository.findById(safeCommitteeId)
+                .orElseThrow(() -> new NoSuchElementException("Committee not found: " + committeeId));
+        if (!Objects.equals(committee.getTemplate().getId(), safeTemplateId)) {
+            throw new IllegalArgumentException("Committee does not belong to this template.");
+        }
+        return committee;
+    }
+
+    private TemplateCommitteeDto toTemplateCommitteeDto(TemplateCommittee committee) {
+        TemplateCommitteeDto dto = new TemplateCommitteeDto();
+        dto.setCommitteeId(committee.getId());
+        dto.setTemplateId(committee.getTemplate().getId());
+        dto.setName(committee.getName());
+        dto.setProfessors(committee.getProfessors().stream()
+                .map(TemplateCommitteeProfessor::getProfessor)
+                .map(this::toProfessorOptionDto)
+                .toList());
+        return dto;
+    }
+
+    private ProfessorOptionDto toProfessorOptionDto(User professor) {
+        ProfessorOptionDto dto = new ProfessorOptionDto();
+        dto.setUserId(professor.getId());
+        dto.setFullName(professor.getFullName());
+        dto.setEmail(professor.getEmail());
+        return dto;
     }
 }

@@ -48,7 +48,7 @@ public class ProjectController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<ProjectListResponse> listProjects(
             @RequestParam(required = false) String term,
             @RequestParam(required = false) Long templateId,
@@ -58,9 +58,64 @@ public class ProjectController {
     }
 
     @GetMapping("/{projectId}")
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable Long projectId) {
         return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId)));
+    }
+
+    @GetMapping("/professors")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    public ResponseEntity<ProfessorListResponse> listProfessors() {
+        return ResponseEntity.ok(new ProfessorListResponse("success", projectService.listProfessors()));
+    }
+
+    @GetMapping("/{projectId}/committees")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    public ResponseEntity<CommitteeListResponse> listCommittees(@PathVariable Long projectId) {
+        return ResponseEntity.ok(new CommitteeListResponse("success", projectService.listCommittees(projectId)));
+    }
+
+    @PostMapping("/{projectId}/committees")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> createCommittee(
+            @PathVariable Long projectId,
+            @RequestBody(required = false) CreateCommitteeRequest request
+    ) {
+        String name = request != null ? request.getName() : null;
+        CommitteeDto committee = projectService.createCommittee(projectId, name);
+        return ResponseEntity.ok(Map.of("status", "success", "data", committee));
+    }
+
+    @PostMapping("/{projectId}/committees/{committeeId}/professors")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> addProfessorToCommittee(
+            @PathVariable Long projectId,
+            @PathVariable Long committeeId,
+            @Valid @RequestBody AddProfessorToCommitteeRequest request
+    ) {
+        CommitteeDto committee = projectService.addProfessorToCommittee(projectId, committeeId, request.getProfessorUserId());
+        return ResponseEntity.ok(Map.of("status", "success", "data", committee));
+    }
+
+    @DeleteMapping("/{projectId}/committees/{committeeId}")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> deleteCommittee(
+            @PathVariable Long projectId,
+            @PathVariable Long committeeId
+    ) {
+        projectService.deleteCommittee(projectId, committeeId);
+        return ResponseEntity.ok(Map.of("status", "success"));
+    }
+
+    @DeleteMapping("/{projectId}/committees/{committeeId}/professors/{professorUserId}")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> removeProfessorFromCommittee(
+            @PathVariable Long projectId,
+            @PathVariable Long committeeId,
+            @PathVariable Long professorUserId
+    ) {
+        CommitteeDto committee = projectService.removeProfessorFromCommittee(projectId, committeeId, professorUserId);
+        return ResponseEntity.ok(Map.of("status", "success", "data", committee));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

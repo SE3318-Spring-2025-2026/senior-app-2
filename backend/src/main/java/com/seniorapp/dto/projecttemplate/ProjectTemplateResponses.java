@@ -283,4 +283,133 @@ public final class ProjectTemplateResponses {
             return data;
         }
     }
+
+    public static class CreateCommitteeRequest {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
+    public static class AddProfessorToCommitteeRequest {
+        private Long professorUserId;
+
+        public Long getProfessorUserId() {
+            return professorUserId;
+        }
+
+        public void setProfessorUserId(Long professorUserId) {
+            this.professorUserId = professorUserId;
+        }
+    }
+
+    public static class TemplateCommitteeDto {
+        private Long committeeId;
+        private Long templateId;
+        private String name;
+        private List<ProfessorOptionDto> professors;
+
+        public Long getCommitteeId() {
+            return committeeId;
+        }
+
+        public void setCommitteeId(Long committeeId) {
+            this.committeeId = committeeId;
+        }
+
+        public Long getTemplateId() {
+            return templateId;
+        }
+
+        public void setTemplateId(Long templateId) {
+            this.templateId = templateId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public List<ProfessorOptionDto> getProfessors() {
+            return professors;
+        }
+
+        public void setProfessors(List<ProfessorOptionDto> professors) {
+            this.professors = professors;
+        }
+    }
+
+    public static class ProfessorOptionDto {
+        private Long userId;
+        private String fullName;
+        private String email;
+
+        public Long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(Long userId) {
+            this.userId = userId;
+        }
+
+        public String getFullName() {
+            return fullName;
+        }
+
+        public void setFullName(String fullName) {
+            this.fullName = fullName;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    }
+
+    public static class TemplateCommitteeListResponse {
+        private String status;
+        private List<TemplateCommitteeDto> data;
+
+        public TemplateCommitteeListResponse(String status, List<TemplateCommitteeDto> data) {
+            this.status = status;
+            this.data = data;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public List<TemplateCommitteeDto> getData() {
+            return data;
+        }
+    }
+
+    public static class ProfessorListResponse {
+        private String status;
+        private List<ProfessorOptionDto> data;
+
+        public ProfessorListResponse(String status, List<ProfessorOptionDto> data) {
+            this.status = status;
+            this.data = data;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public List<ProfessorOptionDto> getData() {
+            return data;
+        }
+    }
 }

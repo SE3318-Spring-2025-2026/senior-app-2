@@ -7,6 +7,9 @@ import com.seniorapp.entity.*;
 import com.seniorapp.repository.ProjectGroupAssignmentRepository;
 import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectTemplateRepository;
+import com.seniorapp.repository.ProjectCommitteeRepository;
+import com.seniorapp.repository.ProjectCommitteeProfessorRepository;
+import com.seniorapp.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +29,26 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectTemplateRepository projectTemplateRepository;
     private final ProjectGroupAssignmentRepository assignmentRepository;
+    private final ProjectCommitteeRepository projectCommitteeRepository;
+    private final ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     public ProjectService(
             ProjectRepository projectRepository,
             ProjectTemplateRepository projectTemplateRepository,
             ProjectGroupAssignmentRepository assignmentRepository,
+            ProjectCommitteeRepository projectCommitteeRepository,
+            ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository,
+            UserRepository userRepository,
             ObjectMapper objectMapper
     ) {
         this.projectRepository = projectRepository;
         this.projectTemplateRepository = projectTemplateRepository;
         this.assignmentRepository = assignmentRepository;
+        this.projectCommitteeRepository = projectCommitteeRepository;
+        this.projectCommitteeProfessorRepository = projectCommitteeProfessorRepository;
+        this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -123,7 +135,11 @@ public class ProjectService {
     public List<ProjectSummary> listProjects(String term, Long templateId, Long groupId) {
         return projectRepository.findAll().stream()
                 .filter(project -> term == null || term.isBlank() || project.getTerm().equalsIgnoreCase(term.trim()))
-                .filter(project -> templateId == null || Objects.equals(project.getTemplate().getId(), templateId))
+                .filter(project -> {
+                    if (templateId == null) return true;
+                    ProjectTemplate template = project.getTemplate();
+                    return template != null && Objects.equals(template.getId(), templateId);
+                })
                 .filter(project -> {
                     if (groupId == null) return true;
                     return Objects.equals(project.getGroupId(), groupId);
@@ -138,6 +154,107 @@ public class ProjectService {
         Project project = projectRepository.findById(safeProjectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found: " + projectId));
         return toDetail(project);
+    }
+
+    @Transactional
+    public CommitteeDto createCommittee(Long projectId, String name) {
+        Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        Project project = projectRepository.findById(safeProjectId)
+                .orElseThrow(() -> new NoSuchElementException("Project not found: " + projectId));
+
+        String resolvedName = name == null || name.isBlank()
+                ? "Committee " + (projectCommitteeRepository.findByProjectIdOrderByIdAsc(safeProjectId).size() + 1)
+                : name.trim();
+
+        ProjectCommittee committee = new ProjectCommittee();
+        committee.setProject(project);
+        committee.setName(resolvedName);
+        ProjectCommittee saved = projectCommitteeRepository.save(committee);
+        return toCommitteeDto(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CommitteeDto> listCommittees(Long projectId) {
+        Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        if (!projectRepository.existsById(safeProjectId)) {
+            throw new NoSuchElementException("Project not found: " + projectId);
+        }
+        return projectCommitteeRepository.findByProjectIdOrderByIdAsc(safeProjectId).stream()
+                .map(this::toCommitteeDto)
+                .toList();
+    }
+
+    @Transactional
+    public CommitteeDto addProfessorToCommittee(Long projectId, Long committeeId, Long professorUserId) {
+        if (professorUserId == null) {
+            throw new IllegalArgumentException("professorUserId is required.");
+        }
+        Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        Long safeCommitteeId = Objects.requireNonNull(committeeId, "committeeId is required.");
+        ProjectCommittee committee = projectCommitteeRepository.findById(safeCommitteeId)
+                .orElseThrow(() -> new NoSuchElementException("Committee not found: " + committeeId));
+        if (!Objects.equals(committee.getProject().getId(), safeProjectId)) {
+            throw new IllegalArgumentException("Committee does not belong to this project.");
+        }
+
+        User professor = userRepository.findById(professorUserId)
+                .orElseThrow(() -> new NoSuchElementException("Professor not found: " + professorUserId));
+        if (professor.getRole() != Role.PROFESSOR) {
+            throw new IllegalArgumentException("Selected user is not a professor.");
+        }
+
+        boolean alreadyExists = committee.getProfessors().stream()
+                .anyMatch(member -> Objects.equals(member.getProfessor().getId(), professorUserId));
+        if (alreadyExists) {
+            return toCommitteeDto(committee);
+        }
+
+        ProjectCommitteeProfessor member = new ProjectCommitteeProfessor();
+        member.setCommittee(committee);
+        member.setProfessor(professor);
+        projectCommitteeProfessorRepository.save(member);
+
+        ProjectCommittee reloaded = projectCommitteeRepository.findById(safeCommitteeId)
+                .orElseThrow(() -> new NoSuchElementException("Committee not found after update: " + committeeId));
+        return toCommitteeDto(reloaded);
+    }
+
+    @Transactional
+    public void deleteCommittee(Long projectId, Long committeeId) {
+        Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        Long safeCommitteeId = Objects.requireNonNull(committeeId, "committeeId is required.");
+        ProjectCommittee committee = projectCommitteeRepository.findById(safeCommitteeId)
+                .orElseThrow(() -> new NoSuchElementException("Committee not found: " + committeeId));
+        if (!Objects.equals(committee.getProject().getId(), safeProjectId)) {
+            throw new IllegalArgumentException("Committee does not belong to this project.");
+        }
+        projectCommitteeRepository.delete(committee);
+    }
+
+    @Transactional
+    public CommitteeDto removeProfessorFromCommittee(Long projectId, Long committeeId, Long professorUserId) {
+        Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        Long safeCommitteeId = Objects.requireNonNull(committeeId, "committeeId is required.");
+        Long safeProfessorUserId = Objects.requireNonNull(professorUserId, "professorUserId is required.");
+
+        ProjectCommittee committee = projectCommitteeRepository.findById(safeCommitteeId)
+                .orElseThrow(() -> new NoSuchElementException("Committee not found: " + committeeId));
+        if (!Objects.equals(committee.getProject().getId(), safeProjectId)) {
+            throw new IllegalArgumentException("Committee does not belong to this project.");
+        }
+
+        committee.getProfessors().removeIf(member ->
+                Objects.equals(member.getProfessor().getId(), safeProfessorUserId)
+        );
+        ProjectCommittee saved = projectCommitteeRepository.save(committee);
+        return toCommitteeDto(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProfessorOptionDto> listProfessors() {
+        return userRepository.findByRole(Role.PROFESSOR).stream()
+                .map(this::toProfessorOptionDto)
+                .toList();
     }
 
     private List<ProjectSprint> buildProjectSprints(Project project, JsonNode sprintsNode) {
@@ -232,7 +349,8 @@ public class ProjectService {
     private ProjectSummary toSummary(Project project) {
         ProjectSummary summary = new ProjectSummary();
         summary.setProjectId(project.getId());
-        summary.setTemplateId(project.getTemplate().getId());
+        ProjectTemplate template = project.getTemplate();
+        summary.setTemplateId(template != null ? template.getId() : null);
         summary.setTitle(project.getTitle());
         summary.setTerm(project.getTerm());
         summary.setStatus(project.getStatus().name());
@@ -244,7 +362,8 @@ public class ProjectService {
     private ProjectDetail toDetail(Project project) {
         ProjectDetail detail = new ProjectDetail();
         detail.setProjectId(project.getId());
-        detail.setTemplateId(project.getTemplate().getId());
+        ProjectTemplate template = project.getTemplate();
+        detail.setTemplateId(template != null ? template.getId() : null);
         detail.setTitle(project.getTitle());
         detail.setTerm(project.getTerm());
         detail.setStatus(project.getStatus().name());
@@ -308,6 +427,26 @@ public class ProjectService {
         RubricDto dto = new RubricDto();
         dto.setTitle(rubric.getTitle());
         dto.setCriteriaType(rubric.getCriteriaType());
+        return dto;
+    }
+
+    private CommitteeDto toCommitteeDto(ProjectCommittee committee) {
+        CommitteeDto dto = new CommitteeDto();
+        dto.setCommitteeId(committee.getId());
+        dto.setProjectId(committee.getProject().getId());
+        dto.setName(committee.getName());
+        dto.setProfessors(committee.getProfessors().stream()
+                .map(ProjectCommitteeProfessor::getProfessor)
+                .map(this::toProfessorOptionDto)
+                .toList());
+        return dto;
+    }
+
+    private ProfessorOptionDto toProfessorOptionDto(User professor) {
+        ProfessorOptionDto dto = new ProfessorOptionDto();
+        dto.setUserId(professor.getId());
+        dto.setFullName(professor.getFullName());
+        dto.setEmail(professor.getEmail());
         return dto;
     }
 }

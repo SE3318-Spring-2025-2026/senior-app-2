@@ -132,3 +132,84 @@ export function createProjectTemplate(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function getProjectTemplates() {
+  return request('/project-templates');
+}
+
+export function getProjects(params = {}) {
+  const query = new URLSearchParams();
+  if (params.term) query.set('term', params.term);
+  if (params.templateId != null) query.set('templateId', String(params.templateId));
+  if (params.groupId != null) query.set('groupId', String(params.groupId));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/projects${suffix}`);
+}
+
+export function getProjectCommittees(projectId) {
+  return request(`/projects/${projectId}/committees`);
+}
+
+export function createProjectCommittee(projectId, name = '') {
+  return request(`/projects/${projectId}/committees`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getProjectProfessors() {
+  return request('/projects/professors');
+}
+
+export function addProfessorToCommittee(projectId, committeeId, professorUserId) {
+  return request(`/projects/${projectId}/committees/${committeeId}/professors`, {
+    method: 'POST',
+    body: JSON.stringify({ professorUserId }),
+  });
+}
+
+export function deleteProjectCommittee(projectId, committeeId) {
+  return request(`/projects/${projectId}/committees/${committeeId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function removeProfessorFromCommittee(projectId, committeeId, professorUserId) {
+  return request(`/projects/${projectId}/committees/${committeeId}/professors/${professorUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getTemplateCommittees(templateId) {
+  return request(`/project-templates/${templateId}/committees`);
+}
+
+export function createTemplateCommittee(templateId, name = '') {
+  return request(`/project-templates/${templateId}/committees`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getTemplateProfessors() {
+  return request('/project-templates/professors');
+}
+
+export function addProfessorToTemplateCommittee(templateId, committeeId, professorUserId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}/professors`, {
+    method: 'POST',
+    body: JSON.stringify({ professorUserId }),
+  });
+}
+
+export function deleteTemplateCommittee(templateId, committeeId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function removeProfessorFromTemplateCommittee(templateId, committeeId, professorUserId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}/professors/${professorUserId}`, {
+    method: 'DELETE',
+  });
+}

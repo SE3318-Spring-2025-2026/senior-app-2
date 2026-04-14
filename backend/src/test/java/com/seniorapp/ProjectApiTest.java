@@ -36,6 +36,8 @@ class ProjectApiTest {
 
     @BeforeEach
     void clearData() {
+        jdbcTemplate.execute("DELETE FROM project_committee_professors");
+        jdbcTemplate.execute("DELETE FROM project_committees");
         jdbcTemplate.execute("DELETE FROM project_deliverable_rubrics");
         jdbcTemplate.execute("DELETE FROM project_evaluation_rubrics");
         jdbcTemplate.execute("DELETE FROM project_deliverables");
