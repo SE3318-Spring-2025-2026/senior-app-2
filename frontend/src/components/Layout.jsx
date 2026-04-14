@@ -26,12 +26,20 @@ function Layout() {
           </NavLink>
 
           {user?.role === 'COORDINATOR' && (
-            <NavLink 
-              to="/panel/whitelist" 
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            >
-              Student Whitelist
-            </NavLink>
+            <>
+              <NavLink 
+                to="/panel/whitelist" 
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Student Whitelist
+              </NavLink>
+              <NavLink
+                to="/panel/template-builder"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Template Builder
+              </NavLink>
+            </>
           )}
 
           {user?.role === 'ADMIN' && (

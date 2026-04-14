@@ -125,3 +125,10 @@ export function getGitHubAuthUrl() {
 export function getLogs(page = 0, size = 20) {
   return request(`/logs?page=${page}&size=${size}`);
 }
+
+export function createProjectTemplate(payload) {
+  return request('/project-templates', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
