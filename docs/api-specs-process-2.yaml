@@ -289,3 +289,48 @@ paths:
             application/json:
               example:
                 error: "Unauthorized: Only system coordinators/admins can perform manual transfers."
+
+  /api/projects:
+    get:
+      summary: Lookup the projects (course templates) available to students
+      description: >
+        This endpoint enables students to look up the available general projects (templates).
+      tags:
+        - General Projects
+        - Templates
+      responses:
+        "200":
+          description: >
+            Lookup successful. General projects are included in response.
+          content:
+            application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  projectId:
+                    type: string
+                  name:
+                    type: string
+                  sprintCount:
+                    type: number
+                  deliverables:
+                    type: string
+            example:            
+              - projectId: "GP - 001"
+                name: "Senioritis Project"
+                sprintCount: 5
+                deliverables: >
+                  "Students will deliver the most amazing project that wows all observers"
+              - projectId: "GP - 002"
+                name: "Senioritis Projectile"
+                sprintCount: 3
+                deliverables: >
+                  "Students will deliver the most amazing project that wows all observers really, really fast"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                error: "The server was unable to process your request. Please contact the server administrator."
