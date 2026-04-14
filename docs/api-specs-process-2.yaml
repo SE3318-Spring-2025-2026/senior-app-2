@@ -287,5 +287,10 @@ paths:
           description: Missing admin privileges.
           content:
             application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
               example:
-                error: "Unauthorized: Only system coordinators/admins can perform manual transfers."
+                error: "Access Denied"

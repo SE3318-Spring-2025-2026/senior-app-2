@@ -31,9 +31,7 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
 
@@ -50,9 +48,11 @@ public class JwtFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 } else {
                     log.debug("JWT accepted but user missing or disabled: userId={} uri={}", userId, request.getRequestURI());
+                    response.sendError(401, "Access Denied");
                 }
             } else {
                 log.debug("Invalid JWT on {}", request.getRequestURI());
+                response.sendError(401, "Access Denied");
             }
         }
 
