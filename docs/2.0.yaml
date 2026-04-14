@@ -235,7 +235,9 @@ paths:
     put:
       summary: 2.3 (Admin) Transfer Group to Another Advisor
       description: >
-        The system coordinator (Admin) can manually transfer a group to another professor.
+        The system coordinator (Admin) can manually transfer a group to another professor in 
+        exceptional situations (e.g., professor leaving). This action bypasses the standard 
+        approval mechanisms.
       tags:
         - Advisor Association (Admin)
       parameters:
@@ -258,5 +260,19 @@ paths:
       responses:
         "200":
           description: Transfer successful.
+          content:
+            application/json:
+              example:
+                message: "Group has been manually transferred to new advisor."
+                newAdvisorId: "prof-505"
         "401":
           description: Missing admin privileges.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: "Access Denied"
