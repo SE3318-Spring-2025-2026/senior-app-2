@@ -11,6 +11,9 @@ import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement';
 import ResetPassword from './pages/ResetPassword'; 
 import TemplateBuilder from './pages/TemplateBuilder';
+import MyProjects from './pages/MyProjects';
+import ProjectInspection from './pages/ProjectInspection';
+import ManageComitees from './pages/ManageComitees';
 
 function App() {
   return (
@@ -35,6 +38,9 @@ function App() {
         {/* Koordinatör rotası */}
         <Route path="whitelist" element={<StudentManagement />} />
         <Route path="template-builder" element={<TemplateBuilder />} />
+        <Route path="my-projects" element={<MyProjects />} />
+        <Route path="templates/:templateId" element={<ProjectInspection />} />
+        <Route path="templates/:templateId/manage-comitees" element={<ManageComitees />} />
         
         <Route
           path="users"

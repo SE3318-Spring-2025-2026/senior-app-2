@@ -39,7 +39,22 @@ function Layout() {
               >
                 Template Builder
               </NavLink>
+              <NavLink
+                to="/panel/my-projects"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                My Projects
+              </NavLink>
             </>
+          )}
+
+          {user?.role === 'PROFESSOR' && (
+            <NavLink
+              to="/panel/my-projects"
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              My Projects
+            </NavLink>
           )}
 
           {user?.role === 'ADMIN' && (

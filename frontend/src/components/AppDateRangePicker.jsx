@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import DatePicker from 'react-datepicker';
 
 function parseIsoDate(value) {
@@ -34,6 +35,22 @@ function getRangeDays(startDate, endDate) {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 }
 
+const RangeDisplayInput = forwardRef(function RangeDisplayInput(
+  { value, onClick, placeholder },
+  ref
+) {
+  return (
+    <input
+      ref={ref}
+      value={value || ''}
+      onClick={onClick}
+      placeholder={placeholder}
+      readOnly
+      className="app-date-picker-input"
+    />
+  );
+});
+
 function AppDateRangePicker({ label, startDate, endDate, onChange, className = '' }) {
   const days = getRangeDays(startDate, endDate);
   const displayValue = startDate && endDate
@@ -54,12 +71,15 @@ function AppDateRangePicker({ label, startDate, endDate, onChange, className = '
           onChange(formatIsoDate(start), formatIsoDate(end));
         }}
         selectsRange
-        shouldCloseOnSelect
+        shouldCloseOnSelect={false}
         dateFormat="yyyy-MM-dd"
         placeholderText="YYYY-MM-DD - YYYY-MM-DD"
-        value={displayValue}
-        readOnly
-        className="app-date-picker-input"
+        customInput={
+          <RangeDisplayInput
+            value={displayValue}
+            placeholder="YYYY-MM-DD - YYYY-MM-DD"
+          />
+        }
       />
     </label>
   );

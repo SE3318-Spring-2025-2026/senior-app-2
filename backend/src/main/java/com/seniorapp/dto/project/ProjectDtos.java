@@ -62,6 +62,30 @@ public final class ProjectDtos {
         }
     }
 
+    public static class CreateCommitteeRequest {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
+    public static class AddProfessorToCommitteeRequest {
+        private Long professorUserId;
+
+        public Long getProfessorUserId() {
+            return professorUserId;
+        }
+
+        public void setProfessorUserId(Long professorUserId) {
+            this.professorUserId = professorUserId;
+        }
+    }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class IdResponse {
         private String status;
@@ -159,6 +183,42 @@ public final class ProjectDtos {
         }
     }
 
+    public static class CommitteeListResponse {
+        private String status;
+        private List<CommitteeDto> data;
+
+        public CommitteeListResponse(String status, List<CommitteeDto> data) {
+            this.status = status;
+            this.data = data;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public List<CommitteeDto> getData() {
+            return data;
+        }
+    }
+
+    public static class ProfessorListResponse {
+        private String status;
+        private List<ProfessorOptionDto> data;
+
+        public ProfessorListResponse(String status, List<ProfessorOptionDto> data) {
+            this.status = status;
+            this.data = data;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public List<ProfessorOptionDto> getData() {
+            return data;
+        }
+    }
+
     public static class ProjectSummary {
         private Long projectId;
         private Long templateId;
@@ -222,6 +282,75 @@ public final class ProjectDtos {
 
         public void setCreatedAt(LocalDateTime createdAt) {
             this.createdAt = createdAt;
+        }
+    }
+
+    public static class CommitteeDto {
+        private Long committeeId;
+        private Long projectId;
+        private String name;
+        private List<ProfessorOptionDto> professors;
+
+        public Long getCommitteeId() {
+            return committeeId;
+        }
+
+        public void setCommitteeId(Long committeeId) {
+            this.committeeId = committeeId;
+        }
+
+        public Long getProjectId() {
+            return projectId;
+        }
+
+        public void setProjectId(Long projectId) {
+            this.projectId = projectId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public List<ProfessorOptionDto> getProfessors() {
+            return professors;
+        }
+
+        public void setProfessors(List<ProfessorOptionDto> professors) {
+            this.professors = professors;
+        }
+    }
+
+    public static class ProfessorOptionDto {
+        private Long userId;
+        private String fullName;
+        private String email;
+
+        public Long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(Long userId) {
+            this.userId = userId;
+        }
+
+        public String getFullName() {
+            return fullName;
+        }
+
+        public void setFullName(String fullName) {
+            this.fullName = fullName;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
         }
     }
 

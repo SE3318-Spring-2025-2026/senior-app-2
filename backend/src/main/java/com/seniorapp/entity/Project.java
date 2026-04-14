@@ -40,6 +40,9 @@ public class Project {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectGroupAssignment> assignments = new ArrayList<>();
 
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectCommittee> committees = new ArrayList<>();
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -128,6 +131,14 @@ public class Project {
 
     public void setAssignments(List<ProjectGroupAssignment> assignments) {
         this.assignments = assignments;
+    }
+
+    public List<ProjectCommittee> getCommittees() {
+        return committees;
+    }
+
+    public void setCommittees(List<ProjectCommittee> committees) {
+        this.committees = committees;
     }
 
     public LocalDateTime getCreatedAt() {
