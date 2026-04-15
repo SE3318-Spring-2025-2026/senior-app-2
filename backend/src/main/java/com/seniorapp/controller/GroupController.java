@@ -18,21 +18,15 @@ public class GroupController {
         this.groupService = groupService;
     }
 
-    // --- ISSUE #72: CREATE GROUP ---
     @PostMapping
     public ResponseEntity<String> createGroup(@RequestBody GroupCreateDto requestDto) {
         groupService.createGroup(requestDto);
         return new ResponseEntity<>("{\"message\": \"Group created and linked to project successfully.\"}", HttpStatus.CREATED);
     }
 
-    // --- ISSUE #74: MANAGE MEMBERS ---
     @PatchMapping("/{groupId}/members")
-    public ResponseEntity<String> manageMembers(
-            @PathVariable Long groupId,
-            @RequestBody GroupMemberActionDto actionDto) {
-        
+    public ResponseEntity<String> manageMembers(@PathVariable Long groupId, @RequestBody GroupMemberActionDto actionDto) {
         groupService.manageMembership(groupId, actionDto);
-        String actionDone = actionDto.getAction().toLowerCase() + "ed";
-        return ResponseEntity.ok("{\"message\": \"Member " + actionDone + " successfully\"}");
+        return ResponseEntity.ok("{\"message\": \"Member action successful\"}");
     }
 }
