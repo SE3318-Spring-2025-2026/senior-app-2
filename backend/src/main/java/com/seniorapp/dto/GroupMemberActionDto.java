@@ -2,11 +2,10 @@ package com.seniorapp.dto;
 
 public class GroupMemberActionDto {
     private String studentId;
-    private String action; // add, remove
+    private String action;
     private String leaderId;
 
     public GroupMemberActionDto() {}
-
     public String getStudentId() { return studentId; }
     public void setStudentId(String studentId) { this.studentId = studentId; }
     public String getAction() { return action; }

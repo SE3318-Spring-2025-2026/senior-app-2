@@ -18,20 +18,15 @@ public class GroupController {
         this.groupService = groupService;
     }
 
-    // Issue #72: Grup Kurma
     @PostMapping
     public ResponseEntity<String> createGroup(@RequestBody GroupCreateDto requestDto) {
         groupService.createGroup(requestDto);
         return new ResponseEntity<>("{\"message\": \"Group created and linked to project successfully.\"}", HttpStatus.CREATED);
     }
 
-    // Issue #74: Üye Yönetimi (Conflict çözümü için burada durmalı)
     @PatchMapping("/{groupId}/members")
-    public ResponseEntity<String> manageMembers(
-            @PathVariable Long groupId,
-            @RequestBody GroupMemberActionDto actionDto) {
-        
+    public ResponseEntity<String> manageMembers(@PathVariable Long groupId, @RequestBody GroupMemberActionDto actionDto) {
         groupService.manageMembership(groupId, actionDto);
-        return ResponseEntity.ok("{\"message\": \"Member action processed successfully\"}");
+        return ResponseEntity.ok("{\"message\": \"Member action successful\"}");
     }
 }
