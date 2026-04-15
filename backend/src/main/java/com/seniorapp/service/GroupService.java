@@ -9,7 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class GroupService {
 
-    // --- ISSUE #72 MANTIĞI ---
+    // --- ISSUE #72 MANTIĞI: GRUP KURMA ---
     public void createGroup(GroupCreateDto dto) {
         if (dto.getGroupName() == null || dto.getStudentId() == null || dto.getProjectId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All fields are required.");
@@ -20,11 +20,36 @@ public class GroupService {
         System.out.println("Grup kuruldu: " + dto.getGroupName() + ", Lider: " + dto.getStudentId());
     }
 
-    // --- ISSUE #74 MANTIĞI ---
+    // --- ISSUE #74 MANTIĞI: ÜYE EKLEME/ÇIKARMA ---
     public void manageMembership(Long groupId, GroupMemberActionDto dto) {
-        if (!"leader-123".equals(dto.getLeaderId())) {
+        boolean isLeader = checkIsLeader(dto.getLeaderId(), groupId); 
+        if (!isLeader) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the Team Leader can manage members.");
         }
-        System.out.println("Üye işlemi: " + dto.getStudentId());
+
+        if (dto.getStudentId() == null || dto.getStudentId().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found.");
+        }
+
+        if ("ADD".equalsIgnoreCase(dto.getAction())) {
+            if (isAlreadyInAnotherGroup(dto.getStudentId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Student is already a member of another group.");
+            }
+            System.out.println(dto.getStudentId() + " gruba eklendi.");
+        } 
+        else if ("REMOVE".equalsIgnoreCase(dto.getAction())) {
+            System.out.println(dto.getStudentId() + " gruptan çıkarıldı.");
+        } 
+        else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid action. Use ADD or REMOVE.");
+        }
+    }
+
+    private boolean checkIsLeader(String leaderId, Long groupId) { 
+        return "leader-123".equals(leaderId); 
+    }
+    
+    private boolean isAlreadyInAnotherGroup(String studentId) { 
+        return false; 
     }
 }
