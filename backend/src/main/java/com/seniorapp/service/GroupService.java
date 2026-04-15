@@ -20,7 +20,7 @@ public class GroupService {
         System.out.println("Grup kuruldu: " + dto.getGroupName() + ", Lider: " + dto.getStudentId());
     }
 
-    // --- ISSUE #74 MANTIĞI: ÜYE EKLEME/ÇIKARMA ---
+    // --- SADECE ISSUE #74: ÜYE EKLEME/ÇIKARMA İŞLEMİ ---
     public void manageMembership(Long groupId, GroupMemberActionDto dto) {
         boolean isLeader = checkIsLeader(dto.getLeaderId(), groupId); 
         if (!isLeader) {
