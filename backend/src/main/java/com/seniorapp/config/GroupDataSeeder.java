@@ -16,9 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Component
 @Order(2)
@@ -45,6 +43,10 @@ public class GroupDataSeeder implements CommandLineRunner {
         if (!userGroups.findById(1L).isPresent()) {
             UserGroup seedGroup = new UserGroup();
 
+            // --- BU SATIR SQL HATASINI ÇÖZÜYOR ---
+            seedGroup.setGroupName("Senior App Default Group");
+            // -------------------------------------
+
             User coordinator = userRepository.findByEmail("professor@seniorapp.com").orElseThrow(() -> new RuntimeException("User not found."));
             entityManager.merge(coordinator);
             seedGroup.setCoordinator(coordinator);
@@ -53,8 +55,7 @@ public class GroupDataSeeder implements CommandLineRunner {
             entityManager.merge(teamLeader);
             seedGroup.setTeamLeader(teamLeader);
 
-            // Team leader will change, but the leader will still be a member of the group when that happens, so they should also be known as a member of the
-            // group
+            // Team leader will change, but the leader will still be a member of the group when that happens, so they should also be known as a member of the group
             List<User> currentMembers = seedGroup.getMembers();
             if (null == currentMembers) {
                 currentMembers = new ArrayList<>();
@@ -64,7 +65,7 @@ public class GroupDataSeeder implements CommandLineRunner {
             seedGroup.setMembers(currentMembers);
 
             userGroups.save(seedGroup);
-            log.info("Default group seeded with default professor as coordinator and default student as team lead and only member.");
+            log.info("Default group seeded with group name, default professor as coordinator and default student as team lead.");
         }
     }
 }
