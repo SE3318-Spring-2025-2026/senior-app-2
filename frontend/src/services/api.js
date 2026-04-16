@@ -125,3 +125,14 @@ export function getGitHubAuthUrl() {
 export function getLogs(page = 0, size = 20) {
   return request(`/logs?page=${page}&size=${size}`);
 }
+
+export function getProjectsList(term, committeeId) {
+  const params = new URLSearchParams();
+  if (term) params.append('term', term);
+  if (committeeId) params.append('committeeId', committeeId);
+  return request(`/projects?${params.toString()}`);
+}
+
+export function getProjectDeliverablesStatus(projectId) {
+  return request(`/projects/${projectId}/deliverables/status`);
+}
