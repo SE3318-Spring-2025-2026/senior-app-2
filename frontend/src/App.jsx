@@ -9,8 +9,9 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement';
-import ResetPassword from './pages/ResetPassword'; 
-import CreateGroup from './pages/CreateGroup'; 
+import ResetPassword from './pages/ResetPassword';
+import IntegrationSettings from './pages/IntegrationSettings';
+import CreateGroup from './pages/CreateGroup';
 
 function App() {
   return (
@@ -32,6 +33,9 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="create-group" element={<CreateGroup />} /> 
         <Route path="whitelist" element={<StudentManagement />} />
+        
+        {/* Team Leader - Integration Settings */}
+        <Route path="integrations" element={<IntegrationSettings />} />
         
         <Route
           path="users"
