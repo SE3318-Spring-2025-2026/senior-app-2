@@ -34,6 +34,8 @@ cd senior-app-2
 
 ## Backend (Spring Boot)
 
+First, set up a local mysql database. Then create your local application-local.properties file, in which you override the `spring.datasource.password=${MYSQL_PASSWORD:}` line with the password you used when setting up your database. You will probably also want to switch the JPA mode to create-delete while developing. Then:
+
 ```bash
 cd backend
 mvn clean install
@@ -131,11 +133,10 @@ The backend automatically seeds these accounts on first run:
 | Role | Email | Password |
 |------|-------|----------|
 | **Admin** | `admin@seniorapp.com` | `admin123` |
-| **Coordinator** | `coordinator@seniorapp.com` | `coord123` |
 | **Professor** | `professor@seniorapp.com` | `prof123` |
 | **Student** | `student@seniorapp.com` | `student123` |
 
-Staff accounts (Admin, Coordinator, Professor) log in via the **Staff** tab on the login page using email and password.
+Staff accounts (Admin, Professor) log in via the **Staff** tab on the login page using email and password.
 
 ---
 
