@@ -131,6 +131,10 @@ export function getGroup(groupId) {
   return request(`/groups/${groupId}`);
 }
 
+export function getProjectTemplates() {
+  return request('/projects');
+}
+
 export function createGroup(groupName, projectId) {
   return request('/groups', {
     method: 'POST',
