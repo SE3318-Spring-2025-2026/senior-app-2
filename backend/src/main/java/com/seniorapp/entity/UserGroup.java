@@ -15,24 +15,29 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import jakarta.persistence.Column; 
 @Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "userGroups")
+@Table(name = "user_groups") // Daha standart bir isim
 public class UserGroup {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @OneToOne(cascade = CascadeType.ALL)
-  @JoinColumn(name = "coordinator", referencedColumnName = "id")
-  private User coordinator;
+    @Column(unique = true, nullable = false) // Boş geçilmesin ve eşsiz olsun
+    private String groupName;
 
-  @OneToOne(cascade = CascadeType.ALL)
-  @JoinColumn(name = "teamLeader", referencedColumnName = "id")
-  private User teamLeader;
+    @OneToOne // Cascade sildik, kullanıcılar silinmesin!
+    @JoinColumn(name = "coordinator_id", referencedColumnName = "id")
+    private User coordinator;
 
-  @OneToMany(cascade = CascadeType.ALL)
-  private List<User> members;
+    @OneToOne
+    @JoinColumn(name = "team_leader_id", referencedColumnName = "id")
+    private User teamLeader;
+
+    @OneToMany // Cascade'i buradan da kaldırdık
+    @JoinColumn(name = "group_id") // Bu sayede arada gereksiz bir tablo oluşmaz
+    private List<User> members;
 }
