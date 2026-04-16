@@ -125,3 +125,10 @@ export function getGitHubAuthUrl() {
 export function getLogs(page = 0, size = 20) {
   return request(`/logs?page=${page}&size=${size}`);
 }
+
+export function submitGrade(submissionId, graderId, rubricId, grade) {
+  return request(`/deliverable-submissions/${submissionId}/grades`, {
+    method: 'POST',
+    body: JSON.stringify({ graderId, rubricId, grade }),
+  });
+}
