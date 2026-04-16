@@ -1,4 +1,3 @@
-
 const API_URL = 'http://localhost:8080/api';
 
 async function request(endpoint, options = {}) {
@@ -116,10 +115,49 @@ export function deleteStudentWhitelistEntry(id) {
 }
 
 export function getGitHubAuthUrl() {
-  
   return 'http://localhost:8080/api/auth/github';
 }
 
 export function getLogs(page = 0, size = 20) {
   return request(`/logs?page=${page}&size=${size}`);
+}
+
+// Group Management APIs
+export function getGroup(groupId) {
+  return request(`/groups/${groupId}`);
+}
+
+export function createGroup(groupName, projectId) {
+  return request('/groups', {
+    method: 'POST',
+    body: JSON.stringify({
+      groupName,
+      projectId,
+    }),
+  });
+}
+
+export function addOrRemoveGroupMember(groupId, studentId, action) {
+  return request(`/groups/${groupId}/members`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      studentId,
+      action // 'add' or 'remove'
+    }),
+  });
+}
+
+// Group Integration APIs
+export function setupIntegrations(groupId, githubPat, jiraSpaceUrl) {
+  return request(`/groups/${groupId}/integrations`, {
+    method: 'POST',
+    body: JSON.stringify({
+      githubPat,
+      jiraSpaceUrl
+    }),
+  });
+}
+
+export function getGroupIntegrations(groupId) {
+  return request(`/groups/${groupId}/integrations`);
 }
