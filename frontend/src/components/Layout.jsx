@@ -36,11 +36,34 @@ function Layout() {
           )}
 
           {user?.role === 'COORDINATOR' && (
-            <NavLink 
-              to="/panel/whitelist" 
+            <>
+              <NavLink 
+                to="/panel/whitelist" 
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Student Whitelist
+              </NavLink>
+              <NavLink
+                to="/panel/template-builder"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Template Builder
+              </NavLink>
+              <NavLink
+                to="/panel/my-projects"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                My Projects
+              </NavLink>
+            </>
+          )}
+
+          {user?.role === 'PROFESSOR' && (
+            <NavLink
+              to="/panel/my-projects"
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
-              Student Whitelist
+              My Projects
             </NavLink>
           )}
 

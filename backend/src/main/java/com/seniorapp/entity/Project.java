@@ -2,68 +2,158 @@ package com.seniorapp.entity;
 
 import jakarta.persistence.*;
 
-/**
- * Definition of a Project
- */
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "projects")
 public class Project {
+
     @Id
-    @Column(unique = true)
-    private String projectId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String name;
-
-    @Column(nullable = false)
-    private int sprintCount;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "template_id", nullable = false)
+    private ProjectTemplate template;
 
     @Column(nullable = false)
-    private String deliverables;
+    private String title;
 
-    public Project() {}
+    @Column(nullable = false)
+    private String term;
 
-    public Project(
-        String id,
-        String name,
-        int sprintCount,
-        String deliverables
-    ) {
-        this.projectId = id;
-        this.name = name;
-        this.sprintCount = sprintCount;
-        this.deliverables = deliverables;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProjectStatus status = ProjectStatus.DRAFT;
+
+    @Column(nullable = false)
+    private Long createdByUserId;
+
+    @Column(name = "group_id")
+    private Long groupId;
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectSprint> sprints = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectGroupAssignment> assignments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectCommittee> committees = new ArrayList<>();
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
     }
 
-    public String getProjectId() {
-        return projectId;
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
-    public void setProjectId(String projectId) {
-        this.projectId = projectId;
+    public Long getId() {
+        return id;
     }
 
-    public String getName() {
-        return name;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public ProjectTemplate getTemplate() {
+        return template;
     }
 
-    public int getSprintCount() {
-        return sprintCount;
+    public void setTemplate(ProjectTemplate template) {
+        this.template = template;
     }
 
-    public void setSprintCount(int sprintCount) {
-        this.sprintCount = sprintCount;
+    public String getTitle() {
+        return title;
     }
 
-    public String getDeliverables() {
-        return deliverables;
+    public void setTitle(String title) {
+        this.title = title;
     }
 
-    public void setDeliverables(String deliverables) {
-        this.deliverables = deliverables;
+    public String getTerm() {
+        return term;
+    }
+
+    public void setTerm(String term) {
+        this.term = term;
+    }
+
+    public ProjectStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ProjectStatus status) {
+        this.status = status;
+    }
+
+    public Long getCreatedByUserId() {
+        return createdByUserId;
+    }
+
+    public void setCreatedByUserId(Long createdByUserId) {
+        this.createdByUserId = createdByUserId;
+    }
+
+    public Long getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(Long groupId) {
+        this.groupId = groupId;
+    }
+
+    public List<ProjectSprint> getSprints() {
+        return sprints;
+    }
+
+    public void setSprints(List<ProjectSprint> sprints) {
+        this.sprints = sprints;
+    }
+
+    public List<ProjectGroupAssignment> getAssignments() {
+        return assignments;
+    }
+
+    public void setAssignments(List<ProjectGroupAssignment> assignments) {
+        this.assignments = assignments;
+    }
+
+    public List<ProjectCommittee> getCommittees() {
+        return committees;
+    }
+
+    public void setCommittees(List<ProjectCommittee> committees) {
+        this.committees = committees;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }
