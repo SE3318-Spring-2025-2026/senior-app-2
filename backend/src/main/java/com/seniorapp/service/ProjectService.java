@@ -117,6 +117,9 @@ public class ProjectService {
         assignmentRepository.findByProjectIdAndActiveTrue(safeProjectId).ifPresent(existing -> {
             throw new IllegalArgumentException("Project already has an active group assignment.");
         });
+        assignmentRepository.findByGroupIdAndActiveTrue(groupId).ifPresent(existing -> {
+            throw new IllegalArgumentException("Group is already assigned to another active project.");
+        });
         project.setGroupId(groupId);
         projectRepository.save(project);
 

@@ -1,9 +1,14 @@
 package com.seniorapp.controller;
 
 import com.seniorapp.dto.GroupCreateDto;
+import com.seniorapp.dto.GroupInviteRequestDto;
+import com.seniorapp.dto.GroupInviteRespondDto;
 import com.seniorapp.dto.GroupIntegrationsRequest;
 import com.seniorapp.dto.GroupIntegrationsResponse;
 import com.seniorapp.dto.GroupMemberActionDto;
+import com.seniorapp.dto.TeamManagementDtos.CreateProjectFromTemplateRequest;
+import com.seniorapp.dto.TeamManagementDtos.StudentListResponse;
+import com.seniorapp.dto.TeamManagementDtos.TeamListResponse;
 import com.seniorapp.entity.User;
 import com.seniorapp.service.GroupService;
 import jakarta.validation.Valid;
@@ -11,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -51,6 +57,56 @@ public class GroupController {
         
         String actionDone = actionDto.getAction().toLowerCase() + "ed"; 
         return ResponseEntity.ok("{\"message\": \"Member " + actionDone + " successfully\"}");
+    }
+
+    @PostMapping("/{groupId}/invites")
+    public ResponseEntity<String> inviteMember(
+            @PathVariable Long groupId,
+            @RequestBody GroupInviteRequestDto request,
+            Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        groupService.inviteMember(groupId, request.getStudentUserId(), currentUser.getId());
+        return ResponseEntity.ok("{\"message\":\"Invite sent successfully.\"}");
+    }
+
+    @PatchMapping("/invites/{inviteId}")
+    public ResponseEntity<String> respondInvite(
+            @PathVariable Long inviteId,
+            @RequestBody GroupInviteRespondDto request,
+            Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        groupService.respondInvite(inviteId, request.getAction(), currentUser.getId());
+        return ResponseEntity.ok("{\"message\":\"Invite updated successfully.\"}");
+    }
+
+    @GetMapping("/my-teams")
+    public ResponseEntity<TeamListResponse> getMyTeams(Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        return ResponseEntity.ok(new TeamListResponse("success", groupService.getMyTeams(currentUser.getId())));
+    }
+
+    @GetMapping("/students")
+    public ResponseEntity<StudentListResponse> listStudents() {
+        return ResponseEntity.ok(new StudentListResponse("success", groupService.listStudents()));
+    }
+
+    @GetMapping("/{groupId}/advisor-options")
+    public ResponseEntity<StudentListResponse> listAdvisorOptions(
+            @PathVariable Long groupId,
+            Authentication authentication
+    ) {
+        User currentUser = (User) authentication.getPrincipal();
+        return ResponseEntity.ok(new StudentListResponse("success", groupService.listAdvisorOptions(groupId, currentUser.getId())));
+    }
+
+    @PostMapping("/{groupId}/project")
+    public ResponseEntity<Map<String, Object>> createProjectForGroup(
+            @PathVariable Long groupId,
+            @RequestBody CreateProjectFromTemplateRequest request,
+            Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        Long projectId = groupService.createProjectForGroup(groupId, request, currentUser.getId());
+        return ResponseEntity.ok(Map.of("status", "success", "data", Map.of("projectId", projectId)));
     }
 
     @PostMapping("/{groupId}/integrations")

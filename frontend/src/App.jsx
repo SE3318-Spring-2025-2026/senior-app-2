@@ -14,6 +14,9 @@ import TemplateBuilder from './pages/TemplateBuilder';
 import MyProjects from './pages/MyProjects';
 import ProjectInspection from './pages/ProjectInspection';
 import ManageComitees from './pages/ManageComitees';
+import TeamManagement from './pages/TeamManagement';
+import StudentProjects from './pages/StudentProjects';
+import StudentProjectPage from './pages/StudentProjectPage';
 
 function App() {
   return (
@@ -38,6 +41,9 @@ function App() {
         {/* Koordinatör rotası */}
         <Route path="whitelist" element={<StudentManagement />} />
         <Route path="template-builder" element={<TemplateBuilder />} />
+        <Route path="create-group" element={<TeamManagement />} />
+        <Route path="my-student-projects" element={<StudentProjects />} />
+        <Route path="student-projects/:projectId" element={<StudentProjectPage />} />
         <Route path="my-projects" element={<MyProjects />} />
         <Route path="templates/:templateId" element={<ProjectInspection />} />
         <Route path="templates/:templateId/manage-comitees" element={<ManageComitees />} />

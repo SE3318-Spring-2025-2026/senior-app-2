@@ -35,6 +35,15 @@ function Layout() {
             </NavLink>
           )}
 
+          {user?.role === 'STUDENT' && (
+            <NavLink
+              to="/panel/my-student-projects"
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              Projelerim
+            </NavLink>
+          )}
+
           {user?.role === 'COORDINATOR' && (
             <>
               <NavLink 

@@ -55,7 +55,7 @@ public class ProjectTemplateController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'STUDENT', 'ADMIN')")
     public ResponseEntity<ProjectTemplateListResponse> listProjectTemplates(
             @AuthenticationPrincipal User principal,
             Authentication authentication
@@ -68,7 +68,7 @@ public class ProjectTemplateController {
     }
 
     @GetMapping("/{templateId}")
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'STUDENT', 'ADMIN')")
     public ResponseEntity<ProjectTemplateDetailResponse> getProjectTemplate(
             @PathVariable Long templateId,
             @AuthenticationPrincipal User principal,

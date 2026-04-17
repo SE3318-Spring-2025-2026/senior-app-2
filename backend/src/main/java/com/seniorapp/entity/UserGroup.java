@@ -28,11 +28,8 @@ public class UserGroup {
     @JoinColumn(name = "team_leader_id", referencedColumnName = "id")
     private User teamLeader;
 
-    // CascadeType.ALL kaldırıldı: Grup silindiğinde kullanıcıların silinmemesi için.
-    // @JoinColumn: Arada gereksiz bir "user_groups_members" tablosu oluşmasını engeller.
-    @OneToMany
-    @JoinColumn(name = "group_id")
-    private List<User> members;
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserGroupMember> memberships;
 
     @Column(name = "github_pat_encrypted", length = 1024)
     private String githubPatEncrypted;
@@ -72,12 +69,12 @@ public class UserGroup {
         this.teamLeader = teamLeader;
     }
 
-    public List<User> getMembers() {
-        return members;
+    public List<UserGroupMember> getMemberships() {
+        return memberships;
     }
 
-    public void setMembers(List<User> members) {
-        this.members = members;
+    public void setMemberships(List<UserGroupMember> memberships) {
+        this.memberships = memberships;
     }
 
     public String getGithubPatEncrypted() {

@@ -213,3 +213,51 @@ export function removeProfessorFromTemplateCommittee(templateId, committeeId, pr
     method: 'DELETE',
   });
 }
+
+export function getStudentDashboard() {
+  return request('/students/dashboard/me');
+}
+
+export function respondGroupInvite(inviteId, action) {
+  return request(`/groups/invites/${inviteId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action }),
+  });
+}
+
+export function getMyTeams() {
+  return request('/groups/my-teams');
+}
+
+export function createTeam(groupName) {
+  return request('/groups', {
+    method: 'POST',
+    body: JSON.stringify({ groupName }),
+  });
+}
+
+export function listStudentsForInvite() {
+  return request('/groups/students');
+}
+
+export function inviteStudentToTeam(groupId, studentUserId) {
+  return request(`/groups/${groupId}/invites`, {
+    method: 'POST',
+    body: JSON.stringify({ studentUserId }),
+  });
+}
+
+export function listAdvisorOptionsForTeam(groupId) {
+  return request(`/groups/${groupId}/advisor-options`);
+}
+
+export function createProjectFromTemplateForTeam(groupId, templateId) {
+  return request(`/groups/${groupId}/project`, {
+    method: 'POST',
+    body: JSON.stringify({ templateId }),
+  });
+}
+
+export function getMyStudentProjects() {
+  return request('/students/dashboard/projects');
+}
