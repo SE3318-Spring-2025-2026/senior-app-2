@@ -59,10 +59,6 @@ export function resetPassword(token, newPassword) {
   });
 }
 
-/**
- * @param {string} [studentId] - required for student whitelist flow
- * @param {'link'|'login'} [flow] - LINK = first-time GitHub link; LOGIN = existing linked account
- */
 export async function getGithubLoginUrl(studentId, flow) {
   const qs = new URLSearchParams();
   if (studentId) qs.set('studentId', studentId);
@@ -99,8 +95,8 @@ export function registerStaff(email, fullName, role) {
     method: 'POST',
     body: JSON.stringify({ email, fullName, role }),
   });
-  
 }
+
 export function uploadStudentWhitelist(studentIds) {
   return request('/coordinator/valid-students', {
     method: 'POST',

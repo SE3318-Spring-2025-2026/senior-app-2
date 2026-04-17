@@ -25,6 +25,16 @@ function Layout() {
             Dashboard
           </NavLink>
 
+          {/* 🚀 BUG #5 FIX: Öğrenciler ve Koordinatörler için Takım Yönetimi sekmesi */}
+          {(user?.role === 'STUDENT' || user?.role === 'COORDINATOR') && (
+            <NavLink 
+              to="/panel/create-group" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              Team Management
+            </NavLink>
+          )}
+
           {user?.role === 'COORDINATOR' && (
             <NavLink 
               to="/panel/whitelist" 

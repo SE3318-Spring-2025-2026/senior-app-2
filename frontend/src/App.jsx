@@ -31,7 +31,11 @@ function App() {
         }
       >
         <Route index element={<Dashboard />} />
+        
+        {/* Her giriş yapmış kullanıcı Dashboard ve Grup Kurma sayfasını görebilir */}
         <Route path="create-group" element={<CreateGroup />} /> 
+        
+        {/* Whitelist genellikle Koordinatör/Admin işidir, istersen AdminRoute ile sarabilirsin */}
         <Route path="whitelist" element={<StudentManagement />} />
         
 {/* Grup Yönetimi - Team Leader */}

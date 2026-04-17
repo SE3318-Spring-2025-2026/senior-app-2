@@ -4,69 +4,93 @@ import com.seniorapp.dto.GroupCreateDto;
 import com.seniorapp.dto.GroupIntegrationsRequest;
 import com.seniorapp.dto.GroupIntegrationsResponse;
 import com.seniorapp.dto.GroupMemberActionDto;
+import com.seniorapp.entity.User;
 import com.seniorapp.entity.UserGroup;
 import com.seniorapp.repository.UserGroupRepository;
+import com.seniorapp.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 
 @Service
 public class GroupService {
     private final UserGroupRepository userGroupRepository;
+    private final UserRepository userRepository;
     private final IntegrationCredentialCryptoService cryptoService;
 
-    public GroupService(UserGroupRepository userGroupRepository, IntegrationCredentialCryptoService cryptoService) {
+    // Constructor Injection kullanılarak @Autowired karmaşası giderildi
+    public GroupService(UserGroupRepository userGroupRepository, 
+                        UserRepository userRepository, 
+                        IntegrationCredentialCryptoService cryptoService) {
         this.userGroupRepository = userGroupRepository;
+        this.userRepository = userRepository;
         this.cryptoService = cryptoService;
     }
 
-    // --- ISSUE #72 MANTIĞI: GRUP KURMA ---
-    public void createGroup(GroupCreateDto dto) {
-        if (dto.getGroupName() == null || dto.getStudentId() == null || dto.getProjectId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All fields are required.");
+    // --- ISSUE #71 & #72 FIX: GERÇEK GRUP KURMA ---
+    public void createGroup(GroupCreateDto dto, Long currentUserId) {
+        if (dto.getGroupName() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group name is required.");
         }
-        if ("existing-group".equals(dto.getGroupName())) {
+
+        // 1. Conflict Kontrolü (Aynı isimde grup var mı?)
+        if (userGroupRepository.existsByGroupName(dto.getGroupName())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Group name is already taken.");
         }
-        System.out.println("Grup kuruldu: " + dto.getGroupName() + ", Lider: " + dto.getStudentId());
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+
+        // 2. Kullanıcı zaten bir grupta mı?
+        if (userGroupRepository.existsByMembersIdOrTeamLeaderId(currentUserId, currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You are already in a group.");
+        }
+
+        // 3. Grubu kur ve Lider ata
+        UserGroup group = new UserGroup();
+        group.setGroupName(dto.getGroupName());
+        group.setTeamLeader(currentUser);
+        
+        if (group.getMembers() == null) group.setMembers(new ArrayList<>());
+        group.getMembers().add(currentUser);
+
+        userGroupRepository.save(group);
     }
 
-    // --- SADECE ISSUE #74: ÜYE EKLEME/ÇIKARMA İŞLEMİ ---
-    public void manageMembership(Long groupId, GroupMemberActionDto dto) {
-        boolean isLeader = checkIsLeader(dto.getLeaderId(), groupId); 
-        if (!isLeader) {
+    // --- ISSUE #73 & #74 FIX: ÜYE YÖNETİMİ ---
+    public void manageMembership(Long groupId, GroupMemberActionDto dto, Long currentUserId) {
+        UserGroup group = userGroupRepository.findById(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
+
+        // Yetki Kontrolü: İsteği atan kişi takım lideri mi? (BUG #2 FIX: 403 döner)
+        if (group.getTeamLeader() == null || !group.getTeamLeader().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the Team Leader can manage members.");
         }
 
-        if (dto.getStudentId() == null || dto.getStudentId().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found.");
-        }
+        User targetUser = userRepository.findById(Long.valueOf(dto.getStudentId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target student not found."));
 
         if ("ADD".equalsIgnoreCase(dto.getAction())) {
-            if (isAlreadyInAnotherGroup(dto.getStudentId())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Student is already a member of another group.");
+            if (userGroupRepository.existsByMembersIdOrTeamLeaderId(targetUser.getId(), targetUser.getId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Student is already in a group.");
             }
-            System.out.println(dto.getStudentId() + " gruba eklendi.");
-        } 
-        else if ("REMOVE".equalsIgnoreCase(dto.getAction())) {
-            System.out.println(dto.getStudentId() + " gruptan çıkarıldı.");
-        } 
-        else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid action. Use ADD or REMOVE.");
+            group.getMembers().add(targetUser);
+            userGroupRepository.save(group);
+            
+        } else if ("REMOVE".equalsIgnoreCase(dto.getAction())) {
+            boolean removed = group.getMembers().removeIf(u -> u.getId().equals(targetUser.getId()));
+            if (!removed) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student is not in this group.");
+            }
+            userGroupRepository.save(group);
         }
     }
 
-    private boolean checkIsLeader(String leaderId, Long groupId) { 
-        return "leader-123".equals(leaderId); 
-    }
-    
-    private boolean isAlreadyInAnotherGroup(String studentId) { 
-        return false; 
-    }
-
+    // --- ENTEGRASYON YÖNETİMİ (main dalından gelenler) ---
     public void saveIntegrations(Long groupId, GroupIntegrationsRequest request) {
         validateJiraUrl(request.getJiraSpaceUrl());
 
