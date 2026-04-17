@@ -261,3 +261,10 @@ export function createProjectFromTemplateForTeam(groupId, templateId) {
 export function getMyStudentProjects() {
   return request('/students/dashboard/projects');
 }
+
+export function submitGrade(submissionId, graderId, rubricId, grade) {
+  return request(`/deliverable-submissions/${submissionId}/grades`, {
+    method: 'POST',
+    body: JSON.stringify({ graderId, rubricId, grade }),
+  });
+}
