@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8080/api';
+const API_URL = 'http://localhost:9999/api';
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('token');
@@ -115,7 +115,7 @@ export function deleteStudentWhitelistEntry(id) {
 }
 
 export function getGitHubAuthUrl() {
-  return 'http://localhost:8080/api/auth/github';
+  return 'http://localhost:9999/api/auth/github';
 }
 
 export function getLogs(page = 0, size = 20) {

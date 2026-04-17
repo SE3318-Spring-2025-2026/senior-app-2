@@ -22,9 +22,8 @@ public class GroupService {
     private final UserRepository userRepository;
     private final IntegrationCredentialCryptoService cryptoService;
 
-    // Constructor Injection kullanılarak @Autowired karmaşası giderildi
-    public GroupService(UserGroupRepository userGroupRepository, 
-                        UserRepository userRepository, 
+    public GroupService(UserGroupRepository userGroupRepository,
+                        UserRepository userRepository,
                         IntegrationCredentialCryptoService cryptoService) {
         this.userGroupRepository = userGroupRepository;
         this.userRepository = userRepository;
@@ -89,8 +88,6 @@ public class GroupService {
             userGroupRepository.save(group);
         }
     }
-
-    // --- ENTEGRASYON YÖNETİMİ (main dalından gelenler) ---
     public void saveIntegrations(Long groupId, GroupIntegrationsRequest request) {
         validateJiraUrl(request.getJiraSpaceUrl());
 
