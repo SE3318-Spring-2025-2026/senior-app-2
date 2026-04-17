@@ -146,6 +146,10 @@ export function getProjects(params = {}) {
   return request(`/projects${suffix}`);
 }
 
+export function getProjectDetail(projectId) {
+  return request(`/projects/${projectId}`);
+}
+
 export function getProjectCommittees(projectId) {
   return request(`/projects/${projectId}/committees`);
 }
