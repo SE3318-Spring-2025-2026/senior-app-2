@@ -9,18 +9,19 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement';
-import ResetPassword from './pages/ResetPassword'; 
-
+import ResetPassword from './pages/ResetPassword';
+import GroupManagement from './pages/GroupManagement';
+import IntegrationSettings from './pages/IntegrationSettings';
+import CreateGroup from './pages/CreateGroup';
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
       <Route path="/auth/callback" element={<GitHubCallback />} />
       <Route path="/access-denied" element={<AccessDenied />} />
-      
       <Route path="/reset-password" element={<ResetPassword />} />
-
       <Route path="/auth/github/callback" element={<GitHubCallback />} />
+
       <Route
         path="/panel"
         element={
@@ -31,8 +32,17 @@ function App() {
       >
         <Route index element={<Dashboard />} />
         
-        {/* Koordinatör rotası */}
+        {/* Her giriş yapmış kullanıcı Dashboard ve Grup Kurma sayfasını görebilir */}
+        <Route path="create-group" element={<CreateGroup />} /> 
+        
+        {/* Whitelist genellikle Koordinatör/Admin işidir, istersen AdminRoute ile sarabilirsin */}
         <Route path="whitelist" element={<StudentManagement />} />
+        
+{/* Grup Yönetimi - Team Leader */}
+<Route path="group" element={<GroupManagement />} />
+
+{/* Team Leader - Integration Settings */}
+<Route path="integrations" element={<IntegrationSettings />} />
         
         <Route
           path="users"
