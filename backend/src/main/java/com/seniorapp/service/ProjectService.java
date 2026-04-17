@@ -3,6 +3,7 @@ package com.seniorapp.service;
 import org.springframework.stereotype.Service;
 
 import com.seniorapp.dto.ProjectTemplateResponse;
+import com.seniorapp.dto.ProjectTemplateResponse.ProjectTemplateItem;
 import com.seniorapp.entity.Project;
 import com.seniorapp.repository.ProjectRepository;
 
@@ -37,8 +38,17 @@ public class ProjectService {
     @Transactional
     public ProjectTemplateResponse getProjectTemplates() {
         List<Project> projects = projectRepository.findAll();
-        
-        ProjectTemplateResponse response = new ProjectTemplateResponse(projects);
+
+        List<ProjectTemplateItem> items = projects.stream()
+                .map(project -> new ProjectTemplateItem(
+                        project.getProjectId(),
+                        project.getName(),
+                        project.getSprintCount(),
+                        List.of(project.getDeliverables())
+                ))
+                .toList();
+
+        ProjectTemplateResponse response = new ProjectTemplateResponse(items);
         log.debug("Fetched {} project templates from database.", projects.size());
         return response;
     }

@@ -2,14 +2,7 @@ package com.seniorapp.entity;
 
 import java.util.List;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 @Entity
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Table(name = "user_groups")
 public class UserGroup {
 
@@ -39,4 +32,73 @@ public class UserGroup {
 
     @Column(name = "jira_space_url_encrypted", length = 1024)
     private String jiraSpaceUrlEncrypted;
+
+    public UserGroup() {
+    }
+
+    public UserGroup(Long id, String groupName, User coordinator, User teamLeader, List<User> members, String githubPatEncrypted, String jiraSpaceUrlEncrypted) {
+        this.id = id;
+        this.groupName = groupName;
+        this.coordinator = coordinator;
+        this.teamLeader = teamLeader;
+        this.members = members;
+        this.githubPatEncrypted = githubPatEncrypted;
+        this.jiraSpaceUrlEncrypted = jiraSpaceUrlEncrypted;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
+
+    public User getCoordinator() {
+        return coordinator;
+    }
+
+    public void setCoordinator(User coordinator) {
+        this.coordinator = coordinator;
+    }
+
+    public User getTeamLeader() {
+        return teamLeader;
+    }
+
+    public void setTeamLeader(User teamLeader) {
+        this.teamLeader = teamLeader;
+    }
+
+    public List<User> getMembers() {
+        return members;
+    }
+
+    public void setMembers(List<User> members) {
+        this.members = members;
+    }
+
+    public String getGithubPatEncrypted() {
+        return githubPatEncrypted;
+    }
+
+    public void setGithubPatEncrypted(String githubPatEncrypted) {
+        this.githubPatEncrypted = githubPatEncrypted;
+    }
+
+    public String getJiraSpaceUrlEncrypted() {
+        return jiraSpaceUrlEncrypted;
+    }
+
+    public void setJiraSpaceUrlEncrypted(String jiraSpaceUrlEncrypted) {
+        this.jiraSpaceUrlEncrypted = jiraSpaceUrlEncrypted;
+    }
 }

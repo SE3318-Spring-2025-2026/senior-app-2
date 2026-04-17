@@ -26,7 +26,7 @@ public class ProjectController {
     @GetMapping
     public ResponseEntity<ProjectTemplateResponse> getProjectTemplates() {
         ProjectTemplateResponse body = projectService.getProjectTemplates();
-        log.debug("Project templates: count={}", body.projects().size());
+        log.debug("Project templates: count={}", body.getProjects().size());
 
         return ResponseEntity.ok(body);
     }
