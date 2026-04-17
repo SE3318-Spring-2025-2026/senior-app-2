@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/projects")
+@RequestMapping("/api/project-templates")
 @CrossOrigin(origins = "*")
 public class ProjectTemplateController {
     private final ProjectTemplateService projectTemplateService;

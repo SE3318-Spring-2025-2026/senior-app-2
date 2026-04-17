@@ -1,14 +1,12 @@
 package com.seniorapp.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
 
 /**
  * Definition of a Project
  */
 @Entity
 @Table(name = "projects")
-@Data
 public class Project {
     @Id
     @Column(unique = true)
@@ -37,4 +35,35 @@ public class Project {
         this.deliverables = deliverables;
     }
 
+    public String getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(String projectId) {
+        this.projectId = projectId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getSprintCount() {
+        return sprintCount;
+    }
+
+    public void setSprintCount(int sprintCount) {
+        this.sprintCount = sprintCount;
+    }
+
+    public String getDeliverables() {
+        return deliverables;
+    }
+
+    public void setDeliverables(String deliverables) {
+        this.deliverables = deliverables;
+    }
 }

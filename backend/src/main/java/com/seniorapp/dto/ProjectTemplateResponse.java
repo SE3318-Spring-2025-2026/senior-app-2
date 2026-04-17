@@ -9,6 +9,10 @@ public class ProjectTemplateResponse {
         this.projects = projects;
     }
 
+    public ProjectTemplateResponse(String projectId, String name, int sprintCount, List<String> deliverables) {
+        this.projects = List.of(new ProjectTemplateItem(projectId, name, sprintCount, deliverables));
+    }
+
     public List<ProjectTemplateItem> getProjects() {
         return projects;
     }

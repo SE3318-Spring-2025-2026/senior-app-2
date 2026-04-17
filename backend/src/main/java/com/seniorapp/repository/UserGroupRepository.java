@@ -16,7 +16,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, Long> {
     @Query("SELECT ug FROM UserGroup ug JOIN ug.members m WHERE m = :user")
     Optional<UserGroup> findByMember(@Param("user") User user);
 
-    @Query("SELECT ug FROM UserGroup ug WHERE ug.teamLeader = :user OR :user IN (ug.members)")
+    @Query("SELECT ug FROM UserGroup ug WHERE ug.teamLeader = :user OR :user MEMBER OF ug.members")
     Optional<UserGroup> findByTeamLeaderOrMember(@Param("user") User user);
 
     boolean existsByGroupName(String groupName);
