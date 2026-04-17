@@ -10,8 +10,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import StudentManagement from './pages/StudentManagement';
 import ResetPassword from './pages/ResetPassword';
-import StudentManagement from './pages/StudentManagement';
-import ResetPassword from './pages/ResetPassword';
 import GroupManagement from './pages/GroupManagement';
 import IntegrationSettings from './pages/IntegrationSettings';
 import CreateGroup from './pages/CreateGroup';
