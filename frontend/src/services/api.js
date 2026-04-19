@@ -272,3 +272,78 @@ export function submitGrade(submissionId, graderId, rubricId, grade) {
     body: JSON.stringify({ graderId, rubricId, grade }),
   });
 }
+
+// ─── Deliverable Submission API ───
+
+/**
+ * Dosya yükleme ile deliverable submission oluşturur.
+ * multipart/form-data kullanır (JSON değil).
+ */
+export async function uploadDeliverableFile(deliverableId, groupId, file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('deliverableId', String(deliverableId));
+  formData.append('groupId', String(groupId));
+
+  const response = await fetch(`${API_URL}/submissions/file`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  const text = await response.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || 'Dosya yüklenemedi.');
+  }
+  return data;
+}
+
+/**
+ * Metin editörü ile deliverable submission oluşturur.
+ */
+export function submitDeliverableText(deliverableId, groupId, textContent) {
+  return request('/submissions/text', {
+    method: 'POST',
+    body: JSON.stringify({ deliverableId, groupId, textContent }),
+  });
+}
+
+/**
+ * Belirli bir deliverable ve grup için olan submission'ı getirir.
+ */
+export function getDeliverableSubmission(deliverableId, groupId) {
+  return request(`/submissions/${deliverableId}/group/${groupId}`);
+}
+
+/**
+ * Bir projeye ait belirli grubun tüm submission'larını getirir.
+ */
+export function getProjectSubmissions(projectId, groupId) {
+  return request(`/submissions/project/${projectId}/group/${groupId}`);
+}
+
+/**
+ * Submission'a ait dosyayı indirir (blob olarak).
+ */
+export async function downloadSubmissionFile(submissionId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/submissions/${submissionId}/download`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Dosya indirilemedi.');
+  }
+  return response.blob();
+}
