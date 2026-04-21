@@ -8,3 +8,7 @@ backend/src/main/resources/application-local.properties
 
 # Maven build output
 backend/target/*
+
+# Deliverable file storage
+backend/storage/
+storage/

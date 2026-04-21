@@ -1,133 +1,101 @@
-import React, { useState, useEffect } from 'react';
-import { getProjectsList, getProjectDeliverablesStatus } from '../services/api';
-import './ProjectInspection.css';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { getProjectDetail, getProjects } from '../services/api';
 
 function ProjectInspection() {
+  const { templateId } = useParams();
   const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [projectDetail, setProjectDetail] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [deliverables, setDeliverables] = useState([]);
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    setLoading(true);
+    setError('');
 
-  const fetchProjects = async () => {
-    try {
-      setLoading(true);
-      const data = await getProjectsList();
-      setProjects(data.content || []);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch projects');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const parsedTemplateId = templateId ? Number(templateId) : undefined;
+    const params = Number.isFinite(parsedTemplateId) ? { templateId: parsedTemplateId } : {};
 
-  const handleProjectSelect = async (project) => {
-    setSelectedProject(project);
-    try {
-      setLoadingDetails(true);
-      const data = await getProjectDeliverablesStatus(project.id);
-      setDeliverables(data);
-    } catch (err) {
-      console.error(err);
-      setDeliverables([]);
-    } finally {
-      setLoadingDetails(false);
+    getProjects(params)
+      .then((res) => {
+        const list = res?.data || [];
+        setProjects(list);
+        if (list.length > 0) {
+          setSelectedProjectId(list[0].projectId);
+        }
+      })
+      .catch((e) => setError(e.message || 'Failed to load project list.'))
+      .finally(() => setLoading(false));
+  }, [templateId]);
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setProjectDetail(null);
+      return;
     }
-  };
+    setLoadingDetail(true);
+    getProjectDetail(selectedProjectId)
+      .then((res) => setProjectDetail(res?.data || null))
+      .catch((e) => setError(e.message || 'Failed to load project detail.'))
+      .finally(() => setLoadingDetail(false));
+  }, [selectedProjectId]);
 
   return (
-    <div className="inspection-dashboard">
-      {/* Sidebar: Projects List */}
-      <div className="inspection-sidebar">
-        <div className="sidebar-header">
-          <h1>Projects</h1>
-        </div>
-        
-        {loading && <p className="loading-text">Loading projects...</p>}
-        {error && <p style={{ color: '#d93025', padding: '15px' }}>{error}</p>}
-        {!loading && projects.length === 0 && !error && <p className="loading-text">No projects found.</p>}
-
-        <ul className="project-list">
-          {projects.map(p => (
-            <li 
-              key={p.id} 
-              className={`project-item ${selectedProject?.id === p.id ? 'active' : ''}`}
-              onClick={() => handleProjectSelect(p)}
+    <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '320px 1fr', gap: '16px' }}>
+      <aside style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px', background: '#fff' }}>
+        <h2 style={{ marginTop: 0 }}>Projects</h2>
+        {loading && <p>Loading...</p>}
+        {error && <p style={{ color: '#b91c1c' }}>{error}</p>}
+        {!loading && projects.length === 0 && <p>No project created from this template yet.</p>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {projects.map((p) => (
+            <button
+              key={p.projectId}
+              onClick={() => setSelectedProjectId(p.projectId)}
+              style={{
+                textAlign: 'left',
+                border: '1px solid #e5e7eb',
+                borderRadius: '10px',
+                padding: '10px',
+                background: selectedProjectId === p.projectId ? '#eef2ff' : '#fff',
+                cursor: 'pointer',
+              }}
             >
-              <span className="project-name">{p.name}</span>
-              <span className="project-term">{p.term}</span>
-            </li>
+              <strong>{p.title}</strong>
+              <div style={{ color: '#6b7280', fontSize: '13px' }}>{p.term}</div>
+            </button>
           ))}
-        </ul>
-      </div>
+        </div>
+      </aside>
 
-      {/* Main Content: Inspection Details */}
-      <div className="inspection-main">
-        {!selectedProject && (
-          <div className="empty-state">
-            <h2>Select a project to inspect</h2>
-            <p>Project details and deliverable statuses will appear here.</p>
+      <main style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px', background: '#fff' }}>
+        <h2 style={{ marginTop: 0 }}>Project Inspection</h2>
+        {!selectedProjectId && <p>Select a project.</p>}
+        {loadingDetail && <p>Loading detail...</p>}
+        {projectDetail && !loadingDetail && (
+          <div>
+            <p><strong>Title:</strong> {projectDetail.title}</p>
+            <p><strong>Status:</strong> {projectDetail.status}</p>
+            <p><strong>Term:</strong> {projectDetail.term}</p>
+            <hr />
+            <h3>Sprints</h3>
+            {projectDetail.sprints?.length ? projectDetail.sprints.map((sprint) => (
+              <div key={sprint.sprintNo} style={{ marginBottom: '12px', border: '1px solid #f1f5f9', borderRadius: '8px', padding: '10px' }}>
+                <strong>{sprint.title}</strong>
+                <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                  {sprint.startDate || '-'} to {sprint.endDate || '-'}
+                </div>
+                <div style={{ marginTop: '6px' }}>
+                  <div><strong>Deliverables:</strong> {sprint.deliverables?.length || 0}</div>
+                  <div><strong>Evaluations:</strong> {sprint.evaluations?.length || 0}</div>
+                </div>
+              </div>
+            )) : <p>No sprint data.</p>}
           </div>
         )}
-
-        {selectedProject && (
-          <>
-            <div className="details-header">
-              <h1>{selectedProject.name}</h1>
-              <p><strong>Term:</strong> {selectedProject.term}</p>
-            </div>
-
-            <div className="details-content">
-              <h3>Deliverable Statuses</h3>
-              
-              {loadingDetails && <p className="loading-text">Loading deliverable details...</p>}
-              {!loadingDetails && deliverables.length === 0 && (
-                <p className="loading-text">No deliverables tracked for this project yet.</p>
-              )}
-
-              {!loadingDetails && deliverables.length > 0 && (
-                <table className="deliverables-table">
-                  <thead>
-                    <tr>
-                      <th>Deliverable ID</th>
-                      <th>Status</th>
-                      <th>System Score</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {deliverables.map(d => (
-                      <tr key={d.deliverableId}>
-                        <td>#{d.deliverableId}</td>
-                        <td>
-                          <span className={`status-badge ${d.status === 'GRADED' ? 'graded' : 'pending'}`}>
-                            {d.status}
-                          </span>
-                        </td>
-                        <td>{d.score !== null ? <strong>{d.score}</strong> : <span style={{ color: '#a0a0a0' }}>—</span>}</td>
-                        <td>
-                          <button 
-                            className="action-btn"
-                            onClick={() => alert(`Navigating to Grade Interface for Deliverable ${d.deliverableId}`)}
-                          >
-                            Inspect / Grade
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+      </main>
     </div>
   );
 }

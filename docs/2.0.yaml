@@ -13,22 +13,48 @@ servers:
 paths:
   /api/projects:
     get:
-      summary: 1.0 List All General Projects (Templates)
+      summary: Lookup the projects (course templates) available to students
       description: >
-        Created by coordinators. Students browse this list to see available course templates 
-        (e.g., SE 1111) before forming or assigning their group to a project.
+        This endpoint enables students to look up the available general projects (templates).
       tags:
-        - Project Templates
+        - General Projects
+        - Templates
       responses:
         "200":
-          description: A list of available general project templates.
+          description: >
+            Lookup successful. General projects are included in response.
+          content:
+            application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  projectId:
+                    type: string
+                  name:
+                    type: string
+                  sprintCount:
+                    type: number
+                  deliverables:
+                    type: string
+            example:            
+              - projectId: "GP - 001"
+                name: "Senioritis Project"
+                sprintCount: 5
+                deliverables: >
+                  "Students will deliver the most amazing project that wows all observers"
+              - projectId: "GP - 002"
+                name: "Senioritis Projectile"
+                sprintCount: 3
+                deliverables: >
+                  "Students will deliver the most amazing project that wows all observers really, really fast"
+        "500":
+          description: Internal Server Error
           content:
             application/json:
               example:
-                - projectId: "proj-se1111"
-                  name: "SE 1111 Graduation Project"
-                  sprintCount: 4
-                  deliverables: ["Analysis", "Design", "Implementation"]
+                error: "The server was unable to process your request. Please contact the server administrator."
 
   /api/groups:
     post:
