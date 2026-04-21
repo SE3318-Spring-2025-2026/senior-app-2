@@ -28,15 +28,68 @@ public class UserGroup {
     @JoinColumn(name = "team_leader_id", referencedColumnName = "id")
     private User teamLeader;
 
-    // CascadeType.ALL kaldırıldı: Grup silindiğinde kullanıcıların silinmemesi için.
-    // @JoinColumn: Arada gereksiz bir "user_groups_members" tablosu oluşmasını engeller.
-    @OneToMany
-    @JoinColumn(name = "group_id")
-    private List<User> members;
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserGroupMember> memberships;
 
     @Column(name = "github_pat_encrypted", length = 1024)
     private String githubPatEncrypted;
 
     @Column(name = "jira_space_url_encrypted", length = 1024)
     private String jiraSpaceUrlEncrypted;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
+
+    public User getCoordinator() {
+        return coordinator;
+    }
+
+    public void setCoordinator(User coordinator) {
+        this.coordinator = coordinator;
+    }
+
+    public User getTeamLeader() {
+        return teamLeader;
+    }
+
+    public void setTeamLeader(User teamLeader) {
+        this.teamLeader = teamLeader;
+    }
+
+    public List<UserGroupMember> getMemberships() {
+        return memberships;
+    }
+
+    public void setMemberships(List<UserGroupMember> memberships) {
+        this.memberships = memberships;
+    }
+
+    public String getGithubPatEncrypted() {
+        return githubPatEncrypted;
+    }
+
+    public void setGithubPatEncrypted(String githubPatEncrypted) {
+        this.githubPatEncrypted = githubPatEncrypted;
+    }
+
+    public String getJiraSpaceUrlEncrypted() {
+        return jiraSpaceUrlEncrypted;
+    }
+
+    public void setJiraSpaceUrlEncrypted(String jiraSpaceUrlEncrypted) {
+        this.jiraSpaceUrlEncrypted = jiraSpaceUrlEncrypted;
+    }
 }

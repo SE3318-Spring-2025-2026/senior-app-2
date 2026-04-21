@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:9999/api';
+const API_URL = 'http://localhost:8080/api';
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('token');
@@ -59,6 +59,10 @@ export function resetPassword(token, newPassword) {
   });
 }
 
+/**
+ * @param {string} [studentId] - required for student whitelist flow
+ * @param {'link'|'login'} [flow] - LINK = first-time GitHub link; LOGIN = existing linked account
+ */
 export async function getGithubLoginUrl(studentId, flow) {
   const qs = new URLSearchParams();
   if (studentId) qs.set('studentId', studentId);
@@ -95,8 +99,8 @@ export function registerStaff(email, fullName, role) {
     method: 'POST',
     body: JSON.stringify({ email, fullName, role }),
   });
+  
 }
-
 export function uploadStudentWhitelist(studentIds) {
   return request('/coordinator/valid-students', {
     method: 'POST',
@@ -115,53 +119,145 @@ export function deleteStudentWhitelistEntry(id) {
 }
 
 export function getGitHubAuthUrl() {
-  return 'http://localhost:9999/api/auth/github';
+  return 'http://localhost:8080/api/auth/github';
 }
 
 export function getLogs(page = 0, size = 20) {
   return request(`/logs?page=${page}&size=${size}`);
 }
 
-// Group Management APIs
-export function getGroup(groupId) {
-  return request(`/groups/${groupId}`);
+export function createProjectTemplate(payload) {
+  return request('/project-templates', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getProjectTemplates() {
-  return request('/projects');
+  return request('/project-templates');
 }
 
-export function createGroup(groupName, projectId) {
+export function getProjects(params = {}) {
+  const query = new URLSearchParams();
+  if (params.term) query.set('term', params.term);
+  if (params.templateId != null) query.set('templateId', String(params.templateId));
+  if (params.groupId != null) query.set('groupId', String(params.groupId));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/projects${suffix}`);
+}
+
+export function getProjectCommittees(projectId) {
+  return request(`/projects/${projectId}/committees`);
+}
+
+export function createProjectCommittee(projectId, name = '') {
+  return request(`/projects/${projectId}/committees`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getProjectProfessors() {
+  return request('/projects/professors');
+}
+
+export function addProfessorToCommittee(projectId, committeeId, professorUserId) {
+  return request(`/projects/${projectId}/committees/${committeeId}/professors`, {
+    method: 'POST',
+    body: JSON.stringify({ professorUserId }),
+  });
+}
+
+export function deleteProjectCommittee(projectId, committeeId) {
+  return request(`/projects/${projectId}/committees/${committeeId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function removeProfessorFromCommittee(projectId, committeeId, professorUserId) {
+  return request(`/projects/${projectId}/committees/${committeeId}/professors/${professorUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getTemplateCommittees(templateId) {
+  return request(`/project-templates/${templateId}/committees`);
+}
+
+export function createTemplateCommittee(templateId, name = '') {
+  return request(`/project-templates/${templateId}/committees`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getTemplateProfessors() {
+  return request('/project-templates/professors');
+}
+
+export function addProfessorToTemplateCommittee(templateId, committeeId, professorUserId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}/professors`, {
+    method: 'POST',
+    body: JSON.stringify({ professorUserId }),
+  });
+}
+
+export function deleteTemplateCommittee(templateId, committeeId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function removeProfessorFromTemplateCommittee(templateId, committeeId, professorUserId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}/professors/${professorUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getStudentDashboard() {
+  return request('/students/dashboard/me');
+}
+
+export function respondGroupInvite(inviteId, action) {
+  return request(`/groups/invites/${inviteId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action }),
+  });
+}
+
+export function getMyTeams() {
+  return request('/groups/my-teams');
+}
+
+export function createTeam(groupName) {
   return request('/groups', {
     method: 'POST',
-    body: JSON.stringify({
-      groupName,
-      projectId,
-    }),
+    body: JSON.stringify({ groupName }),
   });
 }
 
-export function addOrRemoveGroupMember(groupId, studentId, action) {
-  return request(`/groups/${groupId}/members`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      studentId,
-      action // 'add' or 'remove'
-    }),
-  });
+export function listStudentsForInvite() {
+  return request('/groups/students');
 }
 
-// Group Integration APIs
-export function setupIntegrations(groupId, githubPat, jiraSpaceUrl) {
-  return request(`/groups/${groupId}/integrations`, {
+export function inviteStudentToTeam(groupId, studentUserId) {
+  return request(`/groups/${groupId}/invites`, {
     method: 'POST',
-    body: JSON.stringify({
-      githubPat,
-      jiraSpaceUrl
-    }),
+    body: JSON.stringify({ studentUserId }),
   });
 }
 
-export function getGroupIntegrations(groupId) {
-  return request(`/groups/${groupId}/integrations`);
+export function listAdvisorOptionsForTeam(groupId) {
+  return request(`/groups/${groupId}/advisor-options`);
+}
+
+export function createProjectFromTemplateForTeam(groupId, templateId) {
+  return request(`/groups/${groupId}/project`, {
+    method: 'POST',
+    body: JSON.stringify({ templateId }),
+  });
+}
+
+export function getMyStudentProjects() {
+  return request('/students/dashboard/projects');
 }
