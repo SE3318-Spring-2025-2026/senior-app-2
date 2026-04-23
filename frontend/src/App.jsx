@@ -48,6 +48,8 @@ function App() {
         <Route path="templates/:templateId" element={<ProjectInspection />} />
         <Route path="templates/:templateId/manage-comitees" element={<ManageComitees />} />
         
+        <Route path="projects" element={<ProjectInspection />} />
+        
         <Route
           path="users"
           element={
