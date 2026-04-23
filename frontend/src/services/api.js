@@ -59,10 +59,6 @@ export function resetPassword(token, newPassword) {
   });
 }
 
-/**
- * @param {string} [studentId] - required for student whitelist flow
- * @param {'link'|'login'} [flow] - LINK = first-time GitHub link; LOGIN = existing linked account
- */
 export async function getGithubLoginUrl(studentId, flow) {
   const qs = new URLSearchParams();
   if (studentId) qs.set('studentId', studentId);
@@ -99,8 +95,8 @@ export function registerStaff(email, fullName, role) {
     method: 'POST',
     body: JSON.stringify({ email, fullName, role }),
   });
-  
 }
+
 export function uploadStudentWhitelist(studentIds) {
   return request('/coordinator/valid-students', {
     method: 'POST',
@@ -273,12 +269,6 @@ export function submitGrade(submissionId, graderId, rubricId, grade) {
   });
 }
 
-// ─── Deliverable Submission API ───
-
-/**
- * Dosya yükleme ile deliverable submission oluşturur.
- * multipart/form-data kullanır (JSON değil).
- */
 export async function uploadDeliverableFile(deliverableId, groupId, file) {
   const token = localStorage.getItem('token');
   const formData = new FormData();
@@ -303,14 +293,11 @@ export async function uploadDeliverableFile(deliverableId, groupId, file) {
   }
 
   if (!response.ok) {
-    throw new Error(data.message || data.error || 'Dosya yüklenemedi.');
+    throw new Error(data.message || data.error || 'Upload failed');
   }
   return data;
 }
 
-/**
- * Metin editörü ile deliverable submission oluşturur.
- */
 export function submitDeliverableText(deliverableId, groupId, textContent) {
   return request('/submissions/text', {
     method: 'POST',
@@ -318,23 +305,14 @@ export function submitDeliverableText(deliverableId, groupId, textContent) {
   });
 }
 
-/**
- * Belirli bir deliverable ve grup için olan submission'ı getirir.
- */
 export function getDeliverableSubmission(deliverableId, groupId) {
   return request(`/submissions/${deliverableId}/group/${groupId}`);
 }
 
-/**
- * Bir projeye ait belirli grubun tüm submission'larını getirir.
- */
 export function getProjectSubmissions(projectId, groupId) {
   return request(`/submissions/project/${projectId}/group/${groupId}`);
 }
 
-/**
- * Submission'a ait dosyayı indirir (blob olarak).
- */
 export async function downloadSubmissionFile(submissionId) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_URL}/submissions/${submissionId}/download`, {
@@ -342,8 +320,25 @@ export async function downloadSubmissionFile(submissionId) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
+  
   if (!response.ok) {
-    throw new Error('Dosya indirilemedi.');
+    throw new Error('Download failed');
   }
   return response.blob();
+}
+
+export function inviteCommitteeAdvisors(groupId) {
+  return request(`/advisor-requests/invite-committee/${groupId}`, {
+    method: 'POST',
+  });
+}
+
+export function getMyAdvisorRequests() {
+  return request('/advisor-requests/my-requests');
+}
+
+export function respondToAdvisorInvite(requestId, decision) {
+  return request(`/advisor-requests/${requestId}/respond?decision=${decision}`, {
+    method: 'POST',
+  });
 }

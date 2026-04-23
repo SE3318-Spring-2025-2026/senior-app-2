@@ -1,13 +1,15 @@
 package com.seniorapp.dto;
 
+import com.seniorapp.entity.GroupInviteStatus;
+import lombok.Data;
+import java.time.LocalDateTime;
+
+@Data
 public class AdvisorRequestDto {
-    private String groupId;
-    private String professorId;
-
-    public AdvisorRequestDto() {}
-
-    public String getGroupId() { return groupId; }
-    public void setGroupId(String groupId) { this.groupId = groupId; }
-    public String getProfessorId() { return professorId; }
-    public void setProfessorId(String professorId) { this.professorId = professorId; }
+    private Long id;
+    private Long groupId;
+    private String groupName;
+    private String professorName;
+    private GroupInviteStatus status;
+    private LocalDateTime createdAt;
 }

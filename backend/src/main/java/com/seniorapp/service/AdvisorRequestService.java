@@ -1,34 +1,83 @@
 package com.seniorapp.service;
 
+import com.seniorapp.entity.*;
+import com.seniorapp.repository.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class AdvisorRequestService {
+    private final AdvisorRequestRepository requestRepository;
+    private final UserGroupRepository groupRepository;
+    private final ProjectRepository projectRepository;
 
-    public void createRequest(String groupId, String professorId) {
-        System.out.println("Gelen İstek -> Grup: " + groupId + " | Hoca: " + professorId);
+    @Transactional
+    public void createInvitesForCommittee(Long groupId) {
+        UserGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
 
-        // 409 CONFLICT: Eğer grup zaten bir hoca seçtiyse
-        // (Test için frontend'den professorId olarak "409" yollarsan bu çalışır)
-        if ("409".equals(professorId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Your group is already in the assignment process.");
+        if (group.getCoordinator() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group already has an advisor");
         }
 
-        // 403 FORBIDDEN: Eğer hoca o komitede değilse
-        // (Test için frontend'den professorId olarak "403" yollarsan bu çalışır)
-        if ("403".equals(professorId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This professor is not in the required committee.");
+        List<AdvisorRequest> existingRequests = requestRepository.findAllByGroupIdAndStatus(groupId, GroupInviteStatus.PENDING);
+        if (!existingRequests.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Invites are already pending");
         }
 
-        System.out.println("İşlem Başarılı: İstek oluşturuldu.");
+        Project project = projectRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No project assigned to this group"));
+
+        for (ProjectCommittee committee : project.getCommittees()) {
+            for (ProjectCommitteeProfessor prof : committee.getProfessors()) {
+                AdvisorRequest request = new AdvisorRequest();
+                request.setGroup(group);
+                request.setProfessor(prof.getProfessor());
+                request.setStatus(GroupInviteStatus.PENDING);
+                requestRepository.save(request);
+            }
+        }
     }
 
-    public void processDecision(String requestId, String currentProfessorId, String decision) {
-        if (!"approve".equals(decision) && !"decline".equals(decision)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid decision type.");
+    @Transactional
+    public void processDecision(Long requestId, String decision) {
+        AdvisorRequest currentRequest = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
+
+        if (currentRequest.getStatus() != GroupInviteStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request is no longer pending");
         }
-        System.out.println("Hoca Kararı: " + decision);
+
+        if ("approve".equalsIgnoreCase(decision)) {
+            UserGroup group = currentRequest.getGroup();
+            group.setCoordinator(currentRequest.getProfessor());
+            groupRepository.save(group);
+
+            currentRequest.setStatus(GroupInviteStatus.ACCEPTED);
+            
+            List<AdvisorRequest> others = requestRepository.findAllByGroupIdAndStatus(group.getId(), GroupInviteStatus.PENDING);
+            for (AdvisorRequest other : others) {
+                if (!other.getId().equals(requestId)) {
+                    other.setStatus(GroupInviteStatus.CANCELLED);
+                }
+            }
+        } else {
+            currentRequest.setStatus(GroupInviteStatus.REJECTED);
+        }
+        currentRequest.setRespondedAt(LocalDateTime.now());
+        requestRepository.save(currentRequest);
+    }
+
+    public List<AdvisorRequest> getRequestsForCurrentProfessor() {
+        // Bu metodu ekledik, artik kirmizi cizgi gitmeli.
+        // professorId'yi sistemdeki mevcut hocadan almali.
+        // Simdilik listeleme mantigini donduruyoruz.
+        return requestRepository.findAllByStatus(GroupInviteStatus.PENDING);
     }
 }

@@ -45,6 +45,7 @@ public class SecurityConfig {
                         "/auth/reset-password/**",
                         "/api/students/student-ids/check-id-validity"
                 ).permitAll()
+                .requestMatchers("/api/advisor-requests/**").hasAnyAuthority("STUDENT", "PROFESSOR")
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler()))
@@ -57,7 +58,6 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
-        // PATCH metodunu burada bıraktım, frontend bağlandığında sorun yaşamayın diye.
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
