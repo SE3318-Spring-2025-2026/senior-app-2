@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -48,19 +49,31 @@ public class ProjectController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN', 'STUDENT')")
     public ResponseEntity<ProjectListResponse> listProjects(
             @RequestParam(required = false) String term,
             @RequestParam(required = false) Long templateId,
-            @RequestParam(required = false) Long groupId
+            @RequestParam(required = false) Long groupId,
+            @AuthenticationPrincipal User principal
     ) {
-        return ResponseEntity.ok(new ProjectListResponse("success", projectService.listProjects(term, templateId, groupId)));
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+        return ResponseEntity.ok(new ProjectListResponse(
+                "success",
+                projectService.listProjects(term, templateId, groupId, user.getId(), user.getRole())
+        ));
     }
 
     @GetMapping("/{projectId}")
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
-    public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable Long projectId) {
-        return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId)));
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN', 'STUDENT')")
+    public ResponseEntity<ProjectDetailResponse> getProjectDetail(
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal User principal
+    ) {
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+        return ResponseEntity.ok(new ProjectDetailResponse(
+                "success",
+                projectService.getProjectDetail(projectId, user.getId(), user.getRole())
+        ));
     }
 
     @GetMapping("/professors")
