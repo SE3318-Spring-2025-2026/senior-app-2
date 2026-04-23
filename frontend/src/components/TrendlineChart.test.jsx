@@ -30,7 +30,7 @@ describe('TrendlineChart Component', () => {
         loading={true}
       />
     );
-    expect(screen.getByText(/Veriler yükleniyor/i)).toBeInTheDocument();
+    expect(screen.getByText(/Loading data/i)).toBeInTheDocument();
   });
 
   it('displays empty state when no data provided', () => {
@@ -41,7 +41,7 @@ describe('TrendlineChart Component', () => {
         loading={false}
       />
     );
-    expect(screen.getByText(/Görüntülenecek veri bulunamadı/i)).toBeInTheDocument();
+    expect(screen.getByText(/No data available/i)).toBeInTheDocument();
   });
 
   it('renders with line chart type', () => {

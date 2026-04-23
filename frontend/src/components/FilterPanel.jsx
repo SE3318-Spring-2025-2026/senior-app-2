@@ -5,12 +5,12 @@ import { tr } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 
 /**
- * FilterPanel Bileşeni - Analitik dashboard için filtreleme kontrolleri
+ * FilterPanel Component - Filtering controls for analytics dashboard
  * @param {Object} props
- * @param {Array} props.students - Öğrenci listesi
- * @param {Array} props.groups - Grup listesi
- * @param {Function} props.onFilterChange - Filtre değiştiği zaman callback
- * @param {boolean} props.loading - Yükleme durumu
+ * @param {Array} props.students - List of students
+ * @param {Array} props.groups - List of groups
+ * @param {Function} props.onFilterChange - Callback when filters change
+ * @param {boolean} props.loading - Loading state
  */
 const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
   const [selectedStudent, setSelectedStudent] = useState('');
@@ -39,20 +39,20 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
   return (
     <div className="filter-panel">
       <div className="filter-header">
-        <h3>Filtreler</h3>
+        <h3>Filters</h3>
       </div>
 
       <div className="filter-content">
-        {/* Öğrenci Seçimi */}
+        {/* Student Selection */}
         <div className="filter-group">
-          <label htmlFor="student-select">Öğrenci Seçin:</label>
+          <label htmlFor="student-select">Select Student:</label>
           <select
             id="student-select"
             value={selectedStudent}
             onChange={(e) => setSelectedStudent(e.target.value)}
             disabled={loading}
           >
-            <option value="">-- Tüm Öğrenciler --</option>
+            <option value="">-- All Students --</option>
             {students &&
               students.map((student) => (
                 <option key={student.id} value={student.id}>
@@ -62,16 +62,16 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
           </select>
         </div>
 
-        {/* Grup Seçimi */}
+        {/* Group Selection */}
         <div className="filter-group">
-          <label htmlFor="group-select">Grup Seçin:</label>
+          <label htmlFor="group-select">Select Group:</label>
           <select
             id="group-select"
             value={selectedGroup}
             onChange={(e) => setSelectedGroup(e.target.value)}
             disabled={loading}
           >
-            <option value="">-- Tüm Gruplar --</option>
+            <option value="">-- All Groups --</option>
             {groups &&
               groups.map((group) => (
                 <option key={group.id} value={group.id}>
@@ -81,13 +81,13 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
           </select>
         </div>
 
-        {/* Tarih Aralığı */}
+        {/* Date Range */}
         <div className="filter-group date-range">
-          <label>Tarih Aralığı:</label>
+          <label>Date Range:</label>
           <div className="date-inputs">
             <div className="date-input-wrapper">
               <label htmlFor="start-date" className="small-label">
-                Başlangıç:
+                Start:
               </label>
               <DatePicker
                 id="start-date"
@@ -98,7 +98,7 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
                 endDate={endDate}
                 dateFormat="dd/MM/yyyy"
                 locale={tr}
-                placeholderText="Başlangıç tarihi"
+                placeholderText="Start date"
                 disabled={loading}
                 isClearable
               />
@@ -106,7 +106,7 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
 
             <div className="date-input-wrapper">
               <label htmlFor="end-date" className="small-label">
-                Bitiş:
+                End:
               </label>
               <DatePicker
                 id="end-date"
@@ -118,7 +118,7 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
                 minDate={startDate}
                 dateFormat="dd/MM/yyyy"
                 locale={tr}
-                placeholderText="Bitiş tarihi"
+                placeholderText="End date"
                 disabled={loading}
                 isClearable
               />
@@ -126,14 +126,14 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
           </div>
         </div>
 
-        {/* Temizle Butonu */}
+        {/* Clear Button */}
         <div className="filter-actions">
           <button
             onClick={handleReset}
             disabled={loading}
             className="btn-secondary"
           >
-            Filtreleri Temizle
+            Clear Filters
           </button>
         </div>
       </div>

@@ -4,12 +4,12 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 /**
- * PDF olarak raporu dışa aktarır
+ * Export report as PDF
  * @param {string} elementId - HTML element ID
- * @param {Object} options - Dışa aktarma seçenekleri
- * @param {string} [options.fileName] - PDF dosya adı
- * @param {string} [options.title] - Rapor başlığı
- * @param {Object} [options.metadata] - Rapor metadatası
+ * @param {Object} options - Export options
+ * @param {string} [options.fileName] - PDF file name
+ * @param {string} [options.title] - Report title
+ * @param {Object} [options.metadata] - Report metadata
  */
 export async function exportToPDF(elementId, options = {}) {
   try {
@@ -18,7 +18,7 @@ export async function exportToPDF(elementId, options = {}) {
       throw new Error(`Element with ID "${elementId}" not found`);
     }
 
-    // Görseli yakalama
+    // Capture image
     const canvas = await html2canvas(element, {
       scale: 2,
       logging: false,
@@ -35,13 +35,13 @@ export async function exportToPDF(elementId, options = {}) {
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
 
-    // Başlık ve metadatası ekle
+    // Add title and metadata
     if (options.title) {
       pdf.setFontSize(16);
       pdf.text(options.title, 10, 10);
       pdf.setFontSize(10);
       pdf.text(
-        `Oluşturulma Tarihi: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: tr })}`,
+        `Generated: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: tr })}`,
         10,
         18
       );
@@ -57,7 +57,7 @@ export async function exportToPDF(elementId, options = {}) {
       pdf.addPage();
     }
 
-    // Görüntüyü PDF'e ekle
+    // Add image to PDF
     const imgHeight = (canvas.height * pdfWidth) / canvas.width;
     let heightLeft = imgHeight;
     let position = 0;
@@ -72,10 +72,10 @@ export async function exportToPDF(elementId, options = {}) {
       heightLeft -= pdfHeight;
     }
 
-    // PDF'i indir
+    // Download PDF
     const fileName =
       options.fileName ||
-      `Performans-Raporu-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.pdf`;
+      `Performance-Report-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.pdf`;
     pdf.save(fileName);
 
     return true;
@@ -86,9 +86,9 @@ export async function exportToPDF(elementId, options = {}) {
 }
 
 /**
- * Grafikleri PNG görüntü olarak dışa aktarır
+ * Export chart as PNG image
  * @param {string} elementId - HTML element ID
- * @param {string} [fileName] - Dosya adı
+ * @param {string} [fileName] - File name
  */
 export async function exportChartAsImage(elementId, fileName) {
   try {
@@ -106,7 +106,7 @@ export async function exportChartAsImage(elementId, fileName) {
     const link = document.createElement('a');
     link.href = canvas.toDataURL('image/png');
     link.download =
-      fileName || `Grafik-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.png`;
+      fileName || `Chart-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -119,9 +119,9 @@ export async function exportChartAsImage(elementId, fileName) {
 }
 
 /**
- * CSV formatında veriyi dışa aktarır
- * @param {Array} data - Veri dizisi
- * @param {string} [fileName] - Dosya adı
+ * Export data as CSV format
+ * @param {Array} data - Data array
+ * @param {string} [fileName] - File name
  */
 export function exportToCSV(data, fileName) {
   try {

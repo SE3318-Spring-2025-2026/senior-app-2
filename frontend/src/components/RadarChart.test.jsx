@@ -16,33 +16,33 @@ describe('PerformanceRadarChart Component', () => {
     render(
       <PerformanceRadarChart
         data={mockData}
-        studentName="Ahmet Yılmaz"
+        studentName="Ahmed Yilmaz"
         loading={false}
       />
     );
-    expect(screen.getByText(/Ahmet Yılmaz - Performans Metrikleri/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ahmed Yilmaz - Performance Metrics/i)).toBeInTheDocument();
   });
 
   it('displays loading state', () => {
     render(
       <PerformanceRadarChart
         data={[]}
-        studentName="Ahmet Yılmaz"
+        studentName="Ahmed Yilmaz"
         loading={true}
       />
     );
-    expect(screen.getByText(/Veriler yükleniyor/i)).toBeInTheDocument();
+    expect(screen.getByText(/Loading data/i)).toBeInTheDocument();
   });
 
   it('displays empty state when no data', () => {
     render(
       <PerformanceRadarChart
         data={[]}
-        studentName="Ahmet Yılmaz"
+        studentName="Ahmed Yilmaz"
         loading={false}
       />
     );
-    expect(screen.getByText(/Görüntülenecek veri bulunamadı/i)).toBeInTheDocument();
+    expect(screen.getByText(/No data available/i)).toBeInTheDocument();
   });
 
   it('renders with proper structure', () => {

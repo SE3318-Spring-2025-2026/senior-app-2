@@ -15,18 +15,18 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 /**
- * TrendlineChart Bileşeni - Zaman serisine göre skor ilerlemesini gösterir
+ * TrendlineChart Component - Shows score progress over time
  * @param {Object} props
- * @param {Array} props.data - Trend verileri
- * @param {string} props.title - Grafik başlığı
- * @param {boolean} props.loading - Yükleme durumu
- * @param {string} props.type - Grafik türü ('line' veya 'area')
+ * @param {Array} props.data - Trend data
+ * @param {string} props.title - Chart title
+ * @param {boolean} props.loading - Loading state
+ * @param {string} props.type - Chart type ('line' or 'area')
  */
 const TrendlineChart = ({ data, title, loading, type = 'line' }) => {
   if (loading) {
     return (
       <div className="trendline-chart-container loading">
-        <p>Veriler yükleniyor...</p>
+        <p>Loading data...</p>
       </div>
     );
   }
@@ -34,7 +34,7 @@ const TrendlineChart = ({ data, title, loading, type = 'line' }) => {
   if (!data || data.length === 0) {
     return (
       <div className="trendline-chart-container empty">
-        <p>Görüntülenecek veri bulunamadı</p>
+        <p>No data available</p>
       </div>
     );
   }

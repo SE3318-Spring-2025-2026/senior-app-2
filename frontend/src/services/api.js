@@ -351,27 +351,27 @@ export async function downloadSubmissionFile(submissionId) {
 // ─── Analytics API ───
 
 /**
- * Belirli bir öğrenci için performans metriklerini getirir
- * (Doğruluk, Hız, Kalite, vb.)
+ * Get performance metrics for a specific student
+ * (Accuracy, Speed, Quality, etc.)
  */
 export function getStudentPerformance(studentId) {
   return request(`/analytics/students/${studentId}/performance`);
 }
 
 /**
- * Belirli bir grup için performans metriklerini getirir
+ * Get performance metrics for a specific group
  */
 export function getGroupPerformance(groupId) {
   return request(`/analytics/groups/${groupId}/performance`);
 }
 
 /**
- * Zaman serisine göre performans trendlerini getirir
- * @param {Object} params - Filtreleme parametreleri
- * @param {string} [params.studentId] - Öğrenci ID
- * @param {string} [params.groupId] - Grup ID
- * @param {string} [params.startDate] - Başlangıç tarihi (YYYY-MM-DD)
- * @param {string} [params.endDate] - Bitiş tarihi (YYYY-MM-DD)
+ * Get performance trends by time series
+ * @param {Object} params - Filtering parameters
+ * @param {string} [params.studentId] - Student ID
+ * @param {string} [params.groupId] - Group ID
+ * @param {string} [params.startDate] - Start date (YYYY-MM-DD)
+ * @param {string} [params.endDate] - End date (YYYY-MM-DD)
  */
 export function getPerformanceTrends(params = {}) {
   const query = new URLSearchParams();
@@ -384,14 +384,14 @@ export function getPerformanceTrends(params = {}) {
 }
 
 /**
- * Filtreleme için kullanılabilir öğrencileri getirir
+ * Get available students for analytics filtering
  */
 export function getAvailableStudentsForAnalytics() {
   return request('/analytics/available-students');
 }
 
 /**
- * Filtreleme için kullanılabilir grupları getirir
+ * Get available groups for analytics filtering
  */
 export function getAvailableGroupsForAnalytics() {
   return request('/analytics/available-groups');

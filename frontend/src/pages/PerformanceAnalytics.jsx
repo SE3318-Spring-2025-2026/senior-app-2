@@ -22,7 +22,7 @@ const PerformanceAnalytics = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Filtre State
+  // Filter State
   const [filters, setFilters] = useState({
     studentId: '',
     groupId: '',
@@ -30,7 +30,7 @@ const PerformanceAnalytics = () => {
     endDate: null,
   });
 
-  // Başlangıç: Mevcut öğrenci ve grupları yükle
+  // Initial: Load available students and groups
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -46,7 +46,7 @@ const PerformanceAnalytics = () => {
         setGroups(groupsData || []);
       } catch (err) {
         console.error('Error loading initial data:', err);
-        setError('Veriler yüklenirken hata oluştu');
+        setError('Error loading data');
       } finally {
         setLoading(false);
       }
@@ -55,18 +55,18 @@ const PerformanceAnalytics = () => {
     fetchInitialData();
   }, []);
 
-  // Filtreleme değiştiğinde verileri yükle
+  // Load data when filter changes
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Trend verilerini her zaman yükle
+        // Always load trend data
         const trends = await getPerformanceTrends(filters);
         setTrendData(trends || []);
 
-        // Öğrenci seçiliyse öğrenci performansını yükle
+        // Load student performance if selected
         if (filters.studentId) {
           const studentPerf = await getStudentPerformance(filters.studentId);
           setStudentPerformance(studentPerf || null);
@@ -74,7 +74,7 @@ const PerformanceAnalytics = () => {
           setStudentPerformance(null);
         }
 
-        // Grup seçiliyse grup performansını yükle
+        // Load group performance if selected
         if (filters.groupId) {
           const groupPerf = await getGroupPerformance(filters.groupId);
           setGroupPerformance(groupPerf || null);
@@ -83,7 +83,7 @@ const PerformanceAnalytics = () => {
         }
       } catch (err) {
         console.error('Error loading analytics data:', err);
-        setError('Analitik verileri yüklenirken hata oluştu');
+        setError('Error loading analytics data');
       } finally {
         setLoading(false);
       }
@@ -92,53 +92,53 @@ const PerformanceAnalytics = () => {
     fetchAnalyticsData();
   }, [filters]);
 
-  // Filtreleme değişimi
+  // Handle filter change
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
   };
 
-  // PDF olarak raporu dışa aktarma
+  // Export report as PDF
   const handleExportPDF = async () => {
     try {
       await exportToPDF('analytics-dashboard', {
-        fileName: 'Performans-Analitik-Raporu.pdf',
-        title: 'Performans Analitik Raporu',
+        fileName: 'Performance-Analytics-Report.pdf',
+        title: 'Performance Analytics Report',
         metadata: {
-          'Rapor Tarihi': new Date().toLocaleDateString('tr-TR'),
-          'Öğrenci': filters.studentId ? 'Seçili' : 'Tüm',
-          'Grup': filters.groupId ? 'Seçili' : 'Tüm',
+          'Report Date': new Date().toLocaleDateString('en-US'),
+          'Student': filters.studentId ? 'Selected' : 'All',
+          'Group': filters.groupId ? 'Selected' : 'All',
         },
       });
     } catch (err) {
       console.error('PDF export error:', err);
-      setError('PDF dışa aktarırken hata oluştu');
+      setError('Error exporting PDF');
     }
   };
 
-  // CSV olarak veriyi dışa aktarma
+  // Export data as CSV
   const handleExportCSV = () => {
     try {
       if (trendData && trendData.length > 0) {
-        exportToCSV(trendData, 'Performans-Trend-Verileri.csv');
+        exportToCSV(trendData, 'Performance-Trend-Data.csv');
       } else {
-        setError('Dışa aktaracak veri bulunamadı');
+        setError('No data to export');
       }
     } catch (err) {
       console.error('CSV export error:', err);
-      setError('CSV dışa aktarırken hata oluştu');
+      setError('Error exporting CSV');
     }
   };
 
   return (
     <div className="performance-analytics-page">
       <div className="page-header">
-        <h1>📊 Performans Analitik Dashboard</h1>
-        <p>Öğrenci ve grup performansını zaman serisine göre analiz edin</p>
+        <h1>📊 Performance Analytics Dashboard</h1>
+        <p>Analyze student and group performance over time</p>
       </div>
 
       {error && (
         <div className="alert alert-error">
-          <strong>Hata:</strong> {error}
+          <strong>Error:</strong> {error}
         </div>
       )}
 
@@ -155,47 +155,47 @@ const PerformanceAnalytics = () => {
 
         {/* Ana İçerik */}
         <main className="analytics-content" id="analytics-dashboard">
-          {/* Export Düğmeleri */}
+          {/* Export Buttons */}
           <div className="export-controls">
             <button
               onClick={handleExportPDF}
               disabled={loading}
               className="btn-primary"
-              title="Raporu PDF olarak indir"
+              title="Download report as PDF"
             >
-              📥 PDF Olarak İndir
+              📥 Download PDF
             </button>
             <button
               onClick={handleExportCSV}
               disabled={loading || !trendData}
               className="btn-secondary"
-              title="Verileri CSV olarak indir"
+              title="Download data as CSV"
             >
-              📊 CSV Olarak İndir
+              📊 Download CSV
             </button>
           </div>
 
-          {/* Radar Chart - Öğrenci Performans */}
+          {/* Radar Chart - Student Performance */}
           {filters.studentId && (
             <div className="chart-section radar-section">
               <PerformanceRadarChart
                 data={studentPerformance?.metrics || []}
                 studentName={
                   students.find((s) => s.id === filters.studentId)?.name ||
-                  'Öğrenci'
+                  'Student'
                 }
                 loading={loading}
               />
             </div>
           )}
 
-          {/* Radar Chart - Grup Performans */}
+          {/* Radar Chart - Group Performance */}
           {filters.groupId && groupPerformance && (
             <div className="chart-section radar-section">
               <PerformanceRadarChart
                 data={groupPerformance?.metrics || []}
                 studentName={
-                  groups.find((g) => g.id === filters.groupId)?.name || 'Grup'
+                  groups.find((g) => g.id === filters.groupId)?.name || 'Group'
                 }
                 loading={loading}
               />
@@ -207,40 +207,40 @@ const PerformanceAnalytics = () => {
             <div className="chart-section trendline-section">
               <TrendlineChart
                 data={trendData}
-                title="Performans Trendi - Semester Boyunca Skor İlerleme"
+                title="Performance Trends - Score Progress Throughout the Semester"
                 loading={loading}
                 type="line"
               />
             </div>
           )}
 
-          {/* Özet İstatistikler */}
+          {/* Summary Statistics */}
           {(studentPerformance || groupPerformance) && (
             <div className="summary-section">
-              <h3>📈 Özet İstatistikler</h3>
+              <h3>📈 Summary Statistics</h3>
               <div className="summary-grid">
                 {studentPerformance?.summary && (
                   <>
                     <div className="summary-card">
-                      <h4>Ortalama Skor</h4>
+                      <h4>Average Score</h4>
                       <p className="summary-value">
                         {studentPerformance.summary.averageScore}%
                       </p>
                     </div>
                     <div className="summary-card">
-                      <h4>En Yüksek Skor</h4>
+                      <h4>Highest Score</h4>
                       <p className="summary-value">
                         {studentPerformance.summary.maxScore}%
                       </p>
                     </div>
                     <div className="summary-card">
-                      <h4>En Düşük Skor</h4>
+                      <h4>Lowest Score</h4>
                       <p className="summary-value">
                         {studentPerformance.summary.minScore}%
                       </p>
                     </div>
                     <div className="summary-card">
-                      <h4>İlerleme</h4>
+                      <h4>Improvement</h4>
                       <p
                         className={`summary-value ${
                           studentPerformance.summary.improvement >= 0
@@ -257,19 +257,19 @@ const PerformanceAnalytics = () => {
                 {groupPerformance?.summary && (
                   <>
                     <div className="summary-card">
-                      <h4>Grup Ortalama Skoru</h4>
+                      <h4>Group Average Score</h4>
                       <p className="summary-value">
                         {groupPerformance.summary.averageScore}%
                       </p>
                     </div>
                     <div className="summary-card">
-                      <h4>Grup Üye Sayısı</h4>
+                      <h4>Group Members</h4>
                       <p className="summary-value">
                         {groupPerformance.summary.memberCount}
                       </p>
                     </div>
                     <div className="summary-card">
-                      <h4>Proje Sayısı</h4>
+                      <h4>Project Count</h4>
                       <p className="summary-value">
                         {groupPerformance.summary.projectCount}
                       </p>
@@ -280,10 +280,10 @@ const PerformanceAnalytics = () => {
             </div>
           )}
 
-          {/* Boş Durum */}
+          {/* Empty State */}
           {!filters.studentId && !filters.groupId && (
             <div className="empty-state">
-              <p>📋 Başlamak için sol taraftan bir öğrenci veya grup seçin</p>
+              <p>📋 Select a student or group from the sidebar to get started</p>
             </div>
           )}
         </main>

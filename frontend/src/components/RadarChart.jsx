@@ -11,17 +11,17 @@ import {
 } from 'recharts';
 
 /**
- * RadarChart Bileşeni - Öğrenci performans metriklerini gösterir
+ * RadarChart Component - Displays student performance metrics
  * @param {Object} props
- * @param {Array} props.data - Performans verileri
- * @param {string} props.studentName - Öğrenci adı
- * @param {boolean} props.loading - Yükleme durumu
+ * @param {Array} props.data - Performance data
+ * @param {string} props.studentName - Student name
+ * @param {boolean} props.loading - Loading state
  */
 const PerformanceRadarChart = ({ data, studentName, loading }) => {
   if (loading) {
     return (
       <div className="radar-chart-container loading">
-        <p>Veriler yükleniyor...</p>
+        <p>Loading data...</p>
       </div>
     );
   }
@@ -29,21 +29,21 @@ const PerformanceRadarChart = ({ data, studentName, loading }) => {
   if (!data || data.length === 0) {
     return (
       <div className="radar-chart-container empty">
-        <p>Görüntülenecek veri bulunamadı</p>
+        <p>No data available</p>
       </div>
     );
   }
 
   return (
     <div className="radar-chart-container">
-      <h3>{studentName} - Performans Metrikleri</h3>
+      <h3>{studentName} - Performance Metrics</h3>
       <ResponsiveContainer width="100%" height={400}>
         <RadarChart data={data}>
           <PolarGrid stroke="#ccc" />
           <PolarAngleAxis dataKey="metric" />
           <PolarRadiusAxis angle={90} domain={[0, 100]} />
           <Radar
-            name="Performans"
+            name="Performance"
             dataKey="value"
             stroke="#8884d8"
             fill="#8884d8"
