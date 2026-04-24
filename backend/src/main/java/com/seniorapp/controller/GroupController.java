@@ -19,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.Operation;
     
 @RestController
 @RequestMapping("/api/groups")
@@ -127,18 +128,16 @@ public class GroupController {
      * Endpoint for authorized professors/advisors to manually override AI-generated scores.
      * Acceptance Criteria: Validate studentId exists and is linked to auditId.
      */
+  @Operation(summary = "Manual score override", description = "Allows authorized users to manually override the score for a specific student.")
     @PreAuthorize("hasAnyRole('ADVISOR', 'PROFESSOR')")
     @PatchMapping("/grading/override/{auditId}")
     public ResponseEntity<String> overrideScore(
             @PathVariable Long auditId, 
-            @RequestBody ScoreOverrideRequest request) {
+            @Valid @RequestBody ScoreOverrideRequest request) { // <-- @Valid eklendi
         
-        // Basic validation for request body
-        if (request.getStudentId() == null || request.getManualScore() == null) {
-            return ResponseEntity.badRequest().body("Error: studentId and manualScore are required.");
-        }
+        // Manuel validation (if bloğu) sildik çünkü @Valid bunu otomatik yapıyor.
         
-        // Success response (Logic for persistence will be implemented in Issue #129)
+        // Success response
         return ResponseEntity.ok("Success: Manual override request received for Audit ID " + auditId);
     }
 }
