@@ -6,6 +6,7 @@ import com.seniorapp.dto.GroupInviteRespondDto;
 import com.seniorapp.dto.GroupIntegrationsRequest;
 import com.seniorapp.dto.GroupIntegrationsResponse;
 import com.seniorapp.dto.GroupMemberActionDto;
+import com.seniorapp.dto.ScoreOverrideRequest;
 import com.seniorapp.dto.TeamManagementDtos.CreateProjectFromTemplateRequest;
 import com.seniorapp.dto.TeamManagementDtos.StudentListResponse;
 import com.seniorapp.dto.TeamManagementDtos.TeamListResponse;
@@ -14,10 +15,11 @@ import com.seniorapp.service.GroupService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
-
+    
 @RestController
 @RequestMapping("/api/groups")
 @CrossOrigin(origins = "*")
@@ -120,5 +122,23 @@ public class GroupController {
     @GetMapping("/{groupId}/integrations")
     public ResponseEntity<GroupIntegrationsResponse> getIntegrations(@PathVariable Long groupId) {
         return ResponseEntity.ok(groupService.getIntegrations(groupId));
+    }
+    /**
+     * Endpoint for authorized professors/advisors to manually override AI-generated scores.
+     * Acceptance Criteria: Validate studentId exists and is linked to auditId.
+     */
+    @PreAuthorize("hasAnyRole('ADVISOR', 'PROFESSOR')")
+    @PatchMapping("/grading/override/{auditId}")
+    public ResponseEntity<String> overrideScore(
+            @PathVariable Long auditId, 
+            @RequestBody ScoreOverrideRequest request) {
+        
+        // Basic validation for request body
+        if (request.getStudentId() == null || request.getManualScore() == null) {
+            return ResponseEntity.badRequest().body("Error: studentId and manualScore are required.");
+        }
+        
+        // Success response (Logic for persistence will be implemented in Issue #129)
+        return ResponseEntity.ok("Success: Manual override request received for Audit ID " + auditId);
     }
 }
