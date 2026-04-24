@@ -86,8 +86,8 @@ public class GradeControllerSmokeTest {
     @WithMockUser
     void getGrades_ShouldReturnGradesList() throws Exception {
         SubmissionGrade grade = new SubmissionGrade();
-        grade.setSubmissionId(testSubmission.getId());
-        grade.setGraderId(testGrader.getId());
+        grade.setSubmission(testSubmission);
+        grade.setGrader(testGrader);
         grade.setRubricId(2L);
         grade.setGrade(90.0);
         gradeRepository.save(grade);
