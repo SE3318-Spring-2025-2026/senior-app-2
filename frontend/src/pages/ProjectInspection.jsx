@@ -14,7 +14,11 @@ function ProjectInspection() {
   useEffect(() => {
     setLoading(true);
     setError('');
-    getProjects({ templateId: Number(templateId) })
+
+    const parsedTemplateId = templateId ? Number(templateId) : undefined;
+    const params = Number.isFinite(parsedTemplateId) ? { templateId: parsedTemplateId } : {};
+
+    getProjects(params)
       .then((res) => {
         const list = res?.data || [];
         setProjects(list);

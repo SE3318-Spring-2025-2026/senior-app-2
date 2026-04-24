@@ -51,6 +51,7 @@ function App() {
         
         {/* Analitik Rotası */}
         <Route path="analytics" element={<PerformanceAnalytics />} />
+        <Route path="projects" element={<ProjectInspection />} />
         
         <Route
           path="users"

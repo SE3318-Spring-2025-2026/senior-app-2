@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -79,5 +80,21 @@ public class GradeControllerSmokeTest {
                 .andExpect(jsonPath("$.rubricId").value(1))
                 .andExpect(jsonPath("$.submissionId").value(testSubmission.getId()))
                 .andExpect(jsonPath("$.graderId").value(testGrader.getId()));
+    }
+
+    @Test
+    @WithMockUser
+    void getGrades_ShouldReturnGradesList() throws Exception {
+        SubmissionGrade grade = new SubmissionGrade();
+        grade.setSubmissionId(testSubmission.getId());
+        grade.setGraderId(testGrader.getId());
+        grade.setRubricId(2L);
+        grade.setGrade(90.0);
+        gradeRepository.save(grade);
+
+        mockMvc.perform(get("/api/deliverable-submissions/" + testSubmission.getId() + "/grades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].grade").value(90.0));
     }
 }

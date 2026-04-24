@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { submitGrade } from '../services/api';
+import './GradingForm.css';
 
 const GradingForm = ({ submissionId, rubricItems, graderId, onGraded }) => {
   const [grades, setGrades] = useState({});
@@ -40,23 +41,24 @@ const GradingForm = ({ submissionId, rubricItems, graderId, onGraded }) => {
   };
 
   if (!rubricItems || rubricItems.length === 0) {
-    return <div>No rubric available for grading.</div>;
+    return <div className="grading-container">No rubric available for grading.</div>;
   }
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', maxWidth: '600px' }}>
-      <h3>Deliverable Grading</h3>
-      {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-      {success && <div style={{ color: 'green', marginBottom: '10px' }}>{success}</div>}
+    <div className="grading-container">
+      <h3 className="grading-header">Deliverable Grading</h3>
+      
+      {error && <div className="grading-alert error">{error}</div>}
+      {success && <div className="grading-alert success">{success}</div>}
       
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div className="rubric-list">
           {rubricItems.map((item) => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label>
-                <strong>{item.criteria || `Rubric ${item.id}`}</strong>
-                {item.maxScore && <span style={{ marginLeft: '10px', fontSize: '0.9em', color: '#666' }}>(Max: {item.maxScore})</span>}
-              </label>
+            <div key={item.id} className="rubric-item">
+              <div className="rubric-label">
+                <span className="rubric-title">{item.criteria || `Rubric ${item.id}`}</span>
+                {item.maxScore && <span className="rubric-max">Maximum Allowed: {item.maxScore} pts</span>}
+              </div>
               <input
                 type="number"
                 min="0"
@@ -66,7 +68,7 @@ const GradingForm = ({ submissionId, rubricItems, graderId, onGraded }) => {
                 onChange={(e) => handleGradeChange(item.id, e.target.value)}
                 placeholder="Score"
                 required
-                style={{ padding: '8px', width: '100px', borderRadius: '4px', border: '1px solid #ccc' }}
+                className="rubric-input"
               />
             </div>
           ))}
@@ -74,17 +76,9 @@ const GradingForm = ({ submissionId, rubricItems, graderId, onGraded }) => {
         <button
           type="submit"
           disabled={loading || Object.keys(grades).length === 0}
-          style={{
-            marginTop: '20px',
-            padding: '10px 15px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer'
-          }}
+          className="submit-btn"
         >
-          {loading ? 'Submitting...' : 'Submit Grades'}
+          {loading ? 'Submitting Grades...' : 'Submit Grades'}
         </button>
       </form>
     </div>
