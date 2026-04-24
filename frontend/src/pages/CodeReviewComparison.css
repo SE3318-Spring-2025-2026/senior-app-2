@@ -1,0 +1,185 @@
+.code-review-comparison-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f6f8fa;
+}
+
+/* Header */
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e1e4e8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.review-header-content {
+  flex: 1;
+}
+
+.review-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.review-subtitle {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.review-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.review-user {
+  padding: 0.5rem 1rem;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+/* Main container */
+.review-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Footer */
+.review-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  border-top: 1px solid #e1e4e8;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.review-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.5rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.btn-primary:hover {
+  background-color: #218838;
+  border-color: #218838;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+  border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+  border-color: #5a6268;
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: #0366d6;
+  border-color: #0366d6;
+}
+
+.btn-outline:hover {
+  background-color: #f0f8ff;
+  border-color: #0366d6;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .review-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .review-meta {
+    width: 100%;
+  }
+
+  .review-footer {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .review-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .review-header {
+    padding: 1rem;
+  }
+
+  .review-title {
+    font-size: 1.25rem;
+  }
+
+  .review-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .review-footer {
+    padding: 0.75rem 1rem;
+  }
+
+  .btn {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .review-user {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .review-header,
+  .review-footer {
+    display: none;
+  }
+
+  .review-container {
+    flex: auto;
+    height: auto;
+  }
+}
