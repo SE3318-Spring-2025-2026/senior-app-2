@@ -396,3 +396,71 @@ export function getAvailableStudentsForAnalytics() {
 export function getAvailableGroupsForAnalytics() {
   return request('/analytics/available-groups');
 }
+
+/**
+ * ===== CODE REVIEW COMPARISON ENDPOINTS =====
+ * Endpoints for comparing Jira requirements with GitHub code changes
+ */
+
+/**
+ * Get comparison data for a project
+ * Returns: { requirement, diff, highlightedLines, feedback }
+ */
+export function getComparisonData(projectId) {
+  return request(`/comparison/${projectId}`);
+}
+
+/**
+ * Get AI feedback for code review
+ * Returns: Array of feedback items with line numbers and severity
+ */
+export function getAIFeedback(projectId) {
+  return request(`/comparison/${projectId}/ai-feedback`);
+}
+
+/**
+ * Get Jira requirement details
+ */
+export function getJiraRequirement(requirementId) {
+  return request(`/comparison/requirements/${requirementId}`);
+}
+
+/**
+ * Get GitHub diff for a project
+ * Query params: branch, baseBranch, filePath
+ */
+export function getGitHubDiff(projectId, params = {}) {
+  const query = new URLSearchParams();
+  if (params.branch) query.set('branch', params.branch);
+  if (params.baseBranch) query.set('baseBranch', params.baseBranch);
+  if (params.filePath) query.set('filePath', params.filePath);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/comparison/${projectId}/diff${suffix}`);
+}
+
+/**
+ * Save AI feedback dismissal or resolution status
+ */
+export function updateFeedbackStatus(projectId, feedbackId, status) {
+  return request(`/comparison/${projectId}/feedback/${feedbackId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+/**
+ * Get comparison export (PDF or CSV)
+ */
+export function exportComparison(projectId, format = 'pdf') {
+  return fetch(`${API_URL}/comparison/${projectId}/export?format=${format}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  }).then((res) => {
+    if (!res.ok) {
+      throw new Error('Export failed');
+    }
+    return res.blob();
+  });
+}
