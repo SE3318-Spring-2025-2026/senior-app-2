@@ -347,3 +347,52 @@ export async function downloadSubmissionFile(submissionId) {
   }
   return response.blob();
 }
+
+// ─── Analytics API ───
+
+/**
+ * Get performance metrics for a specific student
+ * (Accuracy, Speed, Quality, etc.)
+ */
+export function getStudentPerformance(studentId) {
+  return request(`/analytics/students/${studentId}/performance`);
+}
+
+/**
+ * Get performance metrics for a specific group
+ */
+export function getGroupPerformance(groupId) {
+  return request(`/analytics/groups/${groupId}/performance`);
+}
+
+/**
+ * Get performance trends by time series
+ * @param {Object} params - Filtering parameters
+ * @param {string} [params.studentId] - Student ID
+ * @param {string} [params.groupId] - Group ID
+ * @param {string} [params.startDate] - Start date (YYYY-MM-DD)
+ * @param {string} [params.endDate] - End date (YYYY-MM-DD)
+ */
+export function getPerformanceTrends(params = {}) {
+  const query = new URLSearchParams();
+  if (params.studentId) query.set('studentId', params.studentId);
+  if (params.groupId) query.set('groupId', params.groupId);
+  if (params.startDate) query.set('startDate', params.startDate);
+  if (params.endDate) query.set('endDate', params.endDate);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/analytics/performance-trends${suffix}`);
+}
+
+/**
+ * Get available students for analytics filtering
+ */
+export function getAvailableStudentsForAnalytics() {
+  return request('/analytics/available-students');
+}
+
+/**
+ * Get available groups for analytics filtering
+ */
+export function getAvailableGroupsForAnalytics() {
+  return request('/analytics/available-groups');
+}

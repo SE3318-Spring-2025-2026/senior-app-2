@@ -17,6 +17,7 @@ import ManageComitees from './pages/ManageComitees';
 import TeamManagement from './pages/TeamManagement';
 import StudentProjects from './pages/StudentProjects';
 import StudentProjectPage from './pages/StudentProjectPage';
+import PerformanceAnalytics from './pages/PerformanceAnalytics';
 
 function App() {
   return (
@@ -48,6 +49,8 @@ function App() {
         <Route path="templates/:templateId" element={<ProjectInspection />} />
         <Route path="templates/:templateId/manage-comitees" element={<ManageComitees />} />
         
+        {/* Analitik Rotası */}
+        <Route path="analytics" element={<PerformanceAnalytics />} />
         <Route path="projects" element={<ProjectInspection />} />
         
         <Route
