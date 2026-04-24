@@ -1,16 +1,17 @@
 package com.seniorapp.config;
 
 import com.seniorapp.entity.UserGroup;
+import com.seniorapp.entity.UserGroupMember;
+import com.seniorapp.entity.GroupInviteStatus;
+import com.seniorapp.entity.GroupMembershipRole;
 import com.seniorapp.entity.User;
+import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserGroupRepository;
 import com.seniorapp.repository.UserRepository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +29,12 @@ public class GroupDataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final UserGroupRepository userGroups;
+    private final UserGroupMemberRepository userGroupMembers;
 
-    public GroupDataSeeder(UserRepository userRepository, UserGroupRepository userGroups) {
+    public GroupDataSeeder(UserRepository userRepository, UserGroupRepository userGroups, UserGroupMemberRepository userGroupMembers) {
         this.userRepository = userRepository;
         this.userGroups = userGroups;
+        this.userGroupMembers = userGroupMembers;
     }
 
     @Override
@@ -55,16 +58,14 @@ public class GroupDataSeeder implements CommandLineRunner {
             entityManager.merge(teamLeader);
             seedGroup.setTeamLeader(teamLeader);
 
-            // Team leader will change, but the leader will still be a member of the group when that happens, so they should also be known as a member of the group
-            List<User> currentMembers = seedGroup.getMembers();
-            if (null == currentMembers) {
-                currentMembers = new ArrayList<>();
-            }
-
-            currentMembers.add(teamLeader);
-            seedGroup.setMembers(currentMembers);
-
-            userGroups.save(seedGroup);
+            UserGroup savedGroup = userGroups.save(seedGroup);
+            UserGroupMember leaderMembership = new UserGroupMember();
+            leaderMembership.setGroup(savedGroup);
+            leaderMembership.setUser(teamLeader);
+            leaderMembership.setRole(GroupMembershipRole.LEADER);
+            leaderMembership.setStatus(GroupInviteStatus.ACCEPTED);
+            leaderMembership.setInvitedByUserId(teamLeader.getId());
+            userGroupMembers.save(leaderMembership);
             log.info("Default group seeded with group name, default professor as coordinator and default student as team lead.");
         }
     }

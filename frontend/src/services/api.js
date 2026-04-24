@@ -59,6 +59,10 @@ export function resetPassword(token, newPassword) {
   });
 }
 
+/**
+ * @param {string} [studentId] - required for student whitelist flow
+ * @param {'link'|'login'} [flow] - LINK = first-time GitHub link; LOGIN = existing linked account
+ */
 export async function getGithubLoginUrl(studentId, flow) {
   const qs = new URLSearchParams();
   if (studentId) qs.set('studentId', studentId);
@@ -95,8 +99,8 @@ export function registerStaff(email, fullName, role) {
     method: 'POST',
     body: JSON.stringify({ email, fullName, role }),
   });
+  
 }
-
 export function uploadStudentWhitelist(studentIds) {
   return request('/coordinator/valid-students', {
     method: 'POST',
@@ -122,46 +126,341 @@ export function getLogs(page = 0, size = 20) {
   return request(`/logs?page=${page}&size=${size}`);
 }
 
-// Group Management APIs
-export function getGroup(groupId) {
-  return request(`/groups/${groupId}`);
+export function createProjectTemplate(payload) {
+  return request('/project-templates', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getProjectTemplates() {
-  return request('/projects');
+  return request('/project-templates');
 }
 
-export function createGroup(groupName, projectId) {
+export function getProjects(params = {}) {
+  const query = new URLSearchParams();
+  if (params.term) query.set('term', params.term);
+  if (params.templateId != null) query.set('templateId', String(params.templateId));
+  if (params.groupId != null) query.set('groupId', String(params.groupId));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/projects${suffix}`);
+}
+
+export function getProjectDetail(projectId) {
+  return request(`/projects/${projectId}`);
+}
+
+export function getProjectCommittees(projectId) {
+  return request(`/projects/${projectId}/committees`);
+}
+
+export function createProjectCommittee(projectId, name = '') {
+  return request(`/projects/${projectId}/committees`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getProjectProfessors() {
+  return request('/projects/professors');
+}
+
+export function addProfessorToCommittee(projectId, committeeId, professorUserId) {
+  return request(`/projects/${projectId}/committees/${committeeId}/professors`, {
+    method: 'POST',
+    body: JSON.stringify({ professorUserId }),
+  });
+}
+
+export function deleteProjectCommittee(projectId, committeeId) {
+  return request(`/projects/${projectId}/committees/${committeeId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function removeProfessorFromCommittee(projectId, committeeId, professorUserId) {
+  return request(`/projects/${projectId}/committees/${committeeId}/professors/${professorUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getTemplateCommittees(templateId) {
+  return request(`/project-templates/${templateId}/committees`);
+}
+
+export function createTemplateCommittee(templateId, name = '') {
+  return request(`/project-templates/${templateId}/committees`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getTemplateProfessors() {
+  return request('/project-templates/professors');
+}
+
+export function addProfessorToTemplateCommittee(templateId, committeeId, professorUserId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}/professors`, {
+    method: 'POST',
+    body: JSON.stringify({ professorUserId }),
+  });
+}
+
+export function deleteTemplateCommittee(templateId, committeeId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function removeProfessorFromTemplateCommittee(templateId, committeeId, professorUserId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}/professors/${professorUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getStudentDashboard() {
+  return request('/students/dashboard/me');
+}
+
+export function respondGroupInvite(inviteId, action) {
+  return request(`/groups/invites/${inviteId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action }),
+  });
+}
+
+export function getMyTeams() {
+  return request('/groups/my-teams');
+}
+
+export function createTeam(groupName) {
   return request('/groups', {
     method: 'POST',
-    body: JSON.stringify({
-      groupName,
-      projectId,
-    }),
+    body: JSON.stringify({ groupName }),
   });
 }
 
-export function addOrRemoveGroupMember(groupId, studentId, action) {
-  return request(`/groups/${groupId}/members`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      studentId,
-      action // 'add' or 'remove'
-    }),
-  });
+export function listStudentsForInvite() {
+  return request('/groups/students');
 }
 
-// Group Integration APIs
-export function setupIntegrations(groupId, githubPat, jiraSpaceUrl) {
-  return request(`/groups/${groupId}/integrations`, {
+export function inviteStudentToTeam(groupId, studentUserId) {
+  return request(`/groups/${groupId}/invites`, {
     method: 'POST',
-    body: JSON.stringify({
-      githubPat,
-      jiraSpaceUrl
-    }),
+    body: JSON.stringify({ studentUserId }),
   });
 }
 
-export function getGroupIntegrations(groupId) {
-  return request(`/groups/${groupId}/integrations`);
+export function listAdvisorOptionsForTeam(groupId) {
+  return request(`/groups/${groupId}/advisor-options`);
+}
+
+export function createProjectFromTemplateForTeam(groupId, templateId) {
+  return request(`/groups/${groupId}/project`, {
+    method: 'POST',
+    body: JSON.stringify({ templateId }),
+  });
+}
+
+export function getMyStudentProjects() {
+  return request('/students/dashboard/projects');
+}
+
+export function submitGrade(submissionId, graderId, rubricId, grade) {
+  return request(`/deliverable-submissions/${submissionId}/grades`, {
+    method: 'POST',
+    body: JSON.stringify({ graderId, rubricId, grade }),
+  });
+}
+
+// ─── Deliverable Submission API ───
+
+/**
+ * Dosya yükleme ile deliverable submission oluşturur.
+ * multipart/form-data kullanır (JSON değil).
+ */
+export async function uploadDeliverableFile(deliverableId, groupId, file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('deliverableId', String(deliverableId));
+  formData.append('groupId', String(groupId));
+
+  const response = await fetch(`${API_URL}/submissions/file`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  const text = await response.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || 'Dosya yüklenemedi.');
+  }
+  return data;
+}
+
+/**
+ * Metin editörü ile deliverable submission oluşturur.
+ */
+export function submitDeliverableText(deliverableId, groupId, textContent) {
+  return request('/submissions/text', {
+    method: 'POST',
+    body: JSON.stringify({ deliverableId, groupId, textContent }),
+  });
+}
+
+/**
+ * Belirli bir deliverable ve grup için olan submission'ı getirir.
+ */
+export function getDeliverableSubmission(deliverableId, groupId) {
+  return request(`/submissions/${deliverableId}/group/${groupId}`);
+}
+
+/**
+ * Bir projeye ait belirli grubun tüm submission'larını getirir.
+ */
+export function getProjectSubmissions(projectId, groupId) {
+  return request(`/submissions/project/${projectId}/group/${groupId}`);
+}
+
+/**
+ * Submission'a ait dosyayı indirir (blob olarak).
+ */
+export async function downloadSubmissionFile(submissionId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/submissions/${submissionId}/download`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Dosya indirilemedi.');
+  }
+  return response.blob();
+}
+
+// ─── Analytics API ───
+
+/**
+ * Get performance metrics for a specific student
+ * (Accuracy, Speed, Quality, etc.)
+ */
+export function getStudentPerformance(studentId) {
+  return request(`/analytics/students/${studentId}/performance`);
+}
+
+/**
+ * Get performance metrics for a specific group
+ */
+export function getGroupPerformance(groupId) {
+  return request(`/analytics/groups/${groupId}/performance`);
+}
+
+/**
+ * Get performance trends by time series
+ * @param {Object} params - Filtering parameters
+ * @param {string} [params.studentId] - Student ID
+ * @param {string} [params.groupId] - Group ID
+ * @param {string} [params.startDate] - Start date (YYYY-MM-DD)
+ * @param {string} [params.endDate] - End date (YYYY-MM-DD)
+ */
+export function getPerformanceTrends(params = {}) {
+  const query = new URLSearchParams();
+  if (params.studentId) query.set('studentId', params.studentId);
+  if (params.groupId) query.set('groupId', params.groupId);
+  if (params.startDate) query.set('startDate', params.startDate);
+  if (params.endDate) query.set('endDate', params.endDate);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/analytics/performance-trends${suffix}`);
+}
+
+/**
+ * Get available students for analytics filtering
+ */
+export function getAvailableStudentsForAnalytics() {
+  return request('/analytics/available-students');
+}
+
+/**
+ * Get available groups for analytics filtering
+ */
+export function getAvailableGroupsForAnalytics() {
+  return request('/analytics/available-groups');
+}
+
+/**
+ * ===== CODE REVIEW COMPARISON ENDPOINTS =====
+ * Endpoints for comparing Jira requirements with GitHub code changes
+ */
+
+/**
+ * Get comparison data for a project
+ * Returns: { requirement, diff, highlightedLines, feedback }
+ */
+export function getComparisonData(projectId) {
+  return request(`/comparison/${projectId}`);
+}
+
+/**
+ * Get AI feedback for code review
+ * Returns: Array of feedback items with line numbers and severity
+ */
+export function getAIFeedback(projectId) {
+  return request(`/comparison/${projectId}/ai-feedback`);
+}
+
+/**
+ * Get Jira requirement details
+ */
+export function getJiraRequirement(requirementId) {
+  return request(`/comparison/requirements/${requirementId}`);
+}
+
+/**
+ * Get GitHub diff for a project
+ * Query params: branch, baseBranch, filePath
+ */
+export function getGitHubDiff(projectId, params = {}) {
+  const query = new URLSearchParams();
+  if (params.branch) query.set('branch', params.branch);
+  if (params.baseBranch) query.set('baseBranch', params.baseBranch);
+  if (params.filePath) query.set('filePath', params.filePath);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/comparison/${projectId}/diff${suffix}`);
+}
+
+/**
+ * Save AI feedback dismissal or resolution status
+ */
+export function updateFeedbackStatus(projectId, feedbackId, status) {
+  return request(`/comparison/${projectId}/feedback/${feedbackId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+/**
+ * Get comparison export (PDF or CSV)
+ */
+export function exportComparison(projectId, format = 'pdf') {
+  return fetch(`${API_URL}/comparison/${projectId}/export?format=${format}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  }).then((res) => {
+    if (!res.ok) {
+      throw new Error('Export failed');
+    }
+    return res.blob();
+  });
 }

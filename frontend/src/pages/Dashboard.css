@@ -48,3 +48,50 @@
   color: #4f46e5;
   text-transform: capitalize;
 }
+
+.student-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.dashboard-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.dashboard-panel h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.dashboard-row-card {
+  border: 1px solid #eef2ff;
+  background: #f8faff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.invite-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.invite-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.invite-actions .danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
