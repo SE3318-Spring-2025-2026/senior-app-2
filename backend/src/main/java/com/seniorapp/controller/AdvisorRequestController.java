@@ -1,36 +1,34 @@
 package com.seniorapp.controller;
 
-import com.seniorapp.dto.AdvisorDecisionDto;
-import com.seniorapp.dto.AdvisorRequestDto;
+import com.seniorapp.entity.AdvisorRequest;
 import com.seniorapp.service.AdvisorRequestService;
-import org.springframework.http.HttpStatus;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/advisor-requests")
-@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class AdvisorRequestController {
 
     private final AdvisorRequestService advisorRequestService;
 
-    public AdvisorRequestController(AdvisorRequestService advisorRequestService) {
-        this.advisorRequestService = advisorRequestService;
+    @PostMapping("/invite-committee/{groupId}")
+    public ResponseEntity<String> invite(@PathVariable Long groupId) {
+        advisorRequestService.createInvitesForCommittee(groupId);
+        return ResponseEntity.ok("Invites sent successfully");
     }
 
-    @PostMapping
-    public ResponseEntity<String> sendRequest(@RequestBody AdvisorRequestDto requestDto) {
-        advisorRequestService.createRequest(requestDto.getGroupId(), requestDto.getProfessorId());
-        return new ResponseEntity<>("Request created successfully.", HttpStatus.CREATED);
+    @GetMapping("/my-requests")
+    public ResponseEntity<List<AdvisorRequest>> getMyRequests() {
+        return ResponseEntity.ok(advisorRequestService.getRequestsForCurrentProfessor());
     }
 
-    @PutMapping("/decision")
-    public ResponseEntity<String> handleDecision(@RequestBody AdvisorDecisionDto decisionDto) {
-        advisorRequestService.processDecision(
-            decisionDto.getRequestId(), 
-            decisionDto.getCurrentProfessorId(), 
-            decisionDto.getDecision()
-        );
-        return ResponseEntity.ok("Decision processed.");
+    @PostMapping("/{requestId}/respond")
+    public ResponseEntity<String> respond(@PathVariable Long requestId, @RequestParam String decision) {
+        advisorRequestService.processDecision(requestId, decision);
+        return ResponseEntity.ok("Decision processed");
     }
 }
