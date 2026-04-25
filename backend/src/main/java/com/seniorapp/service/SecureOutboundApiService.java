@@ -14,13 +14,15 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public class SecureOutboundApiService {
-    
+
     private final IntegrationCredentialCryptoService cryptoService;
     private final RestTemplate restTemplate;
-    
-    public SecureOutboundApiService(IntegrationCredentialCryptoService cryptoService) {
+    private final SecureLogger secureLogger;
+
+    public SecureOutboundApiService(IntegrationCredentialCryptoService cryptoService, SecureLogger secureLogger, RestTemplate restTemplate) {
         this.cryptoService = cryptoService;
-        this.restTemplate = new RestTemplate();
+        this.secureLogger = secureLogger;
+        this.restTemplate = restTemplate;
     }
     
     /**
@@ -30,7 +32,7 @@ public class SecureOutboundApiService {
                                                       String requestBody, HttpMethod method) {
         // Validate token format before proceeding
         if (!validateEncryptedTokenFormat(encryptedToken, "GitHub")) {
-            SecureLogger.logProcessFailure("GitHub", "API Call", "Invalid Token Format", apiEndpoint, method.name());
+            secureLogger.logProcessFailure("GitHub", "API Call", "Invalid Token Format", apiEndpoint, method.name());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid GitHub token format");
         }
         
@@ -44,7 +46,7 @@ public class SecureOutboundApiService {
                                                      String requestBody, HttpMethod method) {
         // Validate token format before proceeding
         if (!validateEncryptedTokenFormat(encryptedToken, "Jira")) {
-            SecureLogger.logProcessFailure("Jira", "API Call", "Invalid Token Format", apiEndpoint, method.name());
+            secureLogger.logProcessFailure("Jira", "API Call", "Invalid Token Format", apiEndpoint, method.name());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Jira token format");
         }
         
@@ -61,11 +63,11 @@ public class SecureOutboundApiService {
         String decryptedToken = null;
         try {
             // Step 1: Just-in-time decryption - only decrypt when needed for outbound call
-            SecureLogger.logProcessStart(serviceType, "API Call", apiEndpoint);
+            secureLogger.logProcessStart(serviceType, "API Call", apiEndpoint);
             decryptedToken = cryptoService.decrypt(encryptedToken);
             
             if (decryptedToken == null || decryptedToken.isBlank()) {
-                SecureLogger.logDecryptionFailure(serviceType, "API Call");
+                secureLogger.logDecryptionFailure(serviceType, "API Call");
                 throw new SecureDecryptionException(serviceType);
             }
             
@@ -82,12 +84,12 @@ public class SecureOutboundApiService {
             HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
             
             // Step 3: Execute outbound API call
-            SecureLogger.logApiCallAttempt(serviceType, method.name(), apiEndpoint);
+            secureLogger.logApiCallAttempt(serviceType, method.name(), apiEndpoint);
             
             ResponseEntity<String> response = restTemplate.exchange(
                 apiEndpoint, method, entity, String.class);
             
-            SecureLogger.logProcessSuccess(serviceType, "API Call", response.getStatusCode().toString());
+            secureLogger.logProcessSuccess(serviceType, "API Call", response.getStatusCode().toString());
             
             return response;
             
@@ -97,12 +99,12 @@ public class SecureOutboundApiService {
                 throw ex; // Re-throw our own exceptions
             }
             
-            SecureLogger.logProcessFailure(serviceType, "API Call", ex.getClass().getSimpleName(), 
+            secureLogger.logProcessFailure(serviceType, "API Call", ex.getClass().getSimpleName(),
                                          apiEndpoint, method.name());
             
             // Check if it's a decryption failure
             if (ex.getMessage() != null && ex.getMessage().contains("decrypt")) {
-                SecureLogger.logDecryptionFailure(serviceType, "API Call");
+                secureLogger.logDecryptionFailure(serviceType, "API Call");
                 throw new SecureDecryptionException(serviceType, ex);
             }
             
@@ -116,9 +118,9 @@ public class SecureOutboundApiService {
                 try {
                     // Overwrite the token in memory
                     decryptedToken = null;
-                    SecureLogger.logMemoryCleanup(serviceType, true);
+                    secureLogger.logMemoryCleanup(serviceType, true);
                 } catch (Exception e) {
-                    SecureLogger.logMemoryCleanup(serviceType, false);
+                    secureLogger.logMemoryCleanup(serviceType, false);
                 }
             }
         }
@@ -129,17 +131,17 @@ public class SecureOutboundApiService {
      */
     public boolean validateEncryptedTokenFormat(String encryptedToken, String serviceType) {
         if (encryptedToken == null || encryptedToken.isBlank()) {
-            SecureLogger.logTokenValidation(serviceType, false, "null/empty");
+            secureLogger.logTokenValidation(serviceType, false, "null/empty");
             return false;
         }
         
         // Basic validation - should be Base64 encoded
         try {
             java.util.Base64.getDecoder().decode(encryptedToken);
-            SecureLogger.logTokenValidation(serviceType, true, "Base64");
+            secureLogger.logTokenValidation(serviceType, true, "Base64");
             return true;
         } catch (IllegalArgumentException e) {
-            SecureLogger.logTokenValidation(serviceType, false, "Invalid Base64");
+            secureLogger.logTokenValidation(serviceType, false, "Invalid Base64");
             return false;
         }
     }
