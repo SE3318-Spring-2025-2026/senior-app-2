@@ -1,6 +1,7 @@
 package com.seniorapp.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "submission_grades")
@@ -24,6 +25,23 @@ public class SubmissionGrade {
     @Column(nullable = false)
     private Double grade;
 
+    
+    @Column(name = "original_ai_score")
+    private Double originalAiScore;
+
+    @Column(name = "advisor_adjusted_score")
+    private Double advisorAdjustedScore;
+
+    @Column(name = "final_grade_4_0")
+    private Double finalGrade40;
+
+    @Column(name = "last_modified_by")
+    private String lastModifiedBy;
+
+    @Column(name = "last_modified_at")
+    private LocalDateTime lastModifiedAt;
+
+  
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -38,4 +56,20 @@ public class SubmissionGrade {
 
     public Double getGrade() { return grade; }
     public void setGrade(Double grade) { this.grade = grade; }
+
+    // --- Added Getters and Setters for Issue #129 ---
+    public Double getOriginalAiScore() { return originalAiScore; }
+    public void setOriginalAiScore(Double originalAiScore) { this.originalAiScore = originalAiScore; }
+
+    public Double getAdvisorAdjustedScore() { return advisorAdjustedScore; }
+    public void setAdvisorAdjustedScore(Double advisorAdjustedScore) { this.advisorAdjustedScore = advisorAdjustedScore; }
+
+    public Double getFinalGrade40() { return finalGrade40; }
+    public void setFinalGrade40(Double finalGrade40) { this.finalGrade40 = finalGrade40; }
+
+    public String getLastModifiedBy() { return lastModifiedBy; }
+    public void setLastModifiedBy(String lastModifiedBy) { this.lastModifiedBy = lastModifiedBy; }
+
+    public LocalDateTime getLastModifiedAt() { return lastModifiedAt; }
+    public void setLastModifiedAt(LocalDateTime lastModifiedAt) { this.lastModifiedAt = lastModifiedAt; }
 }
