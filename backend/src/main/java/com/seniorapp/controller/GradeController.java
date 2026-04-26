@@ -37,4 +37,18 @@ public class GradeController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Issue #129: Manual Score Override Endpoint
+     * This allows advisors to manually change a grade and triggers 4.0 recalculation.
+     */
+    @PatchMapping("/grades/{gradeId}/override")
+    public ResponseEntity<GradeResponse> overrideGrade(
+            @PathVariable Long gradeId,
+            @RequestParam Double manualScore,
+            @RequestParam String advisorName) {
+        
+        SubmissionGrade updatedGrade = gradeService.overrideGrade(gradeId, manualScore, advisorName);
+        return ResponseEntity.ok(new GradeResponse(updatedGrade));
+    }
 }
