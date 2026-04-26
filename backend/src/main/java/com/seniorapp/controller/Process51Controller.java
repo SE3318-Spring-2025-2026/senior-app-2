@@ -16,9 +16,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class Process51Controller {
     
     private final SecureOutboundApiService outboundApiService;
-    
-    public Process51Controller(SecureOutboundApiService outboundApiService) {
+    private final SecureLogger secureLogger;
+
+    public Process51Controller(SecureOutboundApiService outboundApiService, SecureLogger secureLogger) {
         this.outboundApiService = outboundApiService;
+        this.secureLogger = secureLogger;
     }
     
     /**
@@ -26,12 +28,12 @@ public class Process51Controller {
      */
     @PostMapping("/github")
     public ResponseEntity<String> executeGitHubApiCall(@RequestBody Process51Request request) {
-        SecureLogger.logProcessStart("GitHub", "Controller Request", request.getApiEndpoint());
+        secureLogger.logProcessStart("GitHub", "Controller Request", request.getApiEndpoint());
         
         try {
             // Validate encrypted token format before processing
             if (!outboundApiService.validateEncryptedTokenFormat(request.getEncryptedToken(), "GitHub")) {
-                SecureLogger.logProcessFailure("GitHub", "Controller Request", "Invalid Token Format", 
+                secureLogger.logProcessFailure("GitHub", "Controller Request", "Invalid Token Format", 
                                                request.getApiEndpoint(), request.getMethod());
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
             }
@@ -45,13 +47,13 @@ public class Process51Controller {
                 method
             );
             
-            SecureLogger.logProcessSuccess("GitHub", "Controller Request", response.getStatusCode().toString());
+            secureLogger.logProcessSuccess("GitHub", "Controller Request", response.getStatusCode().toString());
             return response;
             
         } catch (ResponseStatusException ex) {
             throw ex; // Re-throw our secure exceptions
         } catch (Exception ex) {
-            SecureLogger.logProcessFailure("GitHub", "Controller Request", ex.getClass().getSimpleName(), 
+            secureLogger.logProcessFailure("GitHub", "Controller Request", ex.getClass().getSimpleName(), 
                                          request.getApiEndpoint(), request.getMethod());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "GitHub API call failed");
         }
@@ -62,12 +64,12 @@ public class Process51Controller {
      */
     @PostMapping("/jira")
     public ResponseEntity<String> executeJiraApiCall(@RequestBody Process51Request request) {
-        SecureLogger.logProcessStart("Jira", "Controller Request", request.getApiEndpoint());
+        secureLogger.logProcessStart("Jira", "Controller Request", request.getApiEndpoint());
         
         try {
             // Validate encrypted token format before processing
             if (!outboundApiService.validateEncryptedTokenFormat(request.getEncryptedToken(), "Jira")) {
-                SecureLogger.logProcessFailure("Jira", "Controller Request", "Invalid Token Format", 
+                secureLogger.logProcessFailure("Jira", "Controller Request", "Invalid Token Format", 
                                                request.getApiEndpoint(), request.getMethod());
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
             }
@@ -81,13 +83,13 @@ public class Process51Controller {
                 method
             );
             
-            SecureLogger.logProcessSuccess("Jira", "Controller Request", response.getStatusCode().toString());
+            secureLogger.logProcessSuccess("Jira", "Controller Request", response.getStatusCode().toString());
             return response;
             
         } catch (ResponseStatusException ex) {
             throw ex; // Re-throw our secure exceptions
         } catch (Exception ex) {
-            SecureLogger.logProcessFailure("Jira", "Controller Request", ex.getClass().getSimpleName(), 
+            secureLogger.logProcessFailure("Jira", "Controller Request", ex.getClass().getSimpleName(), 
                                          request.getApiEndpoint(), request.getMethod());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Jira API call failed");
         }

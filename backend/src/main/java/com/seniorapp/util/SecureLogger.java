@@ -2,51 +2,53 @@ package com.seniorapp.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 /**
  * Secure logging utility for Process 5.1 that never exposes sensitive data.
  * All token values, IV values, and plaintext credentials are masked.
  */
+@Component
 public class SecureLogger {
-    
+
     private static final Logger log = LoggerFactory.getLogger(SecureLogger.class);
-    
+
     /**
      * Log Process 5.1 operations without exposing sensitive data
      */
-    public static void logProcessStart(String serviceType, String operation, String endpoint) {
-        log.info("Process 5.1: Starting {} operation - Type: {}, Endpoint: {}", 
+    public void logProcessStart(String serviceType, String operation, String endpoint) {
+        log.info("Process 5.1: Starting {} operation - Type: {}, Endpoint: {}",
                 operation, serviceType, sanitizeEndpoint(endpoint));
     }
-    
+
     /**
      * Log successful Process 5.1 operations
      */
-    public static void logProcessSuccess(String serviceType, String operation, String statusCode) {
-        log.info("Process 5.1: {} operation completed successfully - Type: {}, Status: {}", 
+    public void logProcessSuccess(String serviceType, String operation, String statusCode) {
+        log.info("Process 5.1: {} operation completed successfully - Type: {}, Status: {}",
                 operation, serviceType, statusCode);
     }
     
     /**
      * Log Process 5.1 failures without exposing sensitive data
      */
-    public static void logProcessFailure(String serviceType, String operation, String errorType, 
+    public void logProcessFailure(String serviceType, String operation, String errorType,
                                        String endpoint, String method) {
-        log.error("Process 5.1: {} operation failed - Type: {}, Error: {}, Endpoint: {}, Method: {}", 
+        log.error("Process 5.1: {} operation failed - Type: {}, Error: {}, Endpoint: {}, Method: {}",
                  operation, serviceType, errorType, sanitizeEndpoint(endpoint), method);
     }
     
     /**
      * Log decryption failures securely - never log tokens or IV values
      */
-    public static void logDecryptionFailure(String serviceType, String operation) {
+    public void logDecryptionFailure(String serviceType, String operation) {
         log.error("Process 5.1: Token decryption failed - Type: {}, Operation: {}", serviceType, operation);
     }
     
     /**
      * Log token validation results
      */
-    public static void logTokenValidation(String serviceType, boolean isValid, String tokenFormat) {
+    public void logTokenValidation(String serviceType, boolean isValid, String tokenFormat) {
         if (isValid) {
             log.debug("Process 5.1: Token validation passed - Type: {}, Format: {}", serviceType, tokenFormat);
         } else {
@@ -57,8 +59,8 @@ public class SecureLogger {
     /**
      * Log API call attempts without exposing authentication details
      */
-    public static void logApiCallAttempt(String serviceType, String method, String endpoint) {
-        log.info("Process 5.1: API call initiated - Type: {}, Method: {}, Endpoint: {}", 
+    public void logApiCallAttempt(String serviceType, String method, String endpoint) {
+        log.info("Process 5.1: API call initiated - Type: {}, Method: {}, Endpoint: {}",
                 serviceType, method, sanitizeEndpoint(endpoint));
     }
     
@@ -86,7 +88,7 @@ public class SecureLogger {
     /**
      * Mask token values for logging - shows only first and last 3 characters
      */
-    public static String maskToken(String token) {
+    public String maskToken(String token) {
         if (token == null || token.length() <= 6) {
             return "***";
         }
@@ -96,7 +98,7 @@ public class SecureLogger {
     /**
      * Log memory cleanup operations
      */
-    public static void logMemoryCleanup(String serviceType, boolean successful) {
+    public void logMemoryCleanup(String serviceType, boolean successful) {
         if (successful) {
             log.debug("Process 5.1: Memory cleanup completed - Type: {}", serviceType);
         } else {
