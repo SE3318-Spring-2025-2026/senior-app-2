@@ -20,6 +20,7 @@ const PerformanceAnalytics = () => {
   const [students, setStudents] = useState([]);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Filter State
@@ -55,11 +56,16 @@ const PerformanceAnalytics = () => {
     fetchInitialData();
   }, []);
 
-  // Load data when filter changes
+  // Load data when filter changes (skip initial empty load)
   useEffect(() => {
+    // Skip initial load when filters are empty
+    if (!filters.studentId && !filters.groupId && !filters.startDate && !filters.endDate) {
+      return;
+    }
+
     const fetchAnalyticsData = async () => {
       try {
-        setLoading(true);
+        setAnalyticsLoading(true);
         setError(null);
 
         // Always load trend data
@@ -85,7 +91,7 @@ const PerformanceAnalytics = () => {
         console.error('Error loading analytics data:', err);
         setError('Error loading analytics data');
       } finally {
-        setLoading(false);
+        setAnalyticsLoading(false);
       }
     };
 
@@ -149,7 +155,7 @@ const PerformanceAnalytics = () => {
             students={students}
             groups={groups}
             onFilterChange={handleFilterChange}
-            loading={loading}
+            loading={analyticsLoading}
           />
         </aside>
 
@@ -159,7 +165,7 @@ const PerformanceAnalytics = () => {
           <div className="export-controls">
             <button
               onClick={handleExportPDF}
-              disabled={loading}
+              disabled={analyticsLoading}
               className="btn-primary"
               title="Download report as PDF"
             >
@@ -167,7 +173,7 @@ const PerformanceAnalytics = () => {
             </button>
             <button
               onClick={handleExportCSV}
-              disabled={loading || !trendData}
+              disabled={analyticsLoading || !trendData}
               className="btn-secondary"
               title="Download data as CSV"
             >
@@ -184,7 +190,7 @@ const PerformanceAnalytics = () => {
                   students.find((s) => s.id === filters.studentId)?.name ||
                   'Student'
                 }
-                loading={loading}
+                loading={analyticsLoading}
               />
             </div>
           )}
@@ -197,7 +203,7 @@ const PerformanceAnalytics = () => {
                 studentName={
                   groups.find((g) => g.id === filters.groupId)?.name || 'Group'
                 }
-                loading={loading}
+                loading={analyticsLoading}
               />
             </div>
           )}
@@ -208,7 +214,7 @@ const PerformanceAnalytics = () => {
               <TrendlineChart
                 data={trendData}
                 title="Performance Trends - Score Progress Throughout the Semester"
-                loading={loading}
+                loading={analyticsLoading}
                 type="line"
               />
             </div>
