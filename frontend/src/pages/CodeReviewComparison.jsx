@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import SplitPaneComparison from '../components/comparison/SplitPaneComparison';
 import { getComparisonData, getAIFeedback } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,7 @@ import './CodeReviewComparison.css';
  */
 function CodeReviewComparison() {
   const { projectId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [requirement, setRequirement] = useState(null);
@@ -100,7 +101,33 @@ function CodeReviewComparison() {
   };
 
   // Determine file name from project or use default
-  const fileName = `project-${projectId}.diff`;
+  const fileName = projectId ? `project-${projectId}.diff` : 'select-project.diff';
+
+  // Show project selection if no projectId
+  if (!projectId) {
+    return (
+      <div className="code-review-comparison-page">
+        <header className="review-header">
+          <div className="review-header-content">
+            <h1 className="review-title">Code Review</h1>
+            <p className="review-subtitle">
+              Compare Jira requirements with GitHub code changes
+            </p>
+          </div>
+        </header>
+        <div className="review-container">
+          <div className="empty-state">
+            <div className="empty-state-icon">📋</div>
+            <h2>Select a Project</h2>
+            <p>Please select a project from My Projects to start code review.</p>
+            <button className="btn btn-primary" onClick={() => navigate('/panel/my-projects')}>
+              Go to My Projects
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="code-review-comparison-page">

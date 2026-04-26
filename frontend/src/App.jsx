@@ -56,6 +56,7 @@ function App() {
         
         {/* Code Review Comparison */}
         <Route path="review/:projectId" element={<CodeReviewComparison />} />
+        <Route path="review" element={<CodeReviewComparison />} />
         
         <Route
           path="users"

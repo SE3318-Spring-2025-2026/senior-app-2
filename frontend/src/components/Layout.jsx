@@ -68,16 +68,36 @@ function Layout() {
           )}
 
           {user?.role === 'PROFESSOR' && (
-            <NavLink
-              to="/panel/my-projects"
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            >
-              My Projects
-            </NavLink>
+            <>
+              <NavLink
+                to="/panel/analytics"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                 Analytics
+              </NavLink>
+              <NavLink
+                to="/panel/my-projects"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                My Projects
+              </NavLink>
+              <NavLink
+                to="/panel/review/1"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                 Code Review
+              </NavLink>
+            </>
           )}
 
           {user?.role === 'ADMIN' && (
             <>
+              <NavLink
+                to="/panel/analytics"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                 Analytics
+              </NavLink>
               <NavLink
                 to="/panel/users"
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -89,6 +109,12 @@ function Layout() {
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               >
                 Audit Logs
+              </NavLink>
+              <NavLink
+                to="/panel/review/1"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                 Code Review
               </NavLink>
             </>
           )}
