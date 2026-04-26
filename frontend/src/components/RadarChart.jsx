@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import {
   RadarChart,
   PolarGrid,
@@ -17,7 +17,7 @@ import {
  * @param {string} props.studentName - Student name
  * @param {boolean} props.loading - Loading state
  */
-const PerformanceRadarChart = ({ data, studentName, loading }) => {
+const PerformanceRadarChart = memo(({ data, studentName, loading }) => {
   if (loading) {
     return (
       <div className="radar-chart-container loading">
@@ -62,6 +62,6 @@ const PerformanceRadarChart = ({ data, studentName, loading }) => {
       </ResponsiveContainer>
     </div>
   );
-};
+});
 
 export default PerformanceRadarChart;

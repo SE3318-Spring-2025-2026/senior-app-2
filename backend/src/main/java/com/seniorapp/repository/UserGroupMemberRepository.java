@@ -24,5 +24,7 @@ public interface UserGroupMemberRepository extends JpaRepository<UserGroupMember
 
     List<UserGroupMember> findByGroupIdOrderByCreatedAtAsc(Long groupId);
 
+    List<UserGroupMember> findByGroupId(Long groupId);
+
     boolean existsByGroupIdAndUserIdAndStatusIn(Long groupId, Long userId, List<GroupInviteStatus> statuses);
 }

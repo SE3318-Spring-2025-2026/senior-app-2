@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import {
   LineChart,
   Line,
@@ -22,7 +22,7 @@ import { tr } from 'date-fns/locale';
  * @param {boolean} props.loading - Loading state
  * @param {string} props.type - Chart type ('line' or 'area')
  */
-const TrendlineChart = ({ data, title, loading, type = 'line' }) => {
+const TrendlineChart = memo(({ data, title, loading, type = 'line' }) => {
   if (loading) {
     return (
       <div className="trendline-chart-container loading">
@@ -110,6 +110,6 @@ const TrendlineChart = ({ data, title, loading, type = 'line' }) => {
       </ResponsiveContainer>
     </div>
   );
-};
+});
 
 export default TrendlineChart;

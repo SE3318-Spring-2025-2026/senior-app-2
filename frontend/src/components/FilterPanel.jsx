@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -18,7 +18,7 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
-  useEffect(() => {
+  const handleApplyFilters = () => {
     if (onFilterChange) {
       onFilterChange({
         studentId: selectedStudent,
@@ -27,7 +27,7 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
         endDate: endDate ? format(endDate, 'yyyy-MM-dd') : null,
       });
     }
-  }, [selectedStudent, selectedGroup, startDate, endDate, onFilterChange]);
+  };
 
   const handleReset = () => {
     setSelectedStudent('');
@@ -126,7 +126,7 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
           </div>
         </div>
 
-        {/* Clear Button */}
+        {/* Action Buttons */}
         <div className="filter-actions">
           <button
             onClick={handleReset}
@@ -134,6 +134,13 @@ const FilterPanel = ({ students, groups, onFilterChange, loading }) => {
             className="btn-secondary"
           >
             Clear Filters
+          </button>
+          <button
+            onClick={handleApplyFilters}
+            disabled={loading}
+            className="btn-primary"
+          >
+            Apply Filters
           </button>
         </div>
       </div>

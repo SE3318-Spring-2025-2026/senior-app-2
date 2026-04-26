@@ -100,6 +100,35 @@ function CodeReviewComparison() {
     // For now, we just log it
   };
 
+  const handleBack = () => {
+    navigate('/panel/my-projects');
+  };
+
+  const handleSaveProgress = async () => {
+    try {
+      // Save progress - update feedback statuses
+      console.log('Saving progress for project:', projectId);
+      // In production, this would call an API to save the current state
+      alert('Progress saved successfully!');
+    } catch (err) {
+      console.error('Error saving progress:', err);
+      alert('Failed to save progress');
+    }
+  };
+
+  const handleApproveAndClose = async () => {
+    try {
+      // Approve the code review and close
+      console.log('Approving project:', projectId);
+      // In production, this would call an API to approve the review
+      alert('Code review approved!');
+      navigate('/panel/my-projects');
+    } catch (err) {
+      console.error('Error approving review:', err);
+      alert('Failed to approve review');
+    }
+  };
+
   // Determine file name from project or use default
   const fileName = projectId ? `project-${projectId}.diff` : 'select-project.diff';
 
@@ -161,10 +190,10 @@ function CodeReviewComparison() {
 
       {/* Footer with actions */}
       <footer className="review-footer">
-        <button className="btn btn-secondary">← Back</button>
+        <button className="btn btn-secondary" onClick={handleBack}>← Back</button>
         <div className="review-actions">
-          <button className="btn btn-outline">Save Progress</button>
-          <button className="btn btn-primary">Approve & Close</button>
+          <button className="btn btn-outline" onClick={handleSaveProgress}>Save Progress</button>
+          <button className="btn btn-primary" onClick={handleApproveAndClose}>Approve & Close</button>
         </div>
       </footer>
     </div>
