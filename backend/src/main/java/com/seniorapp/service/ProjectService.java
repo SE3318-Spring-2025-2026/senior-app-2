@@ -9,7 +9,9 @@ import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectTemplateRepository;
 import com.seniorapp.repository.ProjectCommitteeRepository;
 import com.seniorapp.repository.ProjectCommitteeProfessorRepository;
+import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,10 +19,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +35,7 @@ public class ProjectService {
     private final ProjectGroupAssignmentRepository assignmentRepository;
     private final ProjectCommitteeRepository projectCommitteeRepository;
     private final ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository;
+    private final UserGroupMemberRepository userGroupMemberRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
@@ -40,6 +45,7 @@ public class ProjectService {
             ProjectGroupAssignmentRepository assignmentRepository,
             ProjectCommitteeRepository projectCommitteeRepository,
             ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository,
+            UserGroupMemberRepository userGroupMemberRepository,
             UserRepository userRepository,
             ObjectMapper objectMapper
     ) {
@@ -48,6 +54,7 @@ public class ProjectService {
         this.assignmentRepository = assignmentRepository;
         this.projectCommitteeRepository = projectCommitteeRepository;
         this.projectCommitteeProfessorRepository = projectCommitteeProfessorRepository;
+        this.userGroupMemberRepository = userGroupMemberRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
@@ -135,7 +142,22 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectSummary> listProjects(String term, Long templateId, Long groupId) {
+    public List<ProjectSummary> listProjects(String term, Long templateId, Long groupId, Long requesterUserId, Role requesterRole) {
+        Set<Long> allowedStudentGroupIds = null;
+        if (requesterRole == Role.STUDENT) {
+            if (requesterUserId == null) {
+                throw new IllegalArgumentException("Authenticated user id is required.");
+            }
+            allowedStudentGroupIds = new HashSet<>();
+            for (UserGroupMember m : userGroupMemberRepository.findByUserIdAndStatusOrderByCreatedAtDesc(
+                    requesterUserId, GroupInviteStatus.ACCEPTED)) {
+                if (m.getGroup() != null && m.getGroup().getId() != null) {
+                    allowedStudentGroupIds.add(m.getGroup().getId());
+                }
+            }
+        }
+
+        final Set<Long> studentGroups = allowedStudentGroupIds;
         return projectRepository.findAll().stream()
                 .filter(project -> term == null || term.isBlank() || project.getTerm().equalsIgnoreCase(term.trim()))
                 .filter(project -> {
@@ -147,15 +169,37 @@ public class ProjectService {
                     if (groupId == null) return true;
                     return Objects.equals(project.getGroupId(), groupId);
                 })
+                .filter(project -> {
+                    if (studentGroups == null) return true;
+                    Long projectGroupId = project.getGroupId();
+                    return projectGroupId != null && studentGroups.contains(projectGroupId);
+                })
                 .map(this::toSummary)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ProjectDetail getProjectDetail(Long projectId) {
+    public ProjectDetail getProjectDetail(Long projectId, Long requesterUserId, Role requesterRole) {
         Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
         Project project = projectRepository.findById(safeProjectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found: " + projectId));
+
+        if (requesterRole == Role.STUDENT) {
+            if (requesterUserId == null) {
+                throw new IllegalArgumentException("Authenticated user id is required.");
+            }
+            Long groupId = project.getGroupId();
+            if (groupId == null) {
+                throw new AccessDeniedException("Project has no assigned group.");
+            }
+            boolean isMember = userGroupMemberRepository
+                    .findByGroupIdAndUserIdAndStatus(groupId, requesterUserId, GroupInviteStatus.ACCEPTED)
+                    .isPresent();
+            if (!isMember) {
+                throw new AccessDeniedException("You are not a member of this project's group.");
+            }
+        }
+
         return toDetail(project);
     }
 
