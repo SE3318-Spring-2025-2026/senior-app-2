@@ -3,6 +3,7 @@ package com.seniorapp.service;
 import com.seniorapp.entity.*;
 import com.seniorapp.repository.DeliverableSubmissionRepository;
 import com.seniorapp.repository.ProjectDeliverableRepository;
+import com.seniorapp.repository.UserGroupMemberRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,16 +35,19 @@ public class DeliverableSubmissionService {
 
     private final DeliverableSubmissionRepository submissionRepository;
     private final ProjectDeliverableRepository deliverableRepository;
+    private final UserGroupMemberRepository userGroupMemberRepository;
 
     @Value("${app.storage.base-path:./storage}")
     private String storageBasePath;
 
     public DeliverableSubmissionService(
             DeliverableSubmissionRepository submissionRepository,
-            ProjectDeliverableRepository deliverableRepository
+            ProjectDeliverableRepository deliverableRepository,
+            UserGroupMemberRepository userGroupMemberRepository
     ) {
         this.submissionRepository = submissionRepository;
         this.deliverableRepository = deliverableRepository;
+        this.userGroupMemberRepository = userGroupMemberRepository;
     }
 
     /**
@@ -185,6 +189,41 @@ public class DeliverableSubmissionService {
         } catch (MalformedURLException e) {
             throw new RuntimeException("Dosya URL hatası: " + e.getMessage());
         }
+    }
+
+    /**
+     * Submission'ı siler. Sadece grubun Team Leader'ı silebilir.
+     * Dosya tipindeyse disk'ten de silinir.
+     */
+    @Transactional
+    public void deleteSubmission(Long submissionId, Long userId) {
+        DeliverableSubmission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new NoSuchElementException("Submission bulunamadı: " + submissionId));
+
+        Long groupId = submission.getGroupId();
+
+        // Kullanıcının bu grupta LEADER olup olmadığını kontrol et
+        UserGroupMember membership = userGroupMemberRepository
+                .findByGroupIdAndUserIdAndStatus(groupId, userId, GroupInviteStatus.ACCEPTED)
+                .orElseThrow(() -> new IllegalArgumentException("Bu grubun üyesi değilsiniz."));
+
+        if (membership.getRole() != GroupMembershipRole.LEADER) {
+            throw new IllegalArgumentException("Sadece Team Leader dosya silebilir.");
+        }
+
+        // Dosya tipindeyse disk'ten sil
+        if (submission.getSubmissionType() == SubmissionType.FILE_UPLOAD && submission.getFilePath() != null) {
+            try {
+                Path filePath = Paths.get(submission.getFilePath());
+                Files.deleteIfExists(filePath);
+                log.info("Dosya disk'ten silindi: {}", filePath);
+            } catch (IOException e) {
+                log.warn("Dosya disk'ten silinemedi: {}", e.getMessage());
+            }
+        }
+
+        submissionRepository.delete(submission);
+        log.info("Submission silindi: id={}, groupId={}, userId={}", submissionId, groupId, userId);
     }
 
     /**

@@ -48,7 +48,7 @@ public class ProjectController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<ProjectListResponse> listProjects(
             @RequestParam(required = false) String term,
             @RequestParam(required = false) Long templateId,
@@ -58,7 +58,7 @@ public class ProjectController {
     }
 
     @GetMapping("/{projectId}")
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable Long projectId) {
         return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId)));
     }

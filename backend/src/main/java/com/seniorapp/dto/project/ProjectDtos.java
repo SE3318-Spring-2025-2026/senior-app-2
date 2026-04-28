@@ -505,6 +505,7 @@ public final class ProjectDtos {
     }
 
     public static class DeliverableDto {
+        private Long id;
         private String type;
         private String title;
         private String description;
@@ -512,6 +513,14 @@ public final class ProjectDtos {
         private boolean fileUploadDeliverable;
         private boolean autoAddToAllSprints;
         private List<RubricDto> rubrics;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
 
         public String getType() {
             return type;

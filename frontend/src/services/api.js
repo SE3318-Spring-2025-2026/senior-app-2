@@ -347,3 +347,19 @@ export async function downloadSubmissionFile(submissionId) {
   }
   return response.blob();
 }
+
+/**
+ * Submission'ı siler. Sadece Team Leader silebilir.
+ */
+export function deleteSubmissionFile(submissionId) {
+  return request(`/submissions/${submissionId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Kullanıcının belirli bir gruptaki rolünü getirir (LEADER / MEMBER).
+ */
+export function getMyGroupRole(groupId) {
+  return request(`/groups/${groupId}/my-role`);
+}

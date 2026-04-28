@@ -6,6 +6,8 @@ import {
   uploadDeliverableFile,
   submitDeliverableText,
   downloadSubmissionFile,
+  deleteSubmissionFile,
+  getMyGroupRole,
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './StudentProjectPage.css';
@@ -25,8 +27,11 @@ function StudentProjectPage() {
   // Her deliverable için local state (seçili dosya, metin, feedback)
   const [deliverableState, setDeliverableState] = useState({});
 
-  // groupId'yi bulmak için (project.assignments veya URL'den)
+  // groupId'yi bulmak için
   const [groupId, setGroupId] = useState(null);
+
+  // Team Lead kontrolü
+  const [isTeamLead, setIsTeamLead] = useState(false);
 
   // ─── Data Fetch ───
   useEffect(() => {
@@ -44,12 +49,16 @@ function StudentProjectPage() {
           setOpenSprints({ [detail.sprints[0].sprintNo]: true });
         }
 
-        // groupId'yi project'ten al (assignments üzerinden)
-        const assignment = detail?.assignments?.[0];
-        if (assignment) {
-          setGroupId(assignment.groupId);
-        } else if (detail?.groupId) {
-          setGroupId(detail.groupId);
+        // groupId'yi project'ten al
+        const gId = detail?.activeGroupId || detail?.groupId;
+        if (gId) {
+          setGroupId(gId);
+        } else {
+          // assignments üzerinden dene
+          const assignment = detail?.assignments?.[0];
+          if (assignment) {
+            setGroupId(assignment.groupId);
+          }
         }
       })
       .catch((e) => setError(e.message || 'Proje bilgileri yüklenemedi.'))
@@ -66,6 +75,16 @@ function StudentProjectPage() {
       })
       .catch(() => setSubmissions([]));
   }, [projectId, groupId]);
+
+  // Team Lead kontrolü
+  useEffect(() => {
+    if (!groupId) return;
+    getMyGroupRole(groupId)
+      .then((res) => {
+        setIsTeamLead(res?.role === 'LEADER');
+      })
+      .catch(() => setIsTeamLead(false));
+  }, [groupId]);
 
   // ─── Sprint Toggle ───
   const toggleSprint = (sprintNo) => {
@@ -104,7 +123,6 @@ function StudentProjectPage() {
         feedback: { type: 'success', msg: 'Dosya başarıyla yüklendi!' },
         showResubmit: false,
       });
-      // Submissions listesini güncelle
       refreshSubmissions();
     } catch (e) {
       setDelState(deliverableId, {
@@ -153,6 +171,27 @@ function StudentProjectPage() {
     }
   };
 
+  // ─── Dosya Silme (Team Lead Only) ───
+  const handleDelete = async (submissionId, deliverableId) => {
+    if (!window.confirm('Bu dosyayı silmek istediğinizden emin misiniz?')) return;
+
+    setDelState(deliverableId, { deleting: true, feedback: null });
+    try {
+      await deleteSubmissionFile(submissionId);
+      setDelState(deliverableId, {
+        deleting: false,
+        feedback: { type: 'success', msg: 'Dosya başarıyla silindi.' },
+        showResubmit: false,
+      });
+      refreshSubmissions();
+    } catch (e) {
+      setDelState(deliverableId, {
+        deleting: false,
+        feedback: { type: 'error', msg: e.message || 'Dosya silinemedi.' },
+      });
+    }
+  };
+
   // ─── Submissions Refresh ───
   const refreshSubmissions = () => {
     if (!projectId || !groupId) return;
@@ -165,13 +204,6 @@ function StudentProjectPage() {
   };
 
   // ─── Render Helpers ───
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
@@ -198,16 +230,73 @@ function StudentProjectPage() {
 
   const sprints = project.sprints || [];
 
+  // Toplam deliverable ve submitted sayıları
+  const totalDeliverables = sprints.reduce(
+    (acc, s) => acc + (s.deliverables?.length || 0),
+    0
+  );
+  const submittedCount = submissions.filter(
+    (s) => s.status === 'SUBMITTED' || s.status === 'GRADED'
+  ).length;
+
   return (
     <div className="student-project-page">
-      {/* ── Header ── */}
-      <div className="spp-header">
-        <h1>{project.title || 'Proje'}</h1>
-        <div className="spp-header-meta">
-          <span className="spp-badge spp-badge-term">{project.term || '-'}</span>
-          <span className="spp-badge spp-badge-status">{project.status || '-'}</span>
-          {groupId && <span className="spp-badge spp-badge-group">Grup #{groupId}</span>}
+      {/* ── Hero Header ── */}
+      <div className="spp-hero">
+        <div className="spp-hero-content">
+          <div className="spp-hero-left">
+            <h1 className="spp-hero-title">{project.title || 'Proje'}</h1>
+            <p className="spp-hero-subtitle">Proje İnceleme & Dosya Yükleme</p>
+          </div>
+          <div className="spp-hero-badges">
+            <span className="spp-badge spp-badge-term">{project.term || '-'}</span>
+            <span className="spp-badge spp-badge-status">{project.status || '-'}</span>
+            {groupId && <span className="spp-badge spp-badge-group">Grup #{groupId}</span>}
+            {isTeamLead && <span className="spp-badge spp-badge-leader">👑 Team Lead</span>}
+          </div>
         </div>
+        <div className="spp-hero-stats">
+          <div className="spp-stat-card">
+            <span className="spp-stat-number">{sprints.length}</span>
+            <span className="spp-stat-label">Sprint</span>
+          </div>
+          <div className="spp-stat-card">
+            <span className="spp-stat-number">{totalDeliverables}</span>
+            <span className="spp-stat-label">Deliverable</span>
+          </div>
+          <div className="spp-stat-card">
+            <span className="spp-stat-number">{submittedCount}</span>
+            <span className="spp-stat-label">Gönderildi</span>
+          </div>
+          <div className="spp-stat-card">
+            <span className="spp-stat-number">
+              {totalDeliverables > 0
+                ? Math.round((submittedCount / totalDeliverables) * 100)
+                : 0}
+              %
+            </span>
+            <span className="spp-stat-label">İlerleme</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Progress Bar ── */}
+      <div className="spp-progress-wrapper">
+        <div className="spp-progress-bar">
+          <div
+            className="spp-progress-fill"
+            style={{
+              width: `${
+                totalDeliverables > 0
+                  ? (submittedCount / totalDeliverables) * 100
+                  : 0
+              }%`,
+            }}
+          />
+        </div>
+        <span className="spp-progress-text">
+          {submittedCount}/{totalDeliverables} tamamlandı
+        </span>
       </div>
 
       {/* ── Sprint List ── */}
@@ -221,8 +310,15 @@ function StudentProjectPage() {
           >
             <div className="spp-sprint-header" onClick={() => toggleSprint(sprint.sprintNo)}>
               <div className="spp-sprint-title-group">
-                <span className="spp-sprint-chevron">▶</span>
+                <span className="spp-sprint-chevron">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                    <path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
                 <span className="spp-sprint-title">{sprint.title || `Sprint ${sprint.sprintNo}`}</span>
+                <span className="spp-sprint-count">
+                  {sprint.deliverables?.length || 0} deliverable
+                </span>
               </div>
               <span className="spp-sprint-dates">
                 {formatDate(sprint.startDate)} — {formatDate(sprint.endDate)}
@@ -245,6 +341,8 @@ function StudentProjectPage() {
                       onFileSubmit={() => handleFileSubmit(deliverable.id)}
                       onTextSubmit={() => handleTextSubmit(deliverable.id)}
                       onDownload={handleDownload}
+                      onDelete={(submissionId) => handleDelete(submissionId, deliverable.id)}
+                      isTeamLead={isTeamLead}
                     />
                   ))
                 )}
@@ -269,6 +367,8 @@ function DeliverableCard({
   onFileSubmit,
   onTextSubmit,
   onDownload,
+  onDelete,
+  isTeamLead,
 }) {
   const isFileType = deliverable.fileUploadDeliverable;
   const hasExisting = !!existingSubmission && Object.keys(existingSubmission).length > 0;
@@ -304,12 +404,17 @@ function DeliverableCard({
       {showExistingInfo && (
         <div className="spp-existing-submission">
           <div className="spp-existing-info">
-            <span>✅</span>
+            <span className="spp-existing-icon">✅</span>
             {existingSubmission.submissionType === 'FILE_UPLOAD' ? (
-              <span>
-                Dosya yüklendi: <strong>{existingSubmission.originalFileName}</strong>
-                {existingSubmission.fileSize && ` (${formatFileSize(existingSubmission.fileSize)})`}
-              </span>
+              <div className="spp-existing-details">
+                <span className="spp-existing-label">Dosya yüklendi:</span>
+                <strong>{existingSubmission.originalFileName}</strong>
+                {existingSubmission.fileSize && (
+                  <span className="spp-existing-size">
+                    ({formatFileSize(existingSubmission.fileSize)})
+                  </span>
+                )}
+              </div>
             ) : (
               <span>Metin gönderildi ({existingSubmission.textContent?.length || 0} karakter)</span>
             )}
@@ -329,6 +434,16 @@ function DeliverableCard({
             >
               🔄 Yeniden Gönder
             </button>
+            {/* Dosya Silme - Sadece Team Lead */}
+            {isTeamLead && existingSubmission.id && (
+              <button
+                className="spp-btn-delete"
+                onClick={() => onDelete(existingSubmission.id)}
+                disabled={localState.deleting}
+              >
+                {localState.deleting ? '⏳ Siliniyor...' : '🗑️ Sil'}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -356,6 +471,7 @@ function DeliverableCard({
       {/* Feedback */}
       {feedback && (
         <div className={`spp-feedback spp-feedback-${feedback.type}`}>
+          {feedback.type === 'success' ? '✓ ' : '✕ '}
           {feedback.msg}
         </div>
       )}
@@ -428,7 +544,12 @@ function FileUploadArea({ localState, onFileSelect, onSubmit }) {
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="spp-dropzone-icon">📁</div>
+          <div className="spp-dropzone-icon">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx="12" fill="#EEF2FF"/>
+              <path d="M24 16V32M16 24H32" stroke="#6366F1" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+          </div>
           <div className="spp-dropzone-text">
             Dosyayı buraya sürükleyin veya <strong>tıklayarak seçin</strong>
           </div>

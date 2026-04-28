@@ -394,6 +394,7 @@ public class ProjectService {
 
     private DeliverableDto toDeliverableDto(ProjectDeliverable deliverable) {
         DeliverableDto dto = new DeliverableDto();
+        dto.setId(deliverable.getId());
         dto.setType(deliverable.getType());
         dto.setTitle(deliverable.getTitle());
         dto.setDescription(deliverable.getDescription());

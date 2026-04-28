@@ -140,6 +140,24 @@ public class DeliverableSubmissionController {
                 .body(resource);
     }
 
+    /**
+     * DELETE /api/submissions/{submissionId}
+     * Submission'ı siler. Sadece grubun Team Leader'ı silebilir.
+     * Dosya tipindeyse disk'ten de silinir.
+     */
+    @DeleteMapping("/{submissionId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Map<String, Object>> deleteSubmission(
+            @PathVariable Long submissionId,
+            @AuthenticationPrincipal User principal
+    ) {
+        submissionService.deleteSubmission(submissionId, principal.getId());
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Submission başarıyla silindi."
+        ));
+    }
+
     // ── Exception Handlers ──
 
     @ExceptionHandler(IllegalArgumentException.class)

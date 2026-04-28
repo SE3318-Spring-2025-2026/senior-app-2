@@ -109,6 +109,15 @@ public class GroupController {
         return ResponseEntity.ok(Map.of("status", "success", "data", Map.of("projectId", projectId)));
     }
 
+    @GetMapping("/{groupId}/my-role")
+    public ResponseEntity<Map<String, Object>> getMyRole(
+            @PathVariable Long groupId,
+            Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        String role = groupService.getMyRoleInGroup(groupId, currentUser.getId());
+        return ResponseEntity.ok(Map.of("status", "success", "role", role));
+    }
+
     @PostMapping("/{groupId}/integrations")
     public ResponseEntity<String> saveIntegrations(
             @PathVariable Long groupId,

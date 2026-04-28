@@ -1,29 +1,77 @@
 /* ═══════════════════════════════════════════════════════
-   StudentProjectPage.css - Deliverable Submission Page
-   Projenin mevcut tasarımıyla uyumlu, sade ve şık
+   StudentProjectPage.css – Premium Project Review & Upload
+   Modern, glassmorphism-inspired with gradient accents
    ═══════════════════════════════════════════════════════ */
 
 .student-project-page {
   padding: 24px 32px;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* ── Proje Header ── */
-.spp-header {
-  margin-bottom: 28px;
+/* ── Hero Header ── */
+.spp-hero {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%);
+  border-radius: 20px;
+  padding: 32px 36px 28px;
+  margin-bottom: 20px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);
 }
 
-.spp-header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 6px 0;
+.spp-hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
-.spp-header-meta {
+.spp-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.spp-hero-content {
   display: flex;
-  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.spp-hero-title {
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.spp-hero-subtitle {
+  font-size: 0.88rem;
+  opacity: 0.8;
+  margin: 0;
+  font-weight: 400;
+}
+
+.spp-hero-badges {
+  display: flex;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -32,26 +80,126 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.76rem;
+  font-weight: 700;
   letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
 }
 
 .spp-badge-term {
-  background: #eef2ff;
-  color: #4338ca;
+  background: rgba(255,255,255,0.18);
+  color: #fff;
 }
 
 .spp-badge-status {
-  background: #f0fdf4;
-  color: #15803d;
+  background: rgba(16,185,129,0.2);
+  color: #a7f3d0;
+  border-color: rgba(16,185,129,0.3);
 }
 
 .spp-badge-group {
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(251,191,36,0.2);
+  color: #fde68a;
+  border-color: rgba(251,191,36,0.3);
+}
+
+.spp-badge-leader {
+  background: rgba(245,158,11,0.25);
+  color: #fef3c7;
+  border-color: rgba(245,158,11,0.4);
+  animation: spp-leader-pulse 2s infinite;
+}
+
+@keyframes spp-leader-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+}
+
+/* ── Hero Stats ── */
+.spp-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.spp-stat-card {
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.spp-stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,0.18);
+}
+
+.spp-stat-number {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.spp-stat-label {
+  font-size: 0.72rem;
+  opacity: 0.75;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Progress Bar ── */
+.spp-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 0 4px;
+}
+
+.spp-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.spp-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #a78bfa);
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.spp-progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 20px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
+  border-radius: 99px;
+}
+
+.spp-progress-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6366f1;
+  white-space: nowrap;
 }
 
 /* ── Loading / Error ── */
@@ -68,8 +216,8 @@
 
 .spp-loading-spinner {
   display: inline-block;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: 3px solid #e5e7eb;
   border-top-color: #6366f1;
   border-radius: 50%;
@@ -84,22 +232,23 @@
 /* ── Sprint Accordion ── */
 .spp-sprint {
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 16px;
   margin-bottom: 14px;
   background: #fff;
   overflow: hidden;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.25s, border-color 0.25s;
 }
 
 .spp-sprint:hover {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border-color: #d1d5db;
 }
 
 .spp-sprint-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: 16px 20px;
   cursor: pointer;
   user-select: none;
   background: #fafbfc;
@@ -113,6 +262,7 @@
 
 .spp-sprint.open .spp-sprint-header {
   border-bottom-color: #e5e7eb;
+  background: #f8fafc;
 }
 
 .spp-sprint-title-group {
@@ -122,46 +272,58 @@
 }
 
 .spp-sprint-chevron {
-  font-size: 0.85rem;
   color: #94a3b8;
-  transition: transform 0.2s;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
 }
 
 .spp-sprint.open .spp-sprint-chevron {
   transform: rotate(90deg);
+  color: #6366f1;
 }
 
 .spp-sprint-title {
   font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.spp-sprint-count {
+  font-size: 0.72rem;
   font-weight: 600;
-  color: #334155;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #6366f1;
 }
 
 .spp-sprint-dates {
   font-size: 0.78rem;
   color: #94a3b8;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .spp-sprint-body {
-  padding: 16px 18px;
+  padding: 16px 20px;
 }
 
 .spp-no-deliverables {
   text-align: center;
   color: #94a3b8;
   font-size: 0.88rem;
-  padding: 20px;
+  padding: 24px;
 }
 
 /* ── Deliverable Kartı ── */
 .spp-deliverable {
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 16px 18px;
+  border-radius: 14px;
+  padding: 18px 20px;
   margin-bottom: 12px;
   background: #fff;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .spp-deliverable:last-child {
@@ -170,18 +332,19 @@
 
 .spp-deliverable:hover {
   border-color: #c7d2fe;
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.06);
 }
 
 .spp-deliverable-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .spp-deliverable-info h4 {
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: #1e293b;
   margin: 0 0 4px 0;
 }
@@ -189,8 +352,8 @@
 .spp-deliverable-desc {
   font-size: 0.82rem;
   color: #64748b;
-  line-height: 1.45;
-  margin: 0 0 6px 0;
+  line-height: 1.5;
+  margin: 0 0 8px 0;
 }
 
 .spp-deliverable-tags {
@@ -202,7 +365,7 @@
 .spp-tag {
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 2px 10px;
+  padding: 3px 12px;
   border-radius: 14px;
   background: #f1f5f9;
   color: #475569;
@@ -229,9 +392,9 @@
   align-items: center;
   gap: 6px;
   font-size: 0.78rem;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 16px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 20px;
   white-space: nowrap;
 }
 
@@ -257,16 +420,16 @@
 
 /* ── Dosya Yükleme Alanı ── */
 .spp-upload-area {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .spp-dropzone {
   border: 2px dashed #d1d5db;
-  border-radius: 10px;
-  padding: 28px 20px;
+  border-radius: 14px;
+  padding: 32px 20px;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
   background: #fafbfc;
 }
 
@@ -274,16 +437,17 @@
 .spp-dropzone.dragging {
   border-color: #818cf8;
   background: #eef2ff;
+  transform: scale(1.005);
 }
 
 .spp-dropzone-icon {
-  font-size: 2rem;
-  margin-bottom: 6px;
-  opacity: 0.6;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
 }
 
 .spp-dropzone-text {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   color: #64748b;
 }
 
@@ -295,7 +459,7 @@
 .spp-dropzone-hint {
   font-size: 0.75rem;
   color: #94a3b8;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 /* ── Seçili Dosya Önizleme ── */
@@ -303,10 +467,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  margin-top: 10px;
+  padding: 12px 16px;
+  margin-top: 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #f8fafc;
 }
 
@@ -321,8 +485,8 @@
 
 .spp-file-name {
   font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155;
+  font-weight: 700;
+  color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -339,8 +503,8 @@
   color: #ef4444;
   cursor: pointer;
   font-size: 1.1rem;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 6px;
   transition: background 0.15s;
 }
 
@@ -350,7 +514,7 @@
 
 /* ── Metin Editörü ── */
 .spp-text-editor-area {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .spp-text-toolbar {
@@ -360,19 +524,19 @@
   background: #f8fafc;
   border: 1px solid #e5e7eb;
   border-bottom: none;
-  border-radius: 8px 8px 0 0;
+  border-radius: 12px 12px 0 0;
 }
 
 .spp-toolbar-btn {
   background: none;
   border: 1px solid transparent;
-  padding: 5px 9px;
+  padding: 6px 10px;
   cursor: pointer;
   font-size: 0.82rem;
   color: #475569;
-  border-radius: 5px;
+  border-radius: 6px;
   transition: all 0.15s;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .spp-toolbar-btn:hover {
@@ -390,7 +554,7 @@
   min-height: 180px;
   padding: 14px 16px;
   border: 1px solid #e5e7eb;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 12px 12px;
   font-family: 'Segoe UI', system-ui, sans-serif;
   font-size: 0.88rem;
   line-height: 1.6;
@@ -403,6 +567,7 @@
 
 .spp-textarea:focus {
   border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
 }
 
 .spp-char-count {
@@ -422,19 +587,21 @@
 }
 
 .spp-btn-submit {
-  padding: 9px 22px;
-  background: #6366f1;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .spp-btn-submit:hover:not(:disabled) {
-  background: #4f46e5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
 }
 
 .spp-btn-submit:active:not(:disabled) {
@@ -444,6 +611,8 @@
 .spp-btn-submit:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .spp-btn-download {
@@ -451,33 +620,78 @@
   background: #f1f5f9;
   color: #475569;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
 }
 
 .spp-btn-download:hover {
   background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+/* ── Delete Button (Team Lead Only) ── */
+.spp-btn-delete {
+  padding: 8px 18px;
+  background: #fff;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.spp-btn-delete:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.spp-btn-delete:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* ── Feedback Messages ── */
 .spp-feedback {
   font-size: 0.82rem;
-  padding: 8px 14px;
-  border-radius: 8px;
-  margin-top: 10px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin-top: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: spp-feedback-in 0.3s ease-out;
+}
+
+@keyframes spp-feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .spp-feedback-success {
   background: #dcfce7;
   color: #15803d;
+  border: 1px solid #bbf7d0;
 }
 
 .spp-feedback-error {
   background: #fee2e2;
   color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 /* ── Existing Submission Info ── */
@@ -485,40 +699,64 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: #f0fdf4;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
   border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  margin-top: 10px;
+  border-radius: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .spp-existing-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.82rem;
+  gap: 10px;
+  font-size: 0.84rem;
   color: #15803d;
+}
+
+.spp-existing-icon {
+  font-size: 1.2rem;
+}
+
+.spp-existing-details {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.spp-existing-label {
+  font-weight: 500;
+}
+
+.spp-existing-size {
+  color: #22c55e;
+  font-size: 0.78rem;
 }
 
 .spp-existing-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .spp-btn-resubmit {
-  padding: 5px 14px;
+  padding: 6px 16px;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   background: #fff;
   color: #6366f1;
   border: 1px solid #c7d2fe;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
 }
 
 .spp-btn-resubmit:hover {
   background: #eef2ff;
+  transform: translateY(-1px);
 }
 
 /* ── Responsive ── */
@@ -527,12 +765,55 @@
     padding: 16px;
   }
 
+  .spp-hero {
+    padding: 24px 20px 20px;
+    border-radius: 16px;
+  }
+
+  .spp-hero-content {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .spp-hero-title {
+    font-size: 1.3rem;
+  }
+
+  .spp-hero-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .spp-deliverable-top {
     flex-direction: column;
     gap: 8px;
   }
 
+  .spp-existing-submission {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .spp-header-meta {
     gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .spp-hero-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .spp-stat-card {
+    padding: 10px 12px;
+  }
+
+  .spp-stat-number {
+    font-size: 1.1rem;
+  }
+
+  .spp-existing-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
