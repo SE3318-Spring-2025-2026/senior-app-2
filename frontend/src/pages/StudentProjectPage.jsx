@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   getProjectDetail,
   getProjectSubmissions,
@@ -15,575 +15,398 @@ import './StudentProjectPage.css';
 function StudentProjectPage() {
   const { projectId } = useParams();
   const { user } = useAuth();
-
+  const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // Hangi sprint'ler açık
-  const [openSprints, setOpenSprints] = useState({});
-
-  // Her deliverable için local state (seçili dosya, metin, feedback)
+  const [activeSprint, setActiveSprint] = useState(0);
   const [deliverableState, setDeliverableState] = useState({});
-
-  // groupId'yi bulmak için
   const [groupId, setGroupId] = useState(null);
-
-  // Team Lead kontrolü
   const [isTeamLead, setIsTeamLead] = useState(false);
 
-  // ─── Data Fetch ───
   useEffect(() => {
     if (!projectId) return;
     setLoading(true);
-    setError('');
-
     getProjectDetail(projectId)
       .then((res) => {
         const detail = res?.data || res;
         setProject(detail);
-
-        // İlk sprint'i otomatik aç
-        if (detail?.sprints?.length > 0) {
-          setOpenSprints({ [detail.sprints[0].sprintNo]: true });
-        }
-
-        // groupId'yi project'ten al
-        const gId = detail?.activeGroupId || detail?.groupId;
-        if (gId) {
-          setGroupId(gId);
-        } else {
-          // assignments üzerinden dene
-          const assignment = detail?.assignments?.[0];
-          if (assignment) {
-            setGroupId(assignment.groupId);
-          }
-        }
+        const gId = detail?.activeGroupId || detail?.groupId || detail?.assignments?.[0]?.groupId;
+        if (gId) setGroupId(gId);
       })
       .catch((e) => setError(e.message || 'Proje bilgileri yüklenemedi.'))
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  // Submissions fetch (groupId hazır olunca)
   useEffect(() => {
     if (!projectId || !groupId) return;
     getProjectSubmissions(projectId, groupId)
-      .then((res) => {
-        const data = res?.data || [];
-        setSubmissions(Array.isArray(data) ? data : []);
-      })
+      .then((res) => setSubmissions(Array.isArray(res?.data || res) ? (res?.data || res) : []))
       .catch(() => setSubmissions([]));
   }, [projectId, groupId]);
 
-  // Team Lead kontrolü
   useEffect(() => {
     if (!groupId) return;
     getMyGroupRole(groupId)
-      .then((res) => {
-        setIsTeamLead(res?.role === 'LEADER');
-      })
+      .then((res) => setIsTeamLead(res?.role === 'LEADER'))
       .catch(() => setIsTeamLead(false));
   }, [groupId]);
 
-  // ─── Sprint Toggle ───
-  const toggleSprint = (sprintNo) => {
-    setOpenSprints((prev) => ({ ...prev, [sprintNo]: !prev[sprintNo] }));
-  };
+  const getDelState = (id) => deliverableState[id] || {};
+  const setDelState = (id, update) => setDeliverableState((p) => ({ ...p, [id]: { ...p[id], ...update } }));
+  const getExistingSub = (id) => submissions.find((s) => s.deliverableId === id);
 
-  // ─── Deliverable State Helpers ───
-  const getDelState = (deliverableId) =>
-    deliverableState[deliverableId] || {};
-
-  const setDelState = (deliverableId, update) => {
-    setDeliverableState((prev) => ({
-      ...prev,
-      [deliverableId]: { ...prev[deliverableId], ...update },
-    }));
-  };
-
-  const getExistingSubmission = (deliverableId) =>
-    submissions.find((s) => s.deliverableId === deliverableId);
-
-  // ─── Dosya Yükleme ───
-  const handleFileSelect = (deliverableId, file) => {
-    setDelState(deliverableId, { selectedFile: file, feedback: null });
-  };
-
-  const handleFileSubmit = async (deliverableId) => {
-    const state = getDelState(deliverableId);
-    if (!state.selectedFile || !groupId) return;
-
-    setDelState(deliverableId, { submitting: true, feedback: null });
-    try {
-      await uploadDeliverableFile(deliverableId, groupId, state.selectedFile);
-      setDelState(deliverableId, {
-        submitting: false,
-        selectedFile: null,
-        feedback: { type: 'success', msg: 'Dosya başarıyla yüklendi!' },
-        showResubmit: false,
-      });
-      refreshSubmissions();
-    } catch (e) {
-      setDelState(deliverableId, {
-        submitting: false,
-        feedback: { type: 'error', msg: e.message || 'Dosya yüklenemedi.' },
-      });
-    }
-  };
-
-  // ─── Metin Gönderme ───
-  const handleTextSubmit = async (deliverableId) => {
-    const state = getDelState(deliverableId);
-    if (!state.textContent?.trim() || !groupId) return;
-
-    setDelState(deliverableId, { submitting: true, feedback: null });
-    try {
-      await submitDeliverableText(deliverableId, groupId, state.textContent);
-      setDelState(deliverableId, {
-        submitting: false,
-        feedback: { type: 'success', msg: 'Metin başarıyla kaydedildi!' },
-        showResubmit: false,
-      });
-      refreshSubmissions();
-    } catch (e) {
-      setDelState(deliverableId, {
-        submitting: false,
-        feedback: { type: 'error', msg: e.message || 'Metin kaydedilemedi.' },
-      });
-    }
-  };
-
-  // ─── Dosya İndirme ───
-  const handleDownload = async (submissionId, fileName) => {
-    try {
-      const blob = await downloadSubmissionFile(submissionId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName || 'download';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch {
-      alert('Dosya indirilemedi.');
-    }
-  };
-
-  // ─── Dosya Silme (Team Lead Only) ───
-  const handleDelete = async (submissionId, deliverableId) => {
-    if (!window.confirm('Bu dosyayı silmek istediğinizden emin misiniz?')) return;
-
-    setDelState(deliverableId, { deleting: true, feedback: null });
-    try {
-      await deleteSubmissionFile(submissionId);
-      setDelState(deliverableId, {
-        deleting: false,
-        feedback: { type: 'success', msg: 'Dosya başarıyla silindi.' },
-        showResubmit: false,
-      });
-      refreshSubmissions();
-    } catch (e) {
-      setDelState(deliverableId, {
-        deleting: false,
-        feedback: { type: 'error', msg: e.message || 'Dosya silinemedi.' },
-      });
-    }
-  };
-
-  // ─── Submissions Refresh ───
   const refreshSubmissions = () => {
     if (!projectId || !groupId) return;
     getProjectSubmissions(projectId, groupId)
-      .then((res) => {
-        const data = res?.data || [];
-        setSubmissions(Array.isArray(data) ? data : []);
-      })
+      .then((res) => setSubmissions(Array.isArray(res?.data || res) ? (res?.data || res) : []))
       .catch(() => {});
   };
 
-  // ─── Render Helpers ───
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('tr-TR');
+  const handleFileSelect = (id, file) => setDelState(id, { selectedFile: file, feedback: null });
+
+  const handleFileSubmit = async (id) => {
+    const st = getDelState(id);
+    if (!st.selectedFile || !groupId) return;
+    setDelState(id, { submitting: true, feedback: null });
+    try {
+      await uploadDeliverableFile(id, groupId, st.selectedFile);
+      setDelState(id, { submitting: false, selectedFile: null, feedback: { type: 'success', msg: 'Dosya başarıyla yüklendi!' }, showResubmit: false });
+      refreshSubmissions();
+    } catch (e) {
+      setDelState(id, { submitting: false, feedback: { type: 'error', msg: e.message || 'Dosya yüklenemedi.' } });
+    }
   };
 
-  // ─── Loading & Error ───
-  if (loading) {
-    return (
-      <div className="spp-loading">
-        <div className="spp-loading-spinner" />
-        <p>Proje yükleniyor...</p>
-      </div>
-    );
-  }
+  const handleTextSubmit = async (id) => {
+    const st = getDelState(id);
+    if (!st.textContent?.trim() || !groupId) return;
+    setDelState(id, { submitting: true, feedback: null });
+    try {
+      await submitDeliverableText(id, groupId, st.textContent);
+      setDelState(id, { submitting: false, feedback: { type: 'success', msg: 'Metin başarıyla kaydedildi!' }, showResubmit: false });
+      refreshSubmissions();
+    } catch (e) {
+      setDelState(id, { submitting: false, feedback: { type: 'error', msg: e.message || 'Metin kaydedilemedi.' } });
+    }
+  };
 
-  if (error) {
-    return <div className="spp-error">{error}</div>;
-  }
+  const handleDownload = async (subId, fileName) => {
+    try {
+      const blob = await downloadSubmissionFile(subId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fileName || 'download';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch { alert('Dosya indirilemedi.'); }
+  };
 
-  if (!project) {
-    return <div className="spp-error">Proje bulunamadı.</div>;
-  }
+  const handleDelete = async (subId, delId) => {
+    if (!window.confirm('Bu dosyayı silmek istediğinizden emin misiniz?')) return;
+    setDelState(delId, { deleting: true, feedback: null });
+    try {
+      await deleteSubmissionFile(subId);
+      setDelState(delId, { deleting: false, feedback: { type: 'success', msg: 'Dosya başarıyla silindi.' }, showResubmit: false });
+      refreshSubmissions();
+    } catch (e) {
+      setDelState(delId, { deleting: false, feedback: { type: 'error', msg: e.message || 'Dosya silinemedi.' } });
+    }
+  };
+
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+
+  if (loading) return <div className="spp-loading"><div className="spp-loading-spinner" /><p>Proje yükleniyor...</p></div>;
+  if (error) return <div className="spp-error">{error}</div>;
+  if (!project) return <div className="spp-error">Proje bulunamadı.</div>;
 
   const sprints = project.sprints || [];
-
-  // Toplam deliverable ve submitted sayıları
-  const totalDeliverables = sprints.reduce(
-    (acc, s) => acc + (s.deliverables?.length || 0),
-    0
-  );
-  const submittedCount = submissions.filter(
-    (s) => s.status === 'SUBMITTED' || s.status === 'GRADED'
-  ).length;
+  const currentSprint = sprints[activeSprint];
+  const totalDel = sprints.reduce((a, s) => a + (s.deliverables?.length || 0), 0);
+  const submittedCount = submissions.filter((s) => s.status === 'SUBMITTED' || s.status === 'GRADED').length;
 
   return (
     <div className="student-project-page">
-      {/* ── Hero Header ── */}
-      <div className="spp-hero">
-        <div className="spp-hero-content">
-          <div className="spp-hero-left">
-            <h1 className="spp-hero-title">{project.title || 'Proje'}</h1>
-            <p className="spp-hero-subtitle">Proje İnceleme & Dosya Yükleme</p>
-          </div>
-          <div className="spp-hero-badges">
-            <span className="spp-badge spp-badge-term">{project.term || '-'}</span>
-            <span className="spp-badge spp-badge-status">{project.status || '-'}</span>
-            {groupId && <span className="spp-badge spp-badge-group">Grup #{groupId}</span>}
+      {/* Back */}
+      <button className="spp-back-link" onClick={() => navigate('/panel/my-student-projects')}>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7L9 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        Return to Dashboard
+      </button>
+
+      {/* Header */}
+      <div className="spp-header">
+        <div className="spp-header-left">
+          <div className="spp-header-badges">
+            <span className="spp-badge spp-badge-term">{project.term || 'SPRING 2026'}</span>
+            <span className="spp-badge spp-badge-status">{project.status || 'Active Project'}</span>
             {isTeamLead && <span className="spp-badge spp-badge-leader">👑 Team Lead</span>}
           </div>
+          <h1 className="spp-project-title">{project.title || 'Proje'}</h1>
+          <p className="spp-project-meta">{project.department || 'Management Information Systems'} • Year {project.year || '4'}</p>
         </div>
-        <div className="spp-hero-stats">
-          <div className="spp-stat-card">
-            <span className="spp-stat-number">{sprints.length}</span>
-            <span className="spp-stat-label">Sprint</span>
-          </div>
-          <div className="spp-stat-card">
-            <span className="spp-stat-number">{totalDeliverables}</span>
-            <span className="spp-stat-label">Deliverable</span>
-          </div>
-          <div className="spp-stat-card">
-            <span className="spp-stat-number">{submittedCount}</span>
-            <span className="spp-stat-label">Gönderildi</span>
-          </div>
-          <div className="spp-stat-card">
-            <span className="spp-stat-number">
-              {totalDeliverables > 0
-                ? Math.round((submittedCount / totalDeliverables) * 100)
-                : 0}
-              %
-            </span>
-            <span className="spp-stat-label">İlerleme</span>
-          </div>
+        <div className="spp-header-right">
+          <div className="spp-cumulative-label">Cumulative Grade</div>
+          <div className="spp-cumulative-grade">{totalDel > 0 ? Math.round((submittedCount / totalDel) * 100) : '-'}</div>
         </div>
       </div>
 
-      {/* ── Progress Bar ── */}
-      <div className="spp-progress-wrapper">
-        <div className="spp-progress-bar">
-          <div
-            className="spp-progress-fill"
-            style={{
-              width: `${
-                totalDeliverables > 0
-                  ? (submittedCount / totalDeliverables) * 100
-                  : 0
-              }%`,
-            }}
-          />
-        </div>
-        <span className="spp-progress-text">
-          {submittedCount}/{totalDeliverables} tamamlandı
-        </span>
-      </div>
-
-      {/* ── Sprint List ── */}
-      {sprints.length === 0 ? (
-        <div className="spp-no-deliverables">Bu projede henüz sprint tanımlanmamış.</div>
-      ) : (
-        sprints.map((sprint) => (
-          <div
-            key={sprint.sprintNo}
-            className={`spp-sprint ${openSprints[sprint.sprintNo] ? 'open' : ''}`}
-          >
-            <div className="spp-sprint-header" onClick={() => toggleSprint(sprint.sprintNo)}>
-              <div className="spp-sprint-title-group">
-                <span className="spp-sprint-chevron">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                    <path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </span>
-                <span className="spp-sprint-title">{sprint.title || `Sprint ${sprint.sprintNo}`}</span>
-                <span className="spp-sprint-count">
-                  {sprint.deliverables?.length || 0} deliverable
-                </span>
-              </div>
-              <span className="spp-sprint-dates">
-                {formatDate(sprint.startDate)} — {formatDate(sprint.endDate)}
-              </span>
+      {/* Timeline */}
+      {sprints.length > 0 && (
+        <div className="spp-timeline-section">
+          <div className="spp-timeline-header">
+            <div className="spp-timeline-title">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M8 2v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              Project Timeline Progress
             </div>
+            <div className="spp-timeline-legend">
+              <span className="spp-legend-item"><span className="spp-legend-dot active" /> Active</span>
+              <span className="spp-legend-item"><span className="spp-legend-dot completed" /> Completed</span>
+            </div>
+          </div>
+          <div className="spp-sprint-steps">
+            {sprints.map((sprint, idx) => {
+              const isCompleted = idx < activeSprint;
+              const isActive = idx === activeSprint;
+              return (
+                <React.Fragment key={sprint.sprintNo}>
+                  {idx > 0 && <div className={`spp-step-line ${isCompleted ? 'completed' : ''}`} />}
+                  <div className="spp-sprint-step" onClick={() => setActiveSprint(idx)}>
+                    <div className={`spp-step-circle ${isCompleted ? 'completed' : isActive ? 'active' : ''}`}>
+                      {isCompleted ? <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8l3 3 5-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : sprint.sprintNo}
+                    </div>
+                    <span className={`spp-step-label ${isCompleted ? 'completed' : isActive ? 'active' : ''}`}>Sprint {sprint.sprintNo}</span>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-            {openSprints[sprint.sprintNo] && (
-              <div className="spp-sprint-body">
-                {(!sprint.deliverables || sprint.deliverables.length === 0) ? (
-                  <div className="spp-no-deliverables">Bu sprint'te deliverable yok.</div>
-                ) : (
-                  sprint.deliverables.map((deliverable) => (
-                    <DeliverableCard
-                      key={deliverable.id}
-                      deliverable={deliverable}
-                      existingSubmission={getExistingSubmission(deliverable.id)}
-                      localState={getDelState(deliverable.id)}
-                      setLocalState={(update) => setDelState(deliverable.id, update)}
-                      onFileSelect={(file) => handleFileSelect(deliverable.id, file)}
-                      onFileSubmit={() => handleFileSubmit(deliverable.id)}
-                      onTextSubmit={() => handleTextSubmit(deliverable.id)}
-                      onDownload={handleDownload}
-                      onDelete={(submissionId) => handleDelete(submissionId, deliverable.id)}
-                      isTeamLead={isTeamLead}
-                    />
-                  ))
-                )}
-              </div>
+      {/* Sprint Content */}
+      {currentSprint && (
+        <div className="spp-sprint-content">
+          <div className="spp-main-col">
+            <div className="spp-deliverables-header">
+              <h2 className="spp-deliverables-title">{currentSprint.title || `Sprint ${currentSprint.sprintNo}`} Deliverables</h2>
+              <span className="spp-deliverables-dates">{formatDate(currentSprint.startDate)} - {formatDate(currentSprint.endDate)}</span>
+            </div>
+            {(!currentSprint.deliverables || currentSprint.deliverables.length === 0) ? (
+              <div className="spp-no-deliverables">Bu sprint'te deliverable yok.</div>
+            ) : (
+              currentSprint.deliverables.map((del) => (
+                <DeliverableCard
+                  key={del.id}
+                  deliverable={del}
+                  existingSubmission={getExistingSub(del.id)}
+                  localState={getDelState(del.id)}
+                  setLocalState={(u) => setDelState(del.id, u)}
+                  onFileSelect={(f) => handleFileSelect(del.id, f)}
+                  onFileSubmit={() => handleFileSubmit(del.id)}
+                  onTextSubmit={() => handleTextSubmit(del.id)}
+                  onDownload={handleDownload}
+                  onDelete={(subId) => handleDelete(subId, del.id)}
+                  isTeamLead={isTeamLead}
+                />
+              ))
             )}
           </div>
-        ))
+          {/* Sidebar */}
+          <div className="spp-sidebar">
+            <div className="spp-sidebar-title">Sprint Report</div>
+            <div className="spp-report-card">
+              <div className="spp-report-contribution">
+                <div className="spp-contribution-score">
+                  <span className="spp-contribution-number">4</span>
+                  <span className="spp-contribution-total">/5</span>
+                </div>
+                <div className="spp-contribution-info">
+                  <div className="spp-contribution-label">Personal Contribution</div>
+                  <div className="spp-contribution-text">Sprint Performance</div>
+                </div>
+                <span className="spp-excellent-badge">📈 Excellent</span>
+              </div>
+            </div>
+            <div className="spp-eval-card">
+              <div className="spp-eval-header">
+                <span className="spp-eval-title">👥 Teamwork Evaluation</span>
+                <span className="spp-eval-status">Pending</span>
+              </div>
+              <div className="spp-eval-icon">⏳</div>
+              <div className="spp-eval-waiting">Awaiting Instructor Grading</div>
+            </div>
+            <div className="spp-eval-card">
+              <div className="spp-eval-header">
+                <span className="spp-eval-title">🔄 Scrum Process Evaluation</span>
+                <span className="spp-eval-status">Pending</span>
+              </div>
+              <div className="spp-eval-icon">⏳</div>
+              <div className="spp-eval-waiting">Awaiting Instructor Grading</div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════
-// DeliverableCard — Her bir deliverable için submit alanı
-// ═══════════════════════════════════════════════════════
-function DeliverableCard({
-  deliverable,
-  existingSubmission,
-  localState,
-  setLocalState,
-  onFileSelect,
-  onFileSubmit,
-  onTextSubmit,
-  onDownload,
-  onDelete,
-  isTeamLead,
-}) {
+/* ═══ DeliverableCard ═══ */
+function DeliverableCard({ deliverable, existingSubmission, localState, setLocalState, onFileSelect, onFileSubmit, onTextSubmit, onDownload, onDelete, isTeamLead }) {
   const isFileType = deliverable.fileUploadDeliverable;
   const hasExisting = !!existingSubmission && Object.keys(existingSubmission).length > 0;
   const showResubmit = localState.showResubmit;
-
-  // Mevcut submission varsa ve resubmit modunda değilse → mevcut bilgiyi göster
   const showExistingInfo = hasExisting && !showResubmit;
-
-  // Feedback kısmı
   const feedback = localState.feedback;
+  const isGraded = existingSubmission?.status === 'GRADED';
 
   return (
     <div className="spp-deliverable">
       <div className="spp-deliverable-top">
         <div className="spp-deliverable-info">
-          <h4>{deliverable.title}</h4>
-          {deliverable.description && (
-            <p className="spp-deliverable-desc">{deliverable.description}</p>
-          )}
+          <h4><span className="spp-deliverable-dot" />{deliverable.title}</h4>
+          {deliverable.description && <p className="spp-deliverable-desc">{deliverable.description}</p>}
           <div className="spp-deliverable-tags">
             <span className={`spp-tag ${isFileType ? 'spp-tag-file' : 'spp-tag-text'}`}>
-              {isFileType ? '📎 Dosya Yükleme' : '✏️ Metin Editörü'}
+              {isFileType ? '✏️ File Upload' : '✏️ Text Editor'}
             </span>
-            <span className="spp-tag spp-tag-weight">Ağırlık: %{deliverable.weight}</span>
+            <span className="spp-tag spp-tag-weight">Weight: {deliverable.weight}%</span>
           </div>
         </div>
-
-        {/* Durum badge */}
-        <SubmissionStatusBadge submission={existingSubmission} />
+        {isGraded && existingSubmission.grade != null ? (
+          <div className="spp-grade-display">
+            <span className="spp-grade-value">{existingSubmission.grade}</span>
+            <span className="spp-grade-label">Success Grade</span>
+          </div>
+        ) : (
+          <SubmissionStatusBadge submission={existingSubmission} />
+        )}
       </div>
 
-      {/* Mevcut submission bilgisi */}
       {showExistingInfo && (
         <div className="spp-existing-submission">
           <div className="spp-existing-info">
-            <span className="spp-existing-icon">✅</span>
+            <div className="spp-file-icon-wrapper">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 2h5l5 5v9a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" stroke="#6366f1" strokeWidth="1.5"/><path d="M11 2v5h5" stroke="#6366f1" strokeWidth="1.5"/></svg>
+            </div>
             {existingSubmission.submissionType === 'FILE_UPLOAD' ? (
               <div className="spp-existing-details">
-                <span className="spp-existing-label">Dosya yüklendi:</span>
-                <strong>{existingSubmission.originalFileName}</strong>
-                {existingSubmission.fileSize && (
-                  <span className="spp-existing-size">
-                    ({formatFileSize(existingSubmission.fileSize)})
-                  </span>
-                )}
+                <span className="spp-existing-label">{existingSubmission.originalFileName}</span>
+                {existingSubmission.fileSize && <span className="spp-existing-size">{formatFileSize(existingSubmission.fileSize)}</span>}
               </div>
             ) : (
-              <span>Metin gönderildi ({existingSubmission.textContent?.length || 0} karakter)</span>
+              <div className="spp-existing-details">
+                <span className="spp-existing-label">Metin gönderildi</span>
+                <span className="spp-existing-size">{existingSubmission.textContent?.length || 0} karakter</span>
+              </div>
             )}
           </div>
-          <div className="spp-existing-actions">
-            {existingSubmission.submissionType === 'FILE_UPLOAD' && existingSubmission.id && (
-              <button
-                className="spp-btn-download"
-                onClick={() => onDownload(existingSubmission.id, existingSubmission.originalFileName)}
-              >
-                📥 İndir
-              </button>
-            )}
-            <button
-              className="spp-btn-resubmit"
-              onClick={() => setLocalState({ showResubmit: true })}
-            >
-              🔄 Yeniden Gönder
-            </button>
-            {/* Dosya Silme - Sadece Team Lead */}
-            {isTeamLead && existingSubmission.id && (
-              <button
-                className="spp-btn-delete"
-                onClick={() => onDelete(existingSubmission.id)}
-                disabled={localState.deleting}
-              >
-                {localState.deleting ? '⏳ Siliniyor...' : '🗑️ Sil'}
-              </button>
-            )}
+          {existingSubmission.submissionType === 'FILE_UPLOAD' && (
+            <span className="spp-uploaded-badge">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Uploaded
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Dropzone for adding more files */}
+      {showExistingInfo && isFileType && (
+        <div className="spp-upload-area">
+          <div className="spp-dropzone" onClick={() => setLocalState({ showResubmit: true })}>
+            <div className="spp-dropzone-text">Drop more files or click to add</div>
           </div>
         </div>
       )}
 
-      {/* Submit area - mevcut yoksa veya resubmit modundaysa göster */}
       {(!hasExisting || showResubmit) && (
         <>
           {isFileType ? (
-            <FileUploadArea
-              localState={localState}
-              onFileSelect={onFileSelect}
-              onSubmit={onFileSubmit}
-            />
+            <FileUploadArea localState={localState} onFileSelect={onFileSelect} onSubmit={onFileSubmit} />
           ) : (
-            <TextEditorArea
-              localState={localState}
-              setLocalState={setLocalState}
-              onSubmit={onTextSubmit}
-              existingText={existingSubmission?.textContent}
-            />
+            <TextEditorArea localState={localState} setLocalState={setLocalState} onSubmit={onTextSubmit} existingText={existingSubmission?.textContent} />
           )}
         </>
       )}
 
-      {/* Feedback */}
+      {/* Action Buttons */}
+      {showExistingInfo && (
+        <div className="spp-actions-row">
+          {isTeamLead && existingSubmission.id && (
+            <button className="spp-btn-delete" onClick={() => onDelete(existingSubmission.id)} disabled={localState.deleting}>
+              🗑️ {localState.deleting ? 'Siliniyor...' : 'Delete Submission'}
+            </button>
+          )}
+          {existingSubmission.submissionType === 'FILE_UPLOAD' && existingSubmission.id && (
+            <button className="spp-btn-load" onClick={() => onDownload(existingSubmission.id, existingSubmission.originalFileName)}>
+              📄 Load File
+            </button>
+          )}
+          <button className="spp-btn-submit" onClick={() => setLocalState({ showResubmit: true })}>
+            ⏱ Submit to System
+          </button>
+        </div>
+      )}
+
       {feedback && (
         <div className={`spp-feedback spp-feedback-${feedback.type}`}>
-          {feedback.type === 'success' ? '✓ ' : '✕ '}
-          {feedback.msg}
+          {feedback.type === 'success' ? '✓ ' : '✕ '}{feedback.msg}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Submission Status Badge ───
 function SubmissionStatusBadge({ submission }) {
-  if (!submission || Object.keys(submission).length === 0) {
-    return <span className="spp-submission-status spp-status-none">⏳ Gönderilmedi</span>;
-  }
-
-  const status = submission.status;
-  if (status === 'GRADED') {
-    return <span className="spp-submission-status spp-status-graded">✅ Notlandırıldı</span>;
-  }
-  if (status === 'SUBMITTED') {
-    return <span className="spp-submission-status spp-status-submitted">📤 Gönderildi</span>;
-  }
-  return <span className="spp-submission-status spp-status-draft">📝 Taslak</span>;
+  if (!submission || Object.keys(submission).length === 0)
+    return <span className="spp-submission-status spp-status-none">⏳ Awaiting Submission</span>;
+  if (submission.status === 'GRADED')
+    return <span className="spp-submission-status spp-status-graded">✅ Submitted & Graded</span>;
+  if (submission.status === 'SUBMITTED')
+    return <span className="spp-submission-status spp-status-submitted">📤 Submitted</span>;
+  return <span className="spp-submission-status spp-status-draft">📝 Draft</span>;
 }
 
-// ═══════════════════════════════════════════════════════
-// FileUploadArea — Drag & Drop dosya yükleme
-// ═══════════════════════════════════════════════════════
+/* ═══ FileUploadArea ═══ */
 function FileUploadArea({ localState, onFileSelect, onSubmit }) {
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
   const selectedFile = localState.selectedFile;
   const submitting = localState.submitting;
 
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragging(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDragging(false);
-      if (e.dataTransfer.files?.length > 0) {
-        onFileSelect(e.dataTransfer.files[0]);
-      }
-    },
-    [onFileSelect]
-  );
-
-  const handleInputChange = (e) => {
-    if (e.target.files?.length > 0) {
-      onFileSelect(e.target.files[0]);
-    }
-  };
+  const handleDrop = useCallback((e) => {
+    e.preventDefault(); e.stopPropagation(); setDragging(false);
+    if (e.dataTransfer.files?.length > 0) onFileSelect(e.dataTransfer.files[0]);
+  }, [onFileSelect]);
 
   return (
     <div className="spp-upload-area">
       {!selectedFile ? (
         <div
           className={`spp-dropzone ${dragging ? 'dragging' : ''}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="spp-dropzone-icon">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="12" fill="#EEF2FF"/>
-              <path d="M24 16V32M16 24H32" stroke="#6366F1" strokeWidth="2.5" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <div className="spp-dropzone-text">
-            Dosyayı buraya sürükleyin veya <strong>tıklayarak seçin</strong>
-          </div>
-          <div className="spp-dropzone-hint">Tüm dosya formatları desteklenir</div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            style={{ display: 'none' }}
-            onChange={handleInputChange}
-          />
+          <div className="spp-dropzone-text">Drop more files or <strong>click to add</strong></div>
+          <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={(e) => e.target.files?.length > 0 && onFileSelect(e.target.files[0])} />
         </div>
       ) : (
         <>
           <div className="spp-file-preview">
-            <span className="spp-file-icon">📄</span>
+            <div className="spp-file-icon-wrapper">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 2h5l5 5v9a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" stroke="#6366f1" strokeWidth="1.5"/></svg>
+            </div>
             <div className="spp-file-details">
               <div className="spp-file-name">{selectedFile.name}</div>
               <div className="spp-file-size">{formatFileSize(selectedFile.size)}</div>
             </div>
-            <button
-              className="spp-file-remove"
-              onClick={() => onFileSelect(null)}
-              title="Dosyayı kaldır"
-            >
-              ✕
-            </button>
+            <button className="spp-file-remove" onClick={() => onFileSelect(null)}>✕</button>
           </div>
-          <div className="spp-submit-row">
-            <button
-              className="spp-btn-submit"
-              onClick={onSubmit}
-              disabled={submitting}
-            >
-              {submitting ? 'Yükleniyor...' : '📤 Dosyayı Gönder'}
+          <div className="spp-actions-row">
+            <button className="spp-btn-submit" onClick={onSubmit} disabled={submitting}>
+              {submitting ? '⏳ Yükleniyor...' : '⏱ Submit to System'}
             </button>
           </div>
         </>
@@ -592,100 +415,59 @@ function FileUploadArea({ localState, onFileSelect, onSubmit }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════
-// TextEditorArea — Sade metin editörü (toolbar + textarea)
-// ═══════════════════════════════════════════════════════
+/* ═══ TextEditorArea ═══ */
 function TextEditorArea({ localState, setLocalState, onSubmit, existingText }) {
   const textareaRef = useRef(null);
   const textContent = localState.textContent ?? existingText ?? '';
   const submitting = localState.submitting;
 
-  // İlk yükte mevcut metni yükle
   useEffect(() => {
-    if (existingText && !localState.textContent) {
-      setLocalState({ textContent: existingText });
-    }
+    if (existingText && !localState.textContent) setLocalState({ textContent: existingText });
   }, [existingText]);
 
   const insertFormat = (before, after = '') => {
     const ta = textareaRef.current;
     if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
+    const start = ta.selectionStart, end = ta.selectionEnd;
     const selected = textContent.substring(start, end);
-    const replacement = before + selected + after;
-    const newText = textContent.substring(0, start) + replacement + textContent.substring(end);
+    const newText = textContent.substring(0, start) + before + selected + after + textContent.substring(end);
     setLocalState({ textContent: newText });
-    // Cursor'ı düzelt
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
-    }, 0);
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(start + before.length, start + before.length + selected.length); }, 0);
   };
 
   return (
     <div className="spp-text-editor-area">
       <div className="spp-text-toolbar">
-        <button
-          className="spp-toolbar-btn"
-          onClick={() => insertFormat('**', '**')}
-          title="Kalın"
-        >
-          B
-        </button>
-        <button
-          className="spp-toolbar-btn"
-          onClick={() => insertFormat('_', '_')}
-          title="İtalik"
-          style={{ fontStyle: 'italic' }}
-        >
-          I
-        </button>
-        <button
-          className="spp-toolbar-btn"
-          onClick={() => insertFormat('`', '`')}
-          title="Kod"
-          style={{ fontFamily: 'monospace' }}
-        >
-          {'</>'}
-        </button>
-        <button
-          className="spp-toolbar-btn"
-          onClick={() => insertFormat('\n- ')}
-          title="Liste"
-        >
-          • Liste
-        </button>
-        <button
-          className="spp-toolbar-btn"
-          onClick={() => insertFormat('\n## ')}
-          title="Başlık"
-        >
-          H2
-        </button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('**', '**')} title="Bold"><b>B</b></button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('**', '**')} title="Bold" style={{fontWeight:800}}>B</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('_', '_')} title="İtalik" style={{fontStyle:'italic'}}>I</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('_', '_')} title="Underline" style={{textDecoration:'underline'}}>I</button>
+        <div className="spp-toolbar-sep" />
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('`', '`')} title="Code" style={{fontFamily:'monospace'}}>{'<>'}</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('```\n', '\n```')} title="Code Block" style={{fontFamily:'monospace'}}>{'</>'}</button>
+        <div className="spp-toolbar-sep" />
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('\n- ')} title="List">≡ List</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('\n• ')} title="Bullet">• List</button>
+        <div className="spp-toolbar-sep" />
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('\n## ')} title="Heading"><span style={{fontSize:'0.75rem'}}>H₂</span> H2</button>
       </div>
       <textarea
         ref={textareaRef}
         className="spp-textarea"
         value={textContent}
         onChange={(e) => setLocalState({ textContent: e.target.value })}
-        placeholder="Deliverable içeriğinizi buraya yazın..."
+        placeholder="Submit your deliverable details here in a professional tone..."
       />
-      <div className="spp-char-count">{textContent.length} karakter</div>
-      <div className="spp-submit-row">
-        <button
-          className="spp-btn-submit"
-          onClick={onSubmit}
-          disabled={submitting || !textContent.trim()}
-        >
-          {submitting ? 'Kaydediliyor...' : '💾 Metni Kaydet'}
+      <div className="spp-char-count">{textContent.length} characters written</div>
+      <div className="spp-actions-row">
+        <button className="spp-btn-submit" onClick={onSubmit} disabled={submitting || !textContent.trim()}>
+          {submitting ? '⏳ Kaydediliyor...' : '⏱ Submit to System'}
         </button>
       </div>
     </div>
   );
 }
 
-// ─── Utility ───
 function formatFileSize(bytes) {
   if (!bytes) return '';
   if (bytes < 1024) return bytes + ' B';

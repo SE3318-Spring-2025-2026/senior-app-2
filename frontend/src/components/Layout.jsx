@@ -40,7 +40,7 @@ function Layout() {
               to="/panel/my-student-projects"
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
-              Projelerim
+              My Projects
             </NavLink>
           )}
 
