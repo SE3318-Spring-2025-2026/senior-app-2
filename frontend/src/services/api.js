@@ -150,6 +150,10 @@ export function getProjectDetail(projectId) {
   return request(`/projects/${projectId}`);
 }
 
+export function getProjectGroupAssignments(projectId) {
+  return request(`/projects/${projectId}/group-assignments`);
+}
+
 export function getProjectCommittees(projectId) {
   return request(`/projects/${projectId}/committees`);
 }
@@ -266,11 +270,15 @@ export function getMyStudentProjects() {
   return request('/students/dashboard/projects');
 }
 
-export function submitGrade(submissionId, graderId, rubricId, grade) {
+export function submitGrade(submissionId, rubricId, grade) {
   return request(`/deliverable-submissions/${submissionId}/grades`, {
     method: 'POST',
-    body: JSON.stringify({ graderId, rubricId, grade }),
+    body: JSON.stringify({ rubricId, grade }),
   });
+}
+
+export function getSubmissionGrades(submissionId) {
+  return request(`/deliverable-submissions/${submissionId}/grades`);
 }
 
 // ─── Deliverable Submission API ───

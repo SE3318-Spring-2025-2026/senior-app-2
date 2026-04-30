@@ -1,14 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getProjectDetail, getProjects } from '../services/api';
+import {
+  getProjectDetail,
+  getProjectGroupAssignments,
+  getProjectSubmissions,
+  getProjects,
+  getSubmissionGrades,
+} from '../services/api';
+import { computeCumulativeGrade, computeSuccessGrade } from '../utils/gradingMetrics';
 
 function ProjectInspection() {
   const { templateId } = useParams();
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [projectDetail, setProjectDetail] = useState(null);
+  const [groupAssignments, setGroupAssignments] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [gradesBySubmission, setGradesBySubmission] = useState({});
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -29,17 +41,84 @@ function ProjectInspection() {
   useEffect(() => {
     if (!selectedProjectId) {
       setProjectDetail(null);
+      setGroupAssignments([]);
+      setSubmissions([]);
       return;
     }
     setLoadingDetail(true);
-    getProjectDetail(selectedProjectId)
-      .then((res) => setProjectDetail(res?.data || null))
+    Promise.all([
+      getProjectDetail(selectedProjectId),
+      getProjectGroupAssignments(selectedProjectId),
+    ])
+      .then(([detailRes, groupRes]) => {
+        const detail = detailRes?.data || null;
+        const assignments = groupRes?.data || [];
+        setProjectDetail(detail);
+        setGroupAssignments(assignments);
+        if (assignments.length > 0) {
+          setSelectedGroupId(assignments[0].groupId);
+        } else {
+          setSelectedGroupId(null);
+        }
+      })
       .catch((e) => setError(e.message || 'Failed to load project detail.'))
       .finally(() => setLoadingDetail(false));
   }, [selectedProjectId]);
 
+  useEffect(() => {
+    if (!selectedProjectId || !selectedGroupId) {
+      setSubmissions([]);
+      return;
+    }
+
+    let active = true;
+    setLoadingSubmissions(true);
+    getProjectSubmissions(selectedProjectId, selectedGroupId)
+      .then(async (res) => {
+        if (!active) return;
+        const submissionList = res?.data || [];
+        setSubmissions(submissionList);
+
+        const gradeEntries = await Promise.all(
+          submissionList.map(async (submission) => {
+            try {
+              const gradeRes = await getSubmissionGrades(submission.id);
+              return [submission.id, gradeRes || []];
+            } catch {
+              return [submission.id, []];
+            }
+          })
+        );
+        if (!active) return;
+        setGradesBySubmission(Object.fromEntries(gradeEntries));
+      })
+      .catch((e) => {
+        if (active) setError(e.message || 'Failed to load submissions.');
+      })
+      .finally(() => {
+        if (active) setLoadingSubmissions(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedProjectId, selectedGroupId]);
+
+  const activeAssignment = useMemo(
+    () => groupAssignments.find((g) => g.groupId === selectedGroupId) || null,
+    [groupAssignments, selectedGroupId]
+  );
+  const totalDeliverables = useMemo(
+    () => (projectDetail?.sprints || []).reduce((sum, sprint) => sum + (sprint.deliverables?.length || 0), 0),
+    [projectDetail]
+  );
+  const cumulativeGrade = useMemo(
+    () => computeCumulativeGrade(projectDetail, submissions),
+    [projectDetail, submissions]
+  );
+
   return (
-    <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '320px 1fr', gap: '16px' }}>
+    <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '300px 1fr', gap: '16px' }}>
       <aside style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px', background: '#fff' }}>
         <h2 style={{ marginTop: 0 }}>Projects</h2>
         {loading && <p>Loading...</p>}
@@ -75,6 +154,33 @@ function ProjectInspection() {
             <p><strong>Title:</strong> {projectDetail.title}</p>
             <p><strong>Status:</strong> {projectDetail.status}</p>
             <p><strong>Term:</strong> {projectDetail.term}</p>
+            <p><strong>Cumulative Grade:</strong> {cumulativeGrade ?? '-'}</p>
+            <p>
+              <strong>Permission:</strong>{' '}
+              {activeAssignment?.canGrade ? 'Can grade selected group' : 'View only'}
+            </p>
+            <div style={{ marginBottom: '12px' }}>
+              <strong>Groups in project:</strong>
+              <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {groupAssignments.map((group) => (
+                  <button
+                    key={group.groupId}
+                    type="button"
+                    onClick={() => setSelectedGroupId(group.groupId)}
+                    style={{
+                      border: '1px solid #d1d5db',
+                      borderRadius: '999px',
+                      padding: '6px 12px',
+                      background: selectedGroupId === group.groupId ? '#eef2ff' : '#fff',
+                      cursor: 'pointer',
+                    }}
+                    title={group.committeeName || 'Committee not assigned'}
+                  >
+                    Group {group.groupId} {group.canGrade ? '• Grading enabled' : '• View only'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <hr />
             <h3>Sprints</h3>
             {projectDetail.sprints?.length ? projectDetail.sprints.map((sprint) => (
@@ -89,6 +195,40 @@ function ProjectInspection() {
                 </div>
               </div>
             )) : <p>No sprint data.</p>}
+
+            <hr />
+            <h3>Group Submissions</h3>
+            {loadingSubmissions && <p>Loading submissions...</p>}
+            {!loadingSubmissions && !selectedGroupId && <p>No group assigned to this project yet.</p>}
+            {!loadingSubmissions && selectedGroupId && submissions.length === 0 && (
+              <p>No submissions yet for group {selectedGroupId}.</p>
+            )}
+            {!loadingSubmissions && submissions.map((submission) => (
+              <div key={submission.id} style={{ marginBottom: '12px', border: '1px solid #f1f5f9', borderRadius: '8px', padding: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                  <strong>Deliverable #{submission.deliverableId}</strong>
+                  <span>{submission.status}</span>
+                </div>
+                <div style={{ marginTop: '6px', color: '#111827' }}>
+                  <strong>Success Grade:</strong> {(submission.successGrade ?? computeSuccessGrade(gradesBySubmission[submission.id] || [])) ?? '-'}
+                </div>
+                <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
+                  Submitted by user #{submission.submittedByUserId}
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <strong>Grades:</strong>
+                  {(gradesBySubmission[submission.id] || []).length === 0 ? (
+                    <div style={{ color: '#6b7280' }}>No grades yet.</div>
+                  ) : (
+                    (gradesBySubmission[submission.id] || []).map((grade) => (
+                      <div key={grade.id} style={{ fontSize: '14px' }}>
+                        Rubric #{grade.rubricId}: <strong>{grade.grade}</strong> (grader #{grade.graderId})
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>

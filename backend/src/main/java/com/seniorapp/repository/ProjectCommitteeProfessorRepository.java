@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface ProjectCommitteeProfessorRepository extends JpaRepository<ProjectCommitteeProfessor, Long> {
     Optional<ProjectCommitteeProfessor> findByCommitteeIdAndProfessor_Id(Long committeeId, Long professorId);
+    boolean existsByCommittee_Project_IdAndProfessor_Id(Long projectId, Long professorId);
+    boolean existsByCommittee_IdAndProfessor_Id(Long committeeId, Long professorId);
 }

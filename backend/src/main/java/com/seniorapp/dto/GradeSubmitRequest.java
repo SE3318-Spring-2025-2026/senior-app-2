@@ -5,7 +5,6 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 public class GradeSubmitRequest {
 
-    @NotNull(message = "Grader ID cannot be null")
     private Long graderId;
 
     @NotNull(message = "Rubric ID cannot be null")

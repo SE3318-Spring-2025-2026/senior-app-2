@@ -9,6 +9,7 @@ import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectTemplateRepository;
 import com.seniorapp.repository.ProjectCommitteeRepository;
 import com.seniorapp.repository.ProjectCommitteeProfessorRepository;
+import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class ProjectService {
     private final ProjectGroupAssignmentRepository assignmentRepository;
     private final ProjectCommitteeRepository projectCommitteeRepository;
     private final ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository;
+    private final UserGroupMemberRepository userGroupMemberRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
@@ -40,6 +42,7 @@ public class ProjectService {
             ProjectGroupAssignmentRepository assignmentRepository,
             ProjectCommitteeRepository projectCommitteeRepository,
             ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository,
+            UserGroupMemberRepository userGroupMemberRepository,
             UserRepository userRepository,
             ObjectMapper objectMapper
     ) {
@@ -48,6 +51,7 @@ public class ProjectService {
         this.assignmentRepository = assignmentRepository;
         this.projectCommitteeRepository = projectCommitteeRepository;
         this.projectCommitteeProfessorRepository = projectCommitteeProfessorRepository;
+        this.userGroupMemberRepository = userGroupMemberRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
@@ -93,13 +97,13 @@ public class ProjectService {
 
         Project saved = projectRepository.save(project);
         if (request.getGroupId() != null) {
-            assignGroup(saved.getId(), request.getGroupId(), createdByUserId);
+            assignGroup(saved.getId(), request.getGroupId(), null, createdByUserId);
         }
         return Objects.requireNonNull(saved.getId());
     }
 
     @Transactional
-    public AssignmentResponse assignGroup(Long projectId, Long groupId, Long assignedByUserId) {
+    public AssignmentResponse assignGroup(Long projectId, Long groupId, Long committeeId, Long assignedByUserId) {
         if (groupId == null) {
             throw new IllegalArgumentException("groupId is required.");
         }
@@ -120,22 +124,41 @@ public class ProjectService {
         assignmentRepository.findByGroupIdAndActiveTrue(groupId).ifPresent(existing -> {
             throw new IllegalArgumentException("Group is already assigned to another active project.");
         });
+
+        ProjectCommittee committee = null;
+        if (committeeId != null) {
+            committee = projectCommitteeRepository.findById(committeeId)
+                    .orElseThrow(() -> new NoSuchElementException("Committee not found: " + committeeId));
+            if (!Objects.equals(committee.getProject().getId(), safeProjectId)) {
+                throw new IllegalArgumentException("Committee does not belong to this project.");
+            }
+        }
+
         project.setGroupId(groupId);
         projectRepository.save(project);
 
         ProjectGroupAssignment assignment = new ProjectGroupAssignment();
         assignment.setProject(project);
+        assignment.setCommittee(committee);
         assignment.setGroupId(groupId);
         assignment.setAssignedByUserId(assignedByUserId);
         assignment.setAssignedAt(LocalDateTime.now());
         assignment.setActive(true);
         ProjectGroupAssignment saved = assignmentRepository.save(assignment);
 
-        return new AssignmentResponse("success", safeProjectId, saved.getGroupId(), saved.getAssignedAt());
+        return new AssignmentResponse(
+                "success",
+                safeProjectId,
+                saved.getGroupId(),
+                saved.getCommittee() != null ? saved.getCommittee().getId() : null,
+                saved.getAssignedAt()
+        );
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectSummary> listProjects(String term, Long templateId, Long groupId) {
+    public List<ProjectSummary> listProjects(String term, Long templateId, Long groupId, Long viewerUserId) {
+        User viewer = userRepository.findById(Objects.requireNonNull(viewerUserId, "viewerUserId is required."))
+                .orElseThrow(() -> new NoSuchElementException("User not found: " + viewerUserId));
         return projectRepository.findAll().stream()
                 .filter(project -> term == null || term.isBlank() || project.getTerm().equalsIgnoreCase(term.trim()))
                 .filter(project -> {
@@ -147,13 +170,19 @@ public class ProjectService {
                     if (groupId == null) return true;
                     return Objects.equals(project.getGroupId(), groupId);
                 })
+                .filter(project -> canViewProject(viewer, project.getId()))
                 .map(this::toSummary)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ProjectDetail getProjectDetail(Long projectId) {
+    public ProjectDetail getProjectDetail(Long projectId, Long viewerUserId) {
         Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        User viewer = userRepository.findById(Objects.requireNonNull(viewerUserId, "viewerUserId is required."))
+                .orElseThrow(() -> new NoSuchElementException("User not found: " + viewerUserId));
+        if (!canViewProject(viewer, safeProjectId)) {
+            throw new SecurityException("You are not allowed to view this project.");
+        }
         Project project = projectRepository.findById(safeProjectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found: " + projectId));
         return toDetail(project);
@@ -257,6 +286,30 @@ public class ProjectService {
     public List<ProfessorOptionDto> listProfessors() {
         return userRepository.findByRole(Role.PROFESSOR).stream()
                 .map(this::toProfessorOptionDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectGroupAssignmentDto> listProjectGroupAssignments(Long projectId, Long viewerUserId) {
+        Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        User viewer = userRepository.findById(Objects.requireNonNull(viewerUserId, "viewerUserId is required."))
+                .orElseThrow(() -> new NoSuchElementException("User not found: " + viewerUserId));
+
+        if (!projectRepository.existsById(safeProjectId)) {
+            throw new NoSuchElementException("Project not found: " + projectId);
+        }
+
+        if (viewer.getRole() == Role.PROFESSOR) {
+            boolean assignedToProject = projectCommitteeProfessorRepository
+                    .existsByCommittee_Project_IdAndProfessor_Id(safeProjectId, viewerUserId);
+            if (!assignedToProject) {
+                throw new SecurityException("You are not assigned to any committee in this project.");
+            }
+        }
+
+        List<ProjectGroupAssignment> assignments = assignmentRepository.findByProject_IdAndActiveTrue(safeProjectId);
+        return assignments.stream()
+                .map(a -> toProjectGroupAssignmentDto(a, viewer))
                 .toList();
     }
 
@@ -452,5 +505,51 @@ public class ProjectService {
         dto.setFullName(professor.getFullName());
         dto.setEmail(professor.getEmail());
         return dto;
+    }
+
+    private ProjectGroupAssignmentDto toProjectGroupAssignmentDto(ProjectGroupAssignment assignment, User viewer) {
+        ProjectGroupAssignmentDto dto = new ProjectGroupAssignmentDto();
+        dto.setProjectId(assignment.getProject().getId());
+        dto.setGroupId(assignment.getGroupId());
+        dto.setCommitteeId(assignment.getCommittee() != null ? assignment.getCommittee().getId() : null);
+        dto.setCommitteeName(assignment.getCommittee() != null ? assignment.getCommittee().getName() : null);
+
+        if (viewer.getRole() == Role.ADMIN) {
+            dto.setCanGrade(true);
+            return dto;
+        }
+        if (viewer.getRole() == Role.COORDINATOR || viewer.getRole() == Role.PROFESSOR) {
+            if (assignment.getCommittee() == null) {
+                dto.setCanGrade(projectCommitteeProfessorRepository
+                        .existsByCommittee_Project_IdAndProfessor_Id(assignment.getProject().getId(), viewer.getId()));
+            } else {
+                dto.setCanGrade(projectCommitteeProfessorRepository
+                        .existsByCommittee_IdAndProfessor_Id(assignment.getCommittee().getId(), viewer.getId()));
+            }
+            return dto;
+        }
+
+        dto.setCanGrade(false);
+        return dto;
+    }
+
+    private boolean canViewProject(User viewer, Long projectId) {
+        if (viewer.getRole() == Role.ADMIN || viewer.getRole() == Role.COORDINATOR) {
+            return true;
+        }
+        if (viewer.getRole() == Role.PROFESSOR) {
+            return projectCommitteeProfessorRepository
+                    .existsByCommittee_Project_IdAndProfessor_Id(projectId, viewer.getId());
+        }
+        if (viewer.getRole() == Role.STUDENT) {
+            return assignmentRepository.findByProjectIdAndActiveTrue(projectId)
+                    .flatMap(a -> userGroupMemberRepository.findByGroupIdAndUserIdAndStatus(
+                            a.getGroupId(),
+                            viewer.getId(),
+                            GroupInviteStatus.ACCEPTED
+                    ))
+                    .isPresent();
+        }
+        return false;
     }
 }

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   getProjectDetail,
   getProjectSubmissions,
+  getSubmissionGrades,
   uploadDeliverableFile,
   submitDeliverableText,
   downloadSubmissionFile,
@@ -10,6 +11,7 @@ import {
   getMyGroupRole,
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { computeCumulativeGrade, computeSuccessGrade } from '../utils/gradingMetrics';
 import './StudentProjectPage.css';
 
 function StudentProjectPage() {
@@ -24,6 +26,7 @@ function StudentProjectPage() {
   const [deliverableState, setDeliverableState] = useState({});
   const [groupId, setGroupId] = useState(null);
   const [isTeamLead, setIsTeamLead] = useState(false);
+  const [gradesBySubmission, setGradesBySubmission] = useState({});
 
   useEffect(() => {
     if (!projectId) return;
@@ -42,7 +45,22 @@ function StudentProjectPage() {
   useEffect(() => {
     if (!projectId || !groupId) return;
     getProjectSubmissions(projectId, groupId)
-      .then((res) => setSubmissions(Array.isArray(res?.data || res) ? (res?.data || res) : []))
+      .then(async (res) => {
+        const subList = Array.isArray(res?.data || res) ? (res?.data || res) : [];
+        setSubmissions(subList);
+
+        const grades = await Promise.all(
+          subList.map(async (submission) => {
+            try {
+              const response = await getSubmissionGrades(submission.id);
+              return [submission.id, Array.isArray(response) ? response : []];
+            } catch {
+              return [submission.id, []];
+            }
+          })
+        );
+        setGradesBySubmission(Object.fromEntries(grades));
+      })
       .catch(() => setSubmissions([]));
   }, [projectId, groupId]);
 
@@ -124,7 +142,7 @@ function StudentProjectPage() {
   const sprints = project.sprints || [];
   const currentSprint = sprints[activeSprint];
   const totalDel = sprints.reduce((a, s) => a + (s.deliverables?.length || 0), 0);
-  const submittedCount = submissions.filter((s) => s.status === 'SUBMITTED' || s.status === 'GRADED').length;
+  const cumulativeGrade = computeCumulativeGrade(project, submissions);
 
   return (
     <div className="student-project-page">
@@ -147,7 +165,7 @@ function StudentProjectPage() {
         </div>
         <div className="spp-header-right">
           <div className="spp-cumulative-label">Cumulative Grade</div>
-          <div className="spp-cumulative-grade">{totalDel > 0 ? Math.round((submittedCount / totalDel) * 100) : '-'}</div>
+          <div className="spp-cumulative-grade">{cumulativeGrade ?? '-'}</div>
         </div>
       </div>
 
@@ -208,6 +226,7 @@ function StudentProjectPage() {
                   onDownload={handleDownload}
                   onDelete={(subId) => handleDelete(subId, del.id)}
                   isTeamLead={isTeamLead}
+                  grades={existingSubmission ? (gradesBySubmission[existingSubmission.id] || []) : []}
                 />
               ))
             )}
@@ -252,13 +271,14 @@ function StudentProjectPage() {
 }
 
 /* ═══ DeliverableCard ═══ */
-function DeliverableCard({ deliverable, existingSubmission, localState, setLocalState, onFileSelect, onFileSubmit, onTextSubmit, onDownload, onDelete, isTeamLead }) {
+function DeliverableCard({ deliverable, existingSubmission, localState, setLocalState, onFileSelect, onFileSubmit, onTextSubmit, onDownload, onDelete, isTeamLead, grades }) {
   const isFileType = deliverable.fileUploadDeliverable;
   const hasExisting = !!existingSubmission && Object.keys(existingSubmission).length > 0;
   const showResubmit = localState.showResubmit;
   const showExistingInfo = hasExisting && !showResubmit;
   const feedback = localState.feedback;
   const isGraded = existingSubmission?.status === 'GRADED';
+  const successGrade = existingSubmission?.successGrade ?? computeSuccessGrade(grades);
 
   return (
     <div className="spp-deliverable">
@@ -273,9 +293,9 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
             <span className="spp-tag spp-tag-weight">Weight: {deliverable.weight}%</span>
           </div>
         </div>
-        {isGraded && existingSubmission.grade != null ? (
+        {isGraded && successGrade != null ? (
           <div className="spp-grade-display">
-            <span className="spp-grade-value">{existingSubmission.grade}</span>
+            <span className="spp-grade-value">{successGrade}</span>
             <span className="spp-grade-label">Success Grade</span>
           </div>
         ) : (

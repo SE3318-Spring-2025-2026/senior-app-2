@@ -2,11 +2,14 @@ package com.seniorapp.service;
 
 import com.seniorapp.entity.*;
 import com.seniorapp.repository.DeliverableSubmissionRepository;
+import com.seniorapp.repository.ProjectCommitteeProfessorRepository;
 import com.seniorapp.repository.ProjectDeliverableRepository;
+import com.seniorapp.repository.SubmissionGradeRepository;
 import com.seniorapp.repository.UserGroupMemberRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -36,6 +39,8 @@ public class DeliverableSubmissionService {
     private final DeliverableSubmissionRepository submissionRepository;
     private final ProjectDeliverableRepository deliverableRepository;
     private final UserGroupMemberRepository userGroupMemberRepository;
+    private final ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository;
+    private final SubmissionGradeRepository submissionGradeRepository;
 
     @Value("${app.storage.base-path:./storage}")
     private String storageBasePath;
@@ -43,11 +48,15 @@ public class DeliverableSubmissionService {
     public DeliverableSubmissionService(
             DeliverableSubmissionRepository submissionRepository,
             ProjectDeliverableRepository deliverableRepository,
-            UserGroupMemberRepository userGroupMemberRepository
+            UserGroupMemberRepository userGroupMemberRepository,
+            ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository,
+            SubmissionGradeRepository submissionGradeRepository
     ) {
         this.submissionRepository = submissionRepository;
         this.deliverableRepository = deliverableRepository;
         this.userGroupMemberRepository = userGroupMemberRepository;
+        this.projectCommitteeProfessorRepository = projectCommitteeProfessorRepository;
+        this.submissionGradeRepository = submissionGradeRepository;
     }
 
     /**
@@ -143,7 +152,10 @@ public class DeliverableSubmissionService {
      */
     @Transactional(readOnly = true)
     public Optional<DeliverableSubmission> getSubmission(Long deliverableId, Long groupId) {
-        return submissionRepository.findByDeliverableIdAndGroupId(deliverableId, groupId);
+        User user = currentUser();
+        Optional<DeliverableSubmission> submission = submissionRepository.findByDeliverableIdAndGroupId(deliverableId, groupId);
+        submission.ifPresent(value -> ensureCanViewSubmission(user, value));
+        return submission;
     }
 
     /**
@@ -151,6 +163,8 @@ public class DeliverableSubmissionService {
      */
     @Transactional(readOnly = true)
     public List<DeliverableSubmission> getSubmissionsByProject(Long projectId, Long groupId) {
+        User user = currentUser();
+        ensureCanViewProjectGroup(user, projectId, groupId);
         return submissionRepository.findByDeliverable_Sprint_Project_IdAndGroupId(projectId, groupId);
     }
 
@@ -159,7 +173,10 @@ public class DeliverableSubmissionService {
      */
     @Transactional(readOnly = true)
     public Optional<DeliverableSubmission> getSubmissionById(Long submissionId) {
-        return submissionRepository.findById(submissionId);
+        User user = currentUser();
+        Optional<DeliverableSubmission> submission = submissionRepository.findById(submissionId);
+        submission.ifPresent(value -> ensureCanViewSubmission(user, value));
+        return submission;
     }
 
     /**
@@ -167,8 +184,10 @@ public class DeliverableSubmissionService {
      */
     @Transactional(readOnly = true)
     public Resource downloadFile(Long submissionId) {
+        User user = currentUser();
         DeliverableSubmission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new NoSuchElementException("Submission bulunamadı: " + submissionId));
+        ensureCanViewSubmission(user, submission);
 
         if (submission.getSubmissionType() != SubmissionType.FILE_UPLOAD) {
             throw new IllegalArgumentException("Bu submission dosya tipinde değil.");
@@ -239,6 +258,15 @@ public class DeliverableSubmissionService {
         dto.put("status", s.getStatus().name());
         dto.put("submittedAt", s.getSubmittedAt());
         dto.put("updatedAt", s.getUpdatedAt());
+        Double avgGrade = submissionGradeRepository.findAverageGradeBySubmissionId(s.getId());
+        if (avgGrade != null) {
+            double rounded = Math.round(avgGrade * 10.0) / 10.0;
+            dto.put("successGrade", rounded);
+            dto.put("successGradeLetter", toLetterGrade(rounded));
+        } else {
+            dto.put("successGrade", null);
+            dto.put("successGradeLetter", null);
+        }
 
         if (s.getSubmissionType() == SubmissionType.FILE_UPLOAD) {
             dto.put("originalFileName", s.getOriginalFileName());
@@ -254,5 +282,56 @@ public class DeliverableSubmissionService {
      */
     public List<Map<String, Object>> toDtoList(List<DeliverableSubmission> submissions) {
         return submissions.stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    private String toLetterGrade(double score) {
+        if (score >= 95) return "A";
+        if (score >= 90) return "A-";
+        if (score >= 85) return "B+";
+        if (score >= 80) return "B";
+        if (score >= 75) return "B-";
+        if (score >= 70) return "C+";
+        if (score >= 60) return "C";
+        if (score >= 50) return "D";
+        return "F";
+    }
+
+    private User currentUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof User user) {
+            return user;
+        }
+        throw new SecurityException("Authenticated user not found.");
+    }
+
+    private void ensureCanViewSubmission(User user, DeliverableSubmission submission) {
+        Long projectId = submission.getDeliverable().getSprint().getProject().getId();
+        ensureCanViewProjectGroup(user, projectId, submission.getGroupId());
+    }
+
+    private void ensureCanViewProjectGroup(User user, Long projectId, Long groupId) {
+        if (user.getRole() == Role.ADMIN || user.getRole() == Role.COORDINATOR) {
+            return;
+        }
+        if (user.getRole() == Role.PROFESSOR) {
+            boolean assignedToProject = projectCommitteeProfessorRepository
+                    .existsByCommittee_Project_IdAndProfessor_Id(projectId, user.getId());
+            if (assignedToProject) {
+                return;
+            }
+            throw new SecurityException("Bu projenin komitesinde değilsiniz.");
+        }
+
+        if (user.getRole() == Role.STUDENT) {
+            boolean acceptedMember = userGroupMemberRepository
+                    .findByGroupIdAndUserIdAndStatus(groupId, user.getId(), GroupInviteStatus.ACCEPTED)
+                    .isPresent();
+            if (acceptedMember) {
+                return;
+            }
+            throw new SecurityException("Bu grubun submissionlarını görüntüleme yetkiniz yok.");
+        }
+
+        throw new SecurityException("Bu işlem için yetkiniz yok.");
     }
 }

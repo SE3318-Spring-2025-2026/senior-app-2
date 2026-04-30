@@ -170,6 +170,11 @@ public class DeliverableSubmissionController {
         return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
     }
 
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, String>> handleSecurity(SecurityException e) {
+        return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+    }
+
     private Long toLong(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).longValue();

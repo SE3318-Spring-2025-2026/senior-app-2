@@ -44,7 +44,7 @@ public class ProjectController {
             Authentication authentication
     ) {
         Long userId = principal != null ? principal.getId() : tryParseLong(authentication != null ? authentication.getName() : null);
-        return ResponseEntity.ok(projectService.assignGroup(projectId, request.getGroupId(), userId));
+        return ResponseEntity.ok(projectService.assignGroup(projectId, request.getGroupId(), request.getCommitteeId(), userId));
     }
 
     @GetMapping
@@ -52,15 +52,23 @@ public class ProjectController {
     public ResponseEntity<ProjectListResponse> listProjects(
             @RequestParam(required = false) String term,
             @RequestParam(required = false) Long templateId,
-            @RequestParam(required = false) Long groupId
+            @RequestParam(required = false) Long groupId,
+            @AuthenticationPrincipal User principal,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(new ProjectListResponse("success", projectService.listProjects(term, templateId, groupId)));
+        Long userId = principal != null ? principal.getId() : tryParseLong(authentication != null ? authentication.getName() : null);
+        return ResponseEntity.ok(new ProjectListResponse("success", projectService.listProjects(term, templateId, groupId, userId)));
     }
 
     @GetMapping("/{projectId}")
     @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
-    public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable Long projectId) {
-        return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId)));
+    public ResponseEntity<ProjectDetailResponse> getProjectDetail(
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal User principal,
+            Authentication authentication
+    ) {
+        Long userId = principal != null ? principal.getId() : tryParseLong(authentication != null ? authentication.getName() : null);
+        return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId, userId)));
     }
 
     @GetMapping("/professors")
@@ -73,6 +81,17 @@ public class ProjectController {
     @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<CommitteeListResponse> listCommittees(@PathVariable Long projectId) {
         return ResponseEntity.ok(new CommitteeListResponse("success", projectService.listCommittees(projectId)));
+    }
+
+    @GetMapping("/{projectId}/group-assignments")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    public ResponseEntity<GroupAssignmentListResponse> listProjectGroupAssignments(
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal User principal,
+            Authentication authentication
+    ) {
+        Long userId = principal != null ? principal.getId() : tryParseLong(authentication != null ? authentication.getName() : null);
+        return ResponseEntity.ok(new GroupAssignmentListResponse("success", projectService.listProjectGroupAssignments(projectId, userId)));
     }
 
     @PostMapping("/{projectId}/committees")
@@ -126,6 +145,11 @@ public class ProjectController {
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, String>> handleNotFound(NoSuchElementException e) {
         return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, String>> handleSecurity(SecurityException e) {
+        return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
     }
 
     private Long tryParseLong(String value) {

@@ -16,6 +16,10 @@ public class ProjectGroupAssignment {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
+    @ManyToOne
+    @JoinColumn(name = "committee_id")
+    private ProjectCommittee committee;
+
     @Column(nullable = false)
     private Long groupId;
 
@@ -57,6 +61,14 @@ public class ProjectGroupAssignment {
 
     public void setGroupId(Long groupId) {
         this.groupId = groupId;
+    }
+
+    public ProjectCommittee getCommittee() {
+        return committee;
+    }
+
+    public void setCommittee(ProjectCommittee committee) {
+        this.committee = committee;
     }
 
     public Long getAssignedByUserId() {

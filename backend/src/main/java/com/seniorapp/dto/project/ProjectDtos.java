@@ -52,6 +52,7 @@ public final class ProjectDtos {
 
     public static class AssignGroupRequest {
         private Long groupId;
+        private Long committeeId;
 
         public Long getGroupId() {
             return groupId;
@@ -59,6 +60,14 @@ public final class ProjectDtos {
 
         public void setGroupId(Long groupId) {
             this.groupId = groupId;
+        }
+
+        public Long getCommitteeId() {
+            return committeeId;
+        }
+
+        public void setCommitteeId(Long committeeId) {
+            this.committeeId = committeeId;
         }
     }
 
@@ -121,12 +130,14 @@ public final class ProjectDtos {
         private String status;
         private Long projectId;
         private Long groupId;
+        private Long committeeId;
         private LocalDateTime assignedAt;
 
-        public AssignmentResponse(String status, Long projectId, Long groupId, LocalDateTime assignedAt) {
+        public AssignmentResponse(String status, Long projectId, Long groupId, Long committeeId, LocalDateTime assignedAt) {
             this.status = status;
             this.projectId = projectId;
             this.groupId = groupId;
+            this.committeeId = committeeId;
             this.assignedAt = assignedAt;
         }
 
@@ -140,6 +151,10 @@ public final class ProjectDtos {
 
         public Long getGroupId() {
             return groupId;
+        }
+
+        public Long getCommitteeId() {
+            return committeeId;
         }
 
         public LocalDateTime getAssignedAt() {
@@ -215,6 +230,24 @@ public final class ProjectDtos {
         }
 
         public List<ProfessorOptionDto> getData() {
+            return data;
+        }
+    }
+
+    public static class GroupAssignmentListResponse {
+        private String status;
+        private List<ProjectGroupAssignmentDto> data;
+
+        public GroupAssignmentListResponse(String status, List<ProjectGroupAssignmentDto> data) {
+            this.status = status;
+            this.data = data;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public List<ProjectGroupAssignmentDto> getData() {
             return data;
         }
     }
@@ -351,6 +384,54 @@ public final class ProjectDtos {
 
         public void setEmail(String email) {
             this.email = email;
+        }
+    }
+
+    public static class ProjectGroupAssignmentDto {
+        private Long projectId;
+        private Long groupId;
+        private Long committeeId;
+        private String committeeName;
+        private boolean canGrade;
+
+        public Long getProjectId() {
+            return projectId;
+        }
+
+        public void setProjectId(Long projectId) {
+            this.projectId = projectId;
+        }
+
+        public Long getGroupId() {
+            return groupId;
+        }
+
+        public void setGroupId(Long groupId) {
+            this.groupId = groupId;
+        }
+
+        public Long getCommitteeId() {
+            return committeeId;
+        }
+
+        public void setCommitteeId(Long committeeId) {
+            this.committeeId = committeeId;
+        }
+
+        public String getCommitteeName() {
+            return committeeName;
+        }
+
+        public void setCommitteeName(String committeeName) {
+            this.committeeName = committeeName;
+        }
+
+        public boolean isCanGrade() {
+            return canGrade;
+        }
+
+        public void setCanGrade(boolean canGrade) {
+            this.canGrade = canGrade;
         }
     }
 
