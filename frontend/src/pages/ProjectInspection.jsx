@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   getProjectDetail,
@@ -8,9 +8,32 @@ import {
   getSubmissionGrades,
 } from '../services/api';
 import { computeCumulativeGrade, computeSuccessGrade } from '../utils/gradingMetrics';
+import { useAuth } from '../context/AuthContext';
+import GradingForm from '../components/GradingForm';
+
+/** Rubric rows for GradingForm (needs numeric id from API). */
+function rubricItemsForDeliverable(projectDetail, deliverableId) {
+  if (!projectDetail?.sprints || deliverableId == null) return [];
+  for (const sprint of projectDetail.sprints) {
+    const del = (sprint.deliverables || []).find((d) => Number(d.id) === Number(deliverableId));
+    if (del?.rubrics?.length) {
+      return del.rubrics
+        .filter((r) => r.id != null)
+        .map((r) => ({
+          id: r.id,
+          title: r.title,
+          criteria: r.title,
+          maxScore: 100,
+        }));
+    }
+  }
+  return [];
+}
 
 function ProjectInspection() {
   const { templateId } = useParams();
+  const { user } = useAuth();
+  const viewerId = user?.id;
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedGroupId, setSelectedGroupId] = useState(null);
@@ -32,6 +55,8 @@ function ProjectInspection() {
         setProjects(list);
         if (list.length > 0) {
           setSelectedProjectId(list[0].projectId);
+        } else {
+          setSelectedProjectId(null);
         }
       })
       .catch((e) => setError(e.message || 'Failed to load project list.'))
@@ -104,13 +129,32 @@ function ProjectInspection() {
     };
   }, [selectedProjectId, selectedGroupId]);
 
+  const reloadSubmissionsAndGrades = useCallback(async () => {
+    if (!selectedProjectId || !selectedGroupId) return;
+    try {
+      const res = await getProjectSubmissions(selectedProjectId, selectedGroupId);
+      const submissionList = res?.data || [];
+      setSubmissions(submissionList);
+      const gradeEntries = await Promise.all(
+        submissionList.map(async (submission) => {
+          try {
+            const gradeRes = await getSubmissionGrades(submission.id);
+            const list = Array.isArray(gradeRes) ? gradeRes : [];
+            return [submission.id, list];
+          } catch {
+            return [submission.id, []];
+          }
+        })
+      );
+      setGradesBySubmission(Object.fromEntries(gradeEntries));
+    } catch {
+      /* keep existing state */
+    }
+  }, [selectedProjectId, selectedGroupId]);
+
   const activeAssignment = useMemo(
     () => groupAssignments.find((g) => g.groupId === selectedGroupId) || null,
     [groupAssignments, selectedGroupId]
-  );
-  const totalDeliverables = useMemo(
-    () => (projectDetail?.sprints || []).reduce((sum, sprint) => sum + (sprint.deliverables?.length || 0), 0),
-    [projectDetail]
   );
   const cumulativeGrade = useMemo(
     () => computeCumulativeGrade(projectDetail, submissions),
@@ -203,32 +247,60 @@ function ProjectInspection() {
             {!loadingSubmissions && selectedGroupId && submissions.length === 0 && (
               <p>No submissions yet for group {selectedGroupId}.</p>
             )}
-            {!loadingSubmissions && submissions.map((submission) => (
-              <div key={submission.id} style={{ marginBottom: '12px', border: '1px solid #f1f5f9', borderRadius: '8px', padding: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                  <strong>Deliverable #{submission.deliverableId}</strong>
-                  <span>{submission.status}</span>
-                </div>
-                <div style={{ marginTop: '6px', color: '#111827' }}>
-                  <strong>Success Grade:</strong> {(submission.successGrade ?? computeSuccessGrade(gradesBySubmission[submission.id] || [])) ?? '-'}
-                </div>
-                <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
-                  Submitted by user #{submission.submittedByUserId}
-                </div>
-                <div style={{ marginTop: '8px' }}>
-                  <strong>Grades:</strong>
-                  {(gradesBySubmission[submission.id] || []).length === 0 ? (
-                    <div style={{ color: '#6b7280' }}>No grades yet.</div>
-                  ) : (
-                    (gradesBySubmission[submission.id] || []).map((grade) => (
-                      <div key={grade.id} style={{ fontSize: '14px' }}>
-                        Rubric #{grade.rubricId}: <strong>{grade.grade}</strong> (grader #{grade.graderId})
+            {!loadingSubmissions && submissions.map((submission) => {
+              const rubricItems = rubricItemsForDeliverable(projectDetail, submission.deliverableId);
+              const gradesList = gradesBySubmission[submission.id] || [];
+              const myRubricGrades = {};
+              if (viewerId != null) {
+                for (const g of gradesList) {
+                  if (Number(g.graderId) === Number(viewerId)) {
+                    myRubricGrades[String(g.rubricId)] = g.grade;
+                  }
+                }
+              }
+              return (
+                <div key={submission.id} style={{ marginBottom: '12px', border: '1px solid #f1f5f9', borderRadius: '8px', padding: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                    <strong>Deliverable #{submission.deliverableId}</strong>
+                    <span>{submission.status}</span>
+                  </div>
+                  <div style={{ marginTop: '6px', color: '#111827' }}>
+                    <strong>Success Grade:</strong> {(submission.successGrade ?? computeSuccessGrade(gradesList)) ?? '-'}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
+                    Submitted by user #{submission.submittedByUserId}
+                  </div>
+                  <div style={{ marginTop: '8px' }}>
+                    <strong>Grades:</strong>
+                    {gradesList.length === 0 ? (
+                      <div style={{ color: '#6b7280' }}>No grades yet.</div>
+                    ) : (
+                      gradesList.map((grade) => (
+                        <div key={grade.id} style={{ fontSize: '14px' }}>
+                          Rubric #{grade.rubricId}: <strong>{grade.grade}</strong> (grader #{grade.graderId})
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div style={{ marginTop: '12px' }}>
+                    {rubricItems.length === 0 ? (
+                      <div style={{ color: '#6b7280', fontSize: '13px' }}>
+                        No rubrics on this deliverable in project detail — cannot submit scores until rubrics are loaded (check backend project detail).
                       </div>
-                    ))
-                  )}
+                    ) : (
+                      <GradingForm
+                        key={`grade-${submission.id}-${selectedGroupId}`}
+                        submissionId={submission.id}
+                        rubricItems={rubricItems}
+                        canGrade={Boolean(activeAssignment?.canGrade)}
+                        myRubricGrades={myRubricGrades}
+                        onGraded={reloadSubmissionsAndGrades}
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

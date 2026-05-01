@@ -475,6 +475,7 @@ public class ProjectService {
 
     private RubricDto toRubricDto(ProjectDeliverableRubric rubric) {
         RubricDto dto = new RubricDto();
+        dto.setId(rubric.getId());
         dto.setTitle(rubric.getTitle());
         dto.setCriteriaType(rubric.getCriteriaType());
         return dto;
@@ -482,6 +483,7 @@ public class ProjectService {
 
     private RubricDto toRubricDto(ProjectEvaluationRubric rubric) {
         RubricDto dto = new RubricDto();
+        dto.setId(rubric.getId());
         dto.setTitle(rubric.getTitle());
         dto.setCriteriaType(rubric.getCriteriaType());
         return dto;

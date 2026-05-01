@@ -89,18 +89,30 @@ function MyProjects() {
                 <span className="label">Created At</span>
                 <span>{formatDateTime(template.createdAt)}</span>
               </div>
-              {user?.role === 'COORDINATOR' && (
+              {(user?.role === 'COORDINATOR' || user?.role === 'PROFESSOR' || user?.role === 'ADMIN') && (
                 <div className="card-actions">
                   <button
                     type="button"
-                    className="manage-comitees-btn"
+                    className="inspect-projects-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/panel/templates/${template.templateId}/manage-comitees`);
+                      navigate(`/panel/templates/${template.templateId}`);
                     }}
                   >
-                    Manage Comitees
+                    Projects &amp; grading
                   </button>
+                  {user?.role === 'COORDINATOR' && (
+                    <button
+                      type="button"
+                      className="manage-comitees-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/panel/templates/${template.templateId}/manage-comitees`);
+                      }}
+                    >
+                      Manage Comitees
+                    </button>
+                  )}
                 </div>
               )}
             </article>

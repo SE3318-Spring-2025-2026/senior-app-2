@@ -700,8 +700,18 @@ public final class ProjectDtos {
     }
 
     public static class RubricDto {
+        /** Database id of {@code ProjectDeliverableRubric} or {@code ProjectEvaluationRubric}; required for grading API. */
+        private Long id;
         private String title;
         private String criteriaType;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
 
         public String getTitle() {
             return title;

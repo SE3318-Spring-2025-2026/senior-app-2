@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { submitGrade } from '../services/api';
 
-const GradingForm = ({ submissionId, rubricItems, onGraded, canGrade = true }) => {
+/**
+ * @param {object} [myRubricGrades] — rubricId (string) -> grade you already submitted for this submission (read-only rows)
+ */
+const GradingForm = ({ submissionId, rubricItems, onGraded, canGrade = true, myRubricGrades = {} }) => {
   const [grades, setGrades] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    setGrades({});
+    setError('');
+    setSuccess('');
+  }, [submissionId]);
 
   const handleGradeChange = (rubricId, value) => {
     setGrades((prev) => ({
@@ -21,8 +30,8 @@ const GradingForm = ({ submissionId, rubricItems, onGraded, canGrade = true }) =
     setSuccess('');
 
     try {
-      // Create independent grade request for each rubric evaluated
       for (const rubricId of Object.keys(grades)) {
+        if (myRubricGrades[rubricId] != null) continue;
         const gradeValue = parseFloat(grades[rubricId]);
         if (!isNaN(gradeValue)) {
           await submitGrade(submissionId, parseInt(rubricId, 10), gradeValue);
@@ -43,6 +52,12 @@ const GradingForm = ({ submissionId, rubricItems, onGraded, canGrade = true }) =
     return <div>No rubric available for grading.</div>;
   }
 
+  const hasNewGradeToSubmit = Object.keys(grades).some((k) => {
+    if (myRubricGrades[k] != null) return false;
+    const gradeValue = parseFloat(grades[k]);
+    return !isNaN(gradeValue);
+  });
+
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', maxWidth: '600px' }}>
       <h3>Deliverable Grading</h3>
@@ -52,30 +67,37 @@ const GradingForm = ({ submissionId, rubricItems, onGraded, canGrade = true }) =
       
       <form onSubmit={handleSubmit}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          {rubricItems.map((item) => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label>
-                <strong>{item.criteria || `Rubric ${item.id}`}</strong>
-                {item.maxScore && <span style={{ marginLeft: '10px', fontSize: '0.9em', color: '#666' }}>(Max: {item.maxScore})</span>}
-              </label>
-              <input
-                type="number"
-                min="0"
-                max={item.maxScore || 100}
-                step="0.5"
-                value={grades[item.id] || ''}
-                onChange={(e) => handleGradeChange(item.id, e.target.value)}
-                placeholder="Score"
-                required
-                disabled={!canGrade}
-                style={{ padding: '8px', width: '100px', borderRadius: '4px', border: '1px solid #ccc' }}
-              />
-            </div>
-          ))}
+          {rubricItems.map((item) => {
+            const idKey = String(item.id);
+            const already = myRubricGrades[idKey];
+            const label = item.title || item.criteria || `Rubric ${item.id}`;
+            const max = item.maxScore || 100;
+            const locked = already != null && already !== '';
+            return (
+              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label>
+                  <strong>{label}</strong>
+                  {max != null && <span style={{ marginLeft: '10px', fontSize: '0.9em', color: '#666' }}>(Max: {max})</span>}
+                  {locked && <span style={{ marginLeft: '8px', fontSize: '0.85em', color: '#059669' }}>— your score saved</span>}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={max}
+                  step="0.5"
+                  value={locked ? String(already) : (grades[idKey] ?? '')}
+                  onChange={(e) => handleGradeChange(idKey, e.target.value)}
+                  placeholder="Score"
+                  disabled={!canGrade || locked}
+                  style={{ padding: '8px', width: '100px', borderRadius: '4px', border: '1px solid #ccc' }}
+                />
+              </div>
+            );
+          })}
         </div>
         <button
           type="submit"
-          disabled={!canGrade || loading || Object.keys(grades).length === 0}
+          disabled={!canGrade || loading || !hasNewGradeToSubmit}
           style={{
             marginTop: '20px',
             padding: '10px 15px',

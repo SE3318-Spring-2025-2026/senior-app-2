@@ -56,6 +56,23 @@
 
 .card-actions {
   margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inspect-projects-btn {
+  border: 1px solid #38bdf8;
+  color: #0c4a6e;
+  background: #e0f2fe;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.inspect-projects-btn:hover {
+  background: #bae6fd;
 }
 
 .manage-comitees-btn {
