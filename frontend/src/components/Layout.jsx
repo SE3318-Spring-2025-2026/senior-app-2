@@ -36,12 +36,20 @@ function Layout() {
           )}
 
           {user?.role === 'STUDENT' && (
-            <NavLink
-              to="/panel/my-student-projects"
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            >
-              Projelerim
-            </NavLink>
+            <>
+              <NavLink
+                to="/panel/my-student-projects"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Projelerim
+              </NavLink>
+              <NavLink
+                to="/panel/github-profile"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                🐙 GitHub Profile
+              </NavLink>
+            </>
           )}
 
           {user?.role === 'COORDINATOR' && (
@@ -51,6 +59,12 @@ function Layout() {
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               >
                 Student Whitelist
+              </NavLink>
+              <NavLink
+                to="/panel/students"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Students
               </NavLink>
               <NavLink
                 to="/panel/template-builder"
@@ -74,6 +88,12 @@ function Layout() {
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               >
                  Analytics
+              </NavLink>
+              <NavLink
+                to="/panel/students"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Students
               </NavLink>
               <NavLink
                 to="/panel/my-projects"

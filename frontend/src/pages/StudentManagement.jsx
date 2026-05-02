@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   uploadStudentWhitelist,
   getStudentWhitelist,
@@ -54,6 +55,7 @@ function isRowLinked(row) {
 }
 
 function StudentManagement() {
+  const navigate = useNavigate();
   const [ids, setIds] = useState('');
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [list, setList] = useState([]);
@@ -232,7 +234,7 @@ function StudentManagement() {
                   <th>GitHub girişi</th>
                   <th>Ekleyen</th>
                   <th>Tarih</th>
-                  <th style={{ width: 100 }} />
+                  <th style={{ width: 150 }} />
                 </tr>
               </thead>
               <tbody>
@@ -249,15 +251,28 @@ function StudentManagement() {
                     <td>{row.addedBy || '—'}</td>
                     <td>{formatDate(row.addedDate)}</td>
                     <td>
-                      <button
-                        type="button"
-                        className="student-mgmt-btn-delete"
-                        disabled={isRowLinked(row) || deletingId === row.id}
-                        title={isRowLinked(row) ? 'GitHub ile giriş yapılmış kayıt silinemez' : 'Listeden kaldır'}
-                        onClick={() => onDelete(row)}
-                      >
-                        {deletingId === row.id ? '…' : 'Sil'}
-                      </button>
+                      <div style={{ display: 'flex', gap: '5px' }}>
+                        {isRowLinked(row) && row.userId && (
+                          <button
+                            type="button"
+                            className="student-mgmt-btn-delete"
+                            style={{ backgroundColor: '#667eea' }}
+                            title="View GitHub Profile"
+                            onClick={() => navigate(`/panel/github-profile/${row.userId}`)}
+                          >
+                            GitHub
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="student-mgmt-btn-delete"
+                          disabled={isRowLinked(row) || deletingId === row.id}
+                          title={isRowLinked(row) ? 'GitHub ile giriş yapılmış kayıt silinemez' : 'Listeden kaldır'}
+                          onClick={() => onDelete(row)}
+                        >
+                          {deletingId === row.id ? '…' : 'Sil'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
