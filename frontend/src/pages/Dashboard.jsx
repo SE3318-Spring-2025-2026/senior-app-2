@@ -2,6 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyTeams, getProjectTemplates, getStudentDashboard, respondGroupInvite } from '../services/api';
+import InviteCard from '../components/InviteCard';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -9,6 +10,7 @@ function Dashboard() {
   const [data, setData] = useState({ activeProjects: [], pendingDeliverables: [], invitations: [] });
   const [staffData, setStaffData] = useState({ templates: [], teams: [] });
   const [loading, setLoading] = useState(false);
+  const [inviteProcessing, setInviteProcessing] = useState({});
   const navigate = useNavigate();
   const isStudent = user?.role === 'STUDENT';
   const isCoordinator = user?.role === 'COORDINATOR';
@@ -38,11 +40,34 @@ function Dashboard() {
   }, [isCoordinator, isProfessor]);
 
   const onInviteAction = async (inviteId, action) => {
-    await respondGroupInvite(inviteId, action);
-    setData((prev) => ({
-      ...prev,
-      invitations: prev.invitations.filter((invite) => invite.inviteId !== inviteId),
-    }));
+    setInviteProcessing((prev) => ({ ...prev, [inviteId]: action }));
+    try {
+      await respondGroupInvite(inviteId, action);
+      // If accepted, remove from list after a brief delay to show success state
+      if (action === 'ACCEPT') {
+        setTimeout(() => {
+          setData((prev) => ({
+            ...prev,
+            invitations: prev.invitations.filter((invite) => invite.inviteId !== inviteId),
+          }));
+        }, 1500);
+      } else {
+        // If declined, remove immediately
+        setData((prev) => ({
+          ...prev,
+          invitations: prev.invitations.filter((invite) => invite.inviteId !== inviteId),
+        }));
+      }
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    } finally {
+      setInviteProcessing((prev) => {
+        const updated = { ...prev };
+        delete updated[inviteId];
+        return updated;
+      });
+    }
   };
   return (
     <div className="dashboard">
@@ -93,20 +118,37 @@ function Dashboard() {
             ))}
           </section>
 
-          <section className="dashboard-panel">
-            <h3>Invitations</h3>
-            {loading && <p>Loading...</p>}
-            {!loading && data.invitations.length === 0 && <p>No invitations.</p>}
-            {data.invitations.map((invite) => (
-              <div className="dashboard-row-card" key={invite.inviteId}>
-                <strong>{invite.groupName}</strong>
-                <span>Group #{invite.groupId}</span>
-                <div className="invite-actions">
-                  <button onClick={() => onInviteAction(invite.inviteId, 'ACCEPT')}>Accept</button>
-                  <button className="danger" onClick={() => onInviteAction(invite.inviteId, 'DECLINE')}>Decline</button>
-                </div>
+          <section className="dashboard-panel invitations-panel">
+            <div className="panel-header">
+              <h3>Invitations</h3>
+              {data.invitations.length > 0 && (
+                <span className="badge-count">{data.invitations.length}</span>
+              )}
+            </div>
+            {loading && (
+              <div className="invitations-loading">
+                <div className="loading-spinner" />
+                <p>Loading invitations...</p>
               </div>
-            ))}
+            )}
+            {!loading && data.invitations.length === 0 && (
+              <div className="invitations-empty">
+                <div className="empty-icon">&#128236;</div>
+                <p>No pending invitations</p>
+                <span>When someone invites you to a team, it will appear here</span>
+              </div>
+            )}
+            {!loading && data.invitations.length > 0 && (
+              <div className="invitations-list">
+                {data.invitations.map((invite) => (
+                  <InviteCard
+                    key={invite.inviteId}
+                    invite={invite}
+                    onRespond={onInviteAction}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         </div>
       )}

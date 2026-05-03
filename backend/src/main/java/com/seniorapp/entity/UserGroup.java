@@ -21,11 +21,11 @@ public class UserGroup {
     @Column(unique = true, nullable = false)
     private String groupName;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "coordinator_id", referencedColumnName = "id")
     private User coordinator;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "team_leader_id", referencedColumnName = "id")
     private User teamLeader;
 
