@@ -315,9 +315,14 @@ public class AuthService {
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
+        String clientId = resolvedGithubClientId();
+        String clientSecret = resolvedGithubClientSecret();
+        
+        System.out.println("DEBUG GitHub OAuth - client_id: " + clientId + ", secret length: " + clientSecret.length() + ", redirect_uri: " + githubRedirectUri);
+
         Map<String, String> body = Map.of(
-                "client_id", resolvedGithubClientId(),
-                "client_secret", resolvedGithubClientSecret(),
+                "client_id", clientId,
+                "client_secret", clientSecret,
                 "code", code,
                 "redirect_uri", githubRedirectUri
         );
@@ -325,9 +330,23 @@ public class AuthService {
         HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
         ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
 
+        // Debug logging
+        System.out.println("GitHub token response: " + response.getBody());
+        
+        if (response.getBody() == null) {
+            throw new RuntimeException("GitHub returned empty response");
+        }
+        
+        // Check for error
+        if (response.getBody().containsKey("error")) {
+            String error = (String) response.getBody().get("error");
+            String errorDesc = (String) response.getBody().get("error_description");
+            throw new RuntimeException("GitHub OAuth error: " + error + " - " + errorDesc);
+        }
+
         String accessToken = (String) response.getBody().get("access_token");
         if (accessToken == null) {
-            throw new RuntimeException("Failed to retrieve access token from GitHub.");
+            throw new RuntimeException("Failed to retrieve access token from GitHub. Response: " + response.getBody());
         }
         return accessToken;
     }

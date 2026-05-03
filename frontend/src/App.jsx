@@ -19,6 +19,8 @@ import StudentProjects from './pages/StudentProjects';
 import StudentProjectPage from './pages/StudentProjectPage';
 import PerformanceAnalytics from './pages/PerformanceAnalytics';
 import CodeReviewComparison from './pages/CodeReviewComparison';
+import GitHubProfile from './pages/GitHubProfile';
+import StudentList from './pages/StudentList';
 
 function App() {
   return (
@@ -57,6 +59,13 @@ function App() {
         {/* Code Review Comparison */}
         <Route path="review/:projectId" element={<CodeReviewComparison />} />
         <Route path="review" element={<CodeReviewComparison />} />
+        
+        {/* GitHub Profile */}
+        <Route path="github-profile" element={<GitHubProfile />} />
+        <Route path="github-profile/:userId" element={<GitHubProfile />} />
+        
+        {/* Student List for professors */}
+        <Route path="students" element={<StudentList />} />
         
         <Route
           path="users"
