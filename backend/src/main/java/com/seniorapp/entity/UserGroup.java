@@ -1,7 +1,17 @@
 package com.seniorapp.entity;
 
 import java.util.List;
-import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,11 +30,13 @@ public class UserGroup {
     @Column(unique = true, nullable = false)
     private String groupName;
 
-    @OneToOne
+    /** Birden fazla grubun aynı koordinatöre bağlanabilmesi için ManyToOne (OneToOne burada yanlışlıkla UNIQUE üretiyordu). */
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coordinator_id", referencedColumnName = "id")
     private User coordinator;
 
-    @OneToOne
+    /** Aynı kullanıcı birden fazla grubun lideri olabilsin / üyelik modeliyle uyumlu olsun diye ManyToOne. */
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_leader_id", referencedColumnName = "id")
     private User teamLeader;
 

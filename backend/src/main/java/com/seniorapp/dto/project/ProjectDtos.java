@@ -628,8 +628,18 @@ public final class ProjectDtos {
     }
 
     public static class RubricDto {
+        /** project_deliverable_rubrics / project_evaluation_rubrics birincil anahtarı. */
+        private Long id;
         private String title;
         private String criteriaType;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
 
         public String getTitle() {
             return title;

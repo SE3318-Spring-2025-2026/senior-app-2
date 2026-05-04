@@ -56,6 +56,28 @@ public class DeliverableSubmissionService {
         this.userGroupMemberRepository = userGroupMemberRepository;
     }
 
+    /**
+     * Öğrenci teslim etmeden notlandırma için (koordinatör/profesör) boş teslim kaydı oluşturur veya mevcudu döner.
+     * Öğrenci yüklemelerindeki sprint süresi kuralı burada uygulanmaz.
+     */
+    @Transactional
+    public DeliverableSubmission ensureGradingPlaceholder(Long deliverableId, Long groupId, Long actingUserId) {
+        Optional<DeliverableSubmission> existing = submissionRepository.findByDeliverableIdAndGroupId(deliverableId, groupId);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+        ProjectDeliverable deliverable = deliverableRepository.findById(deliverableId)
+                .orElseThrow(() -> new NoSuchElementException("Deliverable bulunamadı: " + deliverableId));
+        DeliverableSubmission s = new DeliverableSubmission();
+        s.setDeliverable(deliverable);
+        s.setGroupId(groupId);
+        s.setSubmittedByUserId(actingUserId);
+        s.setSubmissionType(SubmissionType.TEXT_EDITOR);
+        s.setTextContent("");
+        s.setStatus(SubmissionStatus.DRAFT);
+        return submissionRepository.save(s);
+    }
+
     @Transactional
     public DeliverableSubmission submitFile(Long deliverableId, Long groupId, Long userId, MultipartFile file) {
         if (file == null || file.isEmpty()) {

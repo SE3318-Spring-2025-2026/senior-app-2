@@ -24,6 +24,9 @@ public class SubmissionGrade {
     @Column(nullable = false)
     private Double grade;
 
+    @Column(length = 2000)
+    private String comment;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -38,4 +41,7 @@ public class SubmissionGrade {
 
     public Double getGrade() { return grade; }
     public void setGrade(Double grade) { this.grade = grade; }
+
+    public String getComment() { return comment; }
+    public void setComment(String comment) { this.comment = comment; }
 }

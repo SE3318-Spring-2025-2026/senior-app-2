@@ -266,10 +266,55 @@ export function getMyStudentProjects() {
   return request('/students/dashboard/projects');
 }
 
-export function submitGrade(submissionId, graderId, rubricId, grade) {
+/** Grader is taken from JWT on the server. */
+export function submitGrade(submissionId, rubricId, grade, comment) {
+  const body = { rubricId, grade };
+  if (comment != null && String(comment).trim() !== '') {
+    body.comment = String(comment).trim();
+  }
   return request(`/deliverable-submissions/${submissionId}/grades`, {
     method: 'POST',
-    body: JSON.stringify({ graderId, rubricId, grade }),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getSubmissionGrades(submissionId) {
+  const data = await request(`/deliverable-submissions/${submissionId}/grades`);
+  return Array.isArray(data) ? data : [];
+}
+
+/** Teslim olmasa bile aynı grup + deliverable için rubric notları (boş teslim oluşturulabilir). */
+export async function getDeliverableContextGrades(groupId, deliverableId) {
+  const data = await request(
+    `/deliverable-submissions/context/group/${groupId}/deliverable/${deliverableId}/grades`,
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export function submitDeliverableContextGrade(groupId, deliverableId, rubricId, grade, comment) {
+  const body = { rubricId, grade };
+  if (comment != null && String(comment).trim() !== '') {
+    body.comment = String(comment).trim();
+  }
+  return request(`/deliverable-submissions/context/group/${groupId}/deliverable/${deliverableId}/grades`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getEvaluationGrades(groupId, evaluationId) {
+  const data = await request(`/evaluation-grades/group/${groupId}/evaluations/${evaluationId}`);
+  return Array.isArray(data) ? data : [];
+}
+
+export function submitEvaluationRubricGrade(groupId, evaluationRubricId, grade, comment) {
+  const body = { grade };
+  if (comment != null && String(comment).trim() !== '') {
+    body.comment = String(comment).trim();
+  }
+  return request(`/evaluation-grades/group/${groupId}/rubrics/${evaluationRubricId}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }
 

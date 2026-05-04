@@ -1,0 +1,276 @@
+.insp-page {
+  padding: 24px;
+  min-height: 100%;
+  background: #f3f4f6;
+}
+
+.insp-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.insp-sidebar {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.insp-sidebar-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.insp-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.insp-project-btn {
+  text-align: left;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.insp-project-btn.active {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.insp-project-meta {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.insp-main {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px 18px 24px;
+  background: #fff;
+}
+
+.insp-main-title {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+}
+
+.insp-error {
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.insp-embedded {
+  padding: 0;
+}
+
+.insp-deliverable {
+  margin-bottom: 14px;
+}
+
+.insp-rubric-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.insp-rubric-table th,
+.insp-rubric-table td {
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.insp-rubric-table th {
+  background: #f9fafb;
+  font-weight: 700;
+  color: #374151;
+}
+
+.insp-rubric-title {
+  font-weight: 600;
+  color: #111827;
+}
+
+.insp-rubric-type {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
+.insp-rubric-comment {
+  width: 100%;
+  min-width: 160px;
+  box-sizing: border-box;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.insp-rubric-grade {
+  width: 100%;
+  max-width: 120px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  font: inherit;
+}
+
+.insp-rubric-actions {
+  margin-top: 14px;
+}
+
+.insp-rubric-empty {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.insp-rubric-form {
+  margin-top: 4px;
+}
+
+.insp-readonly-empty {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin: 0 0 8px;
+}
+
+.insp-readonly-text {
+  margin-top: 8px;
+}
+
+.insp-eval-card .insp-rubric-table {
+  font-size: 0.8rem;
+}
+
+.insp-eval-card .insp-rubric-comment {
+  min-width: 100px;
+}
+
+.insp-eval-rubric-title {
+  margin: 10px 0 6px;
+}
+
+.insp-readonly-pre {
+  margin: 0;
+  padding: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.82rem;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.insp-grader-tabs-wrap {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+}
+
+.insp-grader-tabs-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.insp-grader-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.insp-grader-tab {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #64748b;
+  padding: 8px 4px;
+  margin-right: 12px;
+  border-bottom: 3px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.insp-grader-tab:hover {
+  color: #334155;
+}
+
+.insp-grader-tab.active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+
+.insp-deliverable-eval-caption {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #059669;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.insp-eval-by-caption {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin: 4px 0 8px;
+}
+
+.insp-rubric-readonly-banner {
+  font-size: 0.84rem;
+  color: #475569;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.insp-rubric-readonly-cell {
+  min-height: 2.75em;
+  line-height: 1.45;
+  color: #1e293b;
+  white-space: pre-wrap;
+}
+
+.insp-rubric-readonly-grade {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.insp-rubric-row-readonly td {
+  background: #fafafa;
+}
+
+@media (max-width: 960px) {
+  .insp-layout {
+    grid-template-columns: 1fr;
+  }
+}
