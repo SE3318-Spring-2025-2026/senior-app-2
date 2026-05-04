@@ -24,6 +24,7 @@ function StudentProjectPage() {
   const [deliverableState, setDeliverableState] = useState({});
   const [groupId, setGroupId] = useState(null);
   const [isTeamLead, setIsTeamLead] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState('YILMAZ');
 
   useEffect(() => {
     if (!projectId) return;
@@ -152,37 +153,47 @@ function StudentProjectPage() {
       </div>
 
       {/* Timeline */}
-      {sprints.length > 0 && (
-        <div className="spp-timeline-section">
-          <div className="spp-timeline-header">
-            <div className="spp-timeline-title">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M8 2v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-              Project Timeline Progress
+      {sprints.length > 0 && (() => {
+        const now = new Date();
+        let projectActiveSprintIdx = sprints.findIndex(s => new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+        if (projectActiveSprintIdx === -1) {
+          projectActiveSprintIdx = sprints.findIndex(s => new Date(s.startDate) > now);
+          if (projectActiveSprintIdx === -1) projectActiveSprintIdx = sprints.length - 1;
+          else projectActiveSprintIdx = Math.max(0, projectActiveSprintIdx - 1);
+        }
+        return (
+          <div className="spp-timeline-section">
+            <div className="spp-timeline-header">
+              <div className="spp-timeline-title">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M8 2v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                Project Timeline Progress
+              </div>
+              <div className="spp-timeline-legend">
+                <span className="spp-legend-item"><span className="spp-legend-dot active" /> Active</span>
+                <span className="spp-legend-item"><span className="spp-legend-dot completed" /> Completed</span>
+              </div>
             </div>
-            <div className="spp-timeline-legend">
-              <span className="spp-legend-item"><span className="spp-legend-dot active" /> Active</span>
-              <span className="spp-legend-item"><span className="spp-legend-dot completed" /> Completed</span>
-            </div>
-          </div>
-          <div className="spp-sprint-steps">
-            {sprints.map((sprint, idx) => {
-              const isCompleted = idx < activeSprint;
-              const isActive = idx === activeSprint;
-              return (
-                <React.Fragment key={sprint.sprintNo}>
-                  {idx > 0 && <div className={`spp-step-line ${isCompleted ? 'completed' : ''}`} />}
-                  <div className="spp-sprint-step" onClick={() => setActiveSprint(idx)}>
-                    <div className={`spp-step-circle ${isCompleted ? 'completed' : isActive ? 'active' : ''}`}>
-                      {isCompleted ? <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8l3 3 5-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : sprint.sprintNo}
+            <div className="spp-sprint-steps">
+              {sprints.map((sprint, idx) => {
+                const isCompleted = idx < projectActiveSprintIdx;
+                const isProjectActive = idx === projectActiveSprintIdx;
+                const isSelected = idx === activeSprint;
+                return (
+                  <React.Fragment key={sprint.sprintNo}>
+                    {idx > 0 && <div className={`spp-step-line ${isCompleted ? 'completed' : ''}`} />}
+                    <div className="spp-sprint-step" onClick={() => setActiveSprint(idx)}>
+                      <div className={`spp-step-circle ${isCompleted ? 'completed' : isProjectActive ? 'active' : ''} ${isSelected ? 'selected' : ''}`}>
+                        {isCompleted ? <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8l3 3 5-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : sprint.sprintNo}
+                      </div>
+                      <span className={`spp-step-label ${isCompleted ? 'completed' : isProjectActive ? 'active' : ''}`}>Sprint {sprint.sprintNo}</span>
                     </div>
-                    <span className={`spp-step-label ${isCompleted ? 'completed' : isActive ? 'active' : ''}`}>Sprint {sprint.sprintNo}</span>
-                  </div>
-                </React.Fragment>
-              );
-            })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Sprint Content */}
       {currentSprint && (
@@ -228,22 +239,68 @@ function StudentProjectPage() {
                 <span className="spp-excellent-badge">📈 Excellent</span>
               </div>
             </div>
-            <div className="spp-eval-card">
-              <div className="spp-eval-header">
-                <span className="spp-eval-title">👥 Teamwork Evaluation</span>
-                <span className="spp-eval-status">Pending</span>
-              </div>
-              <div className="spp-eval-icon">⏳</div>
-              <div className="spp-eval-waiting">Awaiting Instructor Grading</div>
-            </div>
-            <div className="spp-eval-card">
-              <div className="spp-eval-header">
-                <span className="spp-eval-title">🔄 Scrum Process Evaluation</span>
-                <span className="spp-eval-status">Pending</span>
-              </div>
-              <div className="spp-eval-icon">⏳</div>
-              <div className="spp-eval-waiting">Awaiting Instructor Grading</div>
-            </div>
+            {submissions.some(s => s.status === 'GRADED') ? (
+              <>
+                <div className="spp-eval-card graded">
+                  <div className="spp-eval-header">
+                    <span className="spp-eval-title">👥 Teamwork Evaluation</span>
+                  </div>
+                  <div className="spp-instructor-tabs">
+                    <button className={`spp-inst-tab ${sidebarTab === 'YILMAZ' ? 'active' : ''}`} onClick={() => setSidebarTab('YILMAZ')}>YILMAZ</button>
+                    <button className={`spp-inst-tab ${sidebarTab === 'STONE' ? 'active' : ''}`} onClick={() => setSidebarTab('STONE')}>STONE</button>
+                  </div>
+                  {sidebarTab === 'YILMAZ' ? (
+                    <div className="spp-eval-rubrics">
+                      <div className="spp-eval-row"><div className="spp-eval-crit"><strong>COMMUNICATION</strong><div className="spp-eval-desc">Always on time and clear.</div></div><div className="spp-eval-grade-badge">5/5</div></div>
+                      <div className="spp-eval-row"><div className="spp-eval-crit"><strong>CONFLICT RESOLUTION</strong><div className="spp-eval-desc">Handled minor disagreements well.</div></div><div className="spp-eval-grade-badge">4/5</div></div>
+                      <div className="spp-eval-summary">*EXCELLENT COLLABORATION WITHIN THE GROUP.*</div>
+                    </div>
+                  ) : (
+                    <div className="spp-eval-rubrics">
+                      <div className="spp-eval-row"><div className="spp-eval-crit"><strong>COMMUNICATION</strong><div className="spp-eval-desc">Good overall communication.</div></div><div className="spp-eval-grade-badge">4/5</div></div>
+                    </div>
+                  )}
+                </div>
+                <div className="spp-eval-card graded">
+                  <div className="spp-eval-header">
+                    <span className="spp-eval-title">🔄 Scrum Process Evaluation</span>
+                  </div>
+                  <div className="spp-instructor-tabs">
+                    <button className={`spp-inst-tab ${sidebarTab === 'YILMAZ' ? 'active' : ''}`} onClick={() => setSidebarTab('YILMAZ')}>YILMAZ</button>
+                    <button className={`spp-inst-tab ${sidebarTab === 'STONE' ? 'active' : ''}`} onClick={() => setSidebarTab('STONE')}>STONE</button>
+                  </div>
+                  {sidebarTab === 'YILMAZ' ? (
+                    <div className="spp-eval-rubrics">
+                      <div className="spp-eval-row"><div className="spp-eval-crit"><strong>STANDUPS</strong><div className="spp-eval-desc">Daily sync is impressive.</div></div><div className="spp-eval-grade-badge">5/5</div></div>
+                      <div className="spp-eval-row"><div className="spp-eval-crit"><strong>SPRINT REVIEW</strong><div className="spp-eval-desc">Covered all tasks.</div></div><div className="spp-eval-grade-badge">5/5</div></div>
+                    </div>
+                  ) : (
+                    <div className="spp-eval-rubrics">
+                      <div className="spp-eval-row"><div className="spp-eval-crit"><strong>STANDUPS</strong><div className="spp-eval-desc">Consistent.</div></div><div className="spp-eval-grade-badge">5/5</div></div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="spp-eval-card">
+                  <div className="spp-eval-header">
+                    <span className="spp-eval-title">👥 Teamwork Evaluation</span>
+                    <span className="spp-eval-status">Pending</span>
+                  </div>
+                  <div className="spp-eval-icon">⏳</div>
+                  <div className="spp-eval-waiting">Awaiting Instructor Grading</div>
+                </div>
+                <div className="spp-eval-card">
+                  <div className="spp-eval-header">
+                    <span className="spp-eval-title">🔄 Scrum Process Evaluation</span>
+                    <span className="spp-eval-status">Pending</span>
+                  </div>
+                  <div className="spp-eval-icon">⏳</div>
+                  <div className="spp-eval-waiting">Awaiting Instructor Grading</div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -251,14 +308,21 @@ function StudentProjectPage() {
   );
 }
 
-/* ═══ DeliverableCard ═══ */
 function DeliverableCard({ deliverable, existingSubmission, localState, setLocalState, onFileSelect, onFileSubmit, onTextSubmit, onDownload, onDelete, isTeamLead }) {
   const isFileType = deliverable.fileUploadDeliverable;
+  const isDemoType = deliverable.type === 'DEMO' || deliverable.title?.toLowerCase().includes('demo');
   const hasExisting = !!existingSubmission && Object.keys(existingSubmission).length > 0;
   const showResubmit = localState.showResubmit;
   const showExistingInfo = hasExisting && !showResubmit;
   const feedback = localState.feedback;
   const isGraded = existingSubmission?.status === 'GRADED';
+  const [instTab, setInstTab] = useState('YILMAZ');
+
+  const mockEvaluators = [
+    { id: 'YILMAZ', name: "DR. AHMET YILMAZ", comment: "Excellent scope definition. Minor tweaks needed in timeline.", rubrics: [ { criteria: "Scope Definition", comment: "Very clear and concise description of the problem space.", grade: "A" }, { criteria: "Technical Feasibility", comment: "The chosen stack is appropriate for the requirements.", grade: "S" }, { criteria: "Timeline Realism", comment: "Check weeks 4-5 as they seem a bit rushed.", grade: "B+" } ] },
+    { id: 'STONE', name: "PROF. SARAH STONE", comment: "Good overall, but lacks some depth in feasibility analysis.", rubrics: [ { criteria: "Scope Definition", comment: "Good.", grade: "B" }, { criteria: "Technical Feasibility", comment: "Need more details on DB choice.", grade: "B-" } ] }
+  ];
+  const activeEval = mockEvaluators.find(e => e.id === instTab);
 
   return (
     <div className="spp-deliverable">
@@ -267,9 +331,13 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
           <h4><span className="spp-deliverable-dot" />{deliverable.title}</h4>
           {deliverable.description && <p className="spp-deliverable-desc">{deliverable.description}</p>}
           <div className="spp-deliverable-tags">
-            <span className={`spp-tag ${isFileType ? 'spp-tag-file' : 'spp-tag-text'}`}>
-              {isFileType ? '✏️ File Upload' : '✏️ Text Editor'}
-            </span>
+            {isDemoType ? (
+              <span className="spp-tag spp-tag-demo">🎤 Demo</span>
+            ) : (
+              <span className={`spp-tag ${isFileType ? 'spp-tag-file' : 'spp-tag-text'}`}>
+                {isFileType ? '✏️ File Upload' : '✏️ Text Editor'}
+              </span>
+            )}
             <span className="spp-tag spp-tag-weight">Weight: {deliverable.weight}%</span>
           </div>
         </div>
@@ -283,7 +351,43 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
         )}
       </div>
 
-      {showExistingInfo && (
+      {isGraded && (
+        <div className="spp-graded-view">
+          <div className="spp-instructor-tabs">
+            {mockEvaluators.map(ev => (
+              <button key={ev.id} className={`spp-inst-tab ${instTab === ev.id ? 'active' : ''}`} onClick={() => setInstTab(ev.id)}>
+                {ev.name}
+              </button>
+            ))}
+          </div>
+          <div className="spp-graded-content">
+            <div className="spp-graded-comment-box">
+              <span className="spp-graded-eval-title">💬 DELIVERABLE EVALUATION BY {activeEval.name}</span>
+              <p className="spp-graded-comment">"{activeEval.comment}"</p>
+            </div>
+            <table className="spp-rubric-table">
+              <thead>
+                <tr>
+                  <th>CRITERION</th>
+                  <th>INSTRUCTOR COMMENTS</th>
+                  <th style={{textAlign: 'center'}}>GRADE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeEval.rubrics.map((r, i) => (
+                  <tr key={i}>
+                    <td><strong>{r.criteria}</strong></td>
+                    <td>{r.comment}</td>
+                    <td style={{textAlign: 'center'}}><span className={`spp-letter-grade grade-${r.grade.replace('+','-plus').replace('-','-minus')}`}>{r.grade}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {!isGraded && showExistingInfo && !isDemoType && (
         <div className="spp-existing-submission">
           <div className="spp-existing-info">
             <div className="spp-file-icon-wrapper">
@@ -310,8 +414,7 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
         </div>
       )}
 
-      {/* Dropzone for adding more files */}
-      {showExistingInfo && isFileType && (
+      {!isGraded && showExistingInfo && isFileType && !isDemoType && (
         <div className="spp-upload-area">
           <div className="spp-dropzone" onClick={() => setLocalState({ showResubmit: true })}>
             <div className="spp-dropzone-text">Drop more files or click to add</div>
@@ -319,7 +422,13 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
         </div>
       )}
 
-      {(!hasExisting || showResubmit) && (
+      {!isGraded && isDemoType && (
+        <div className="spp-demo-box">
+          MID-SPRINT DEMO - THIS DELIVERABLE TYPE DOES NOT REQUIRE A DIGITAL SUBMISSION.
+        </div>
+      )}
+
+      {!isGraded && (!hasExisting || showResubmit) && !isDemoType && (
         <>
           {isFileType ? (
             <FileUploadArea localState={localState} onFileSelect={onFileSelect} onSubmit={onFileSubmit} />
@@ -330,7 +439,7 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
       )}
 
       {/* Action Buttons */}
-      {showExistingInfo && (
+      {!isGraded && showExistingInfo && (
         <div className="spp-actions-row">
           {isTeamLead && existingSubmission.id && (
             <button className="spp-btn-delete" onClick={() => onDelete(existingSubmission.id)} disabled={localState.deleting}>
@@ -447,21 +556,31 @@ function TextEditorArea({ localState, setLocalState, onSubmit, existingText }) {
         <button className="spp-toolbar-btn" onClick={() => insertFormat('```\n', '\n```')} title="Code Block" style={{fontFamily:'monospace'}}>{'</>'}</button>
         <div className="spp-toolbar-sep" />
         <button className="spp-toolbar-btn" onClick={() => insertFormat('\n- ')} title="List">≡ List</button>
-        <button className="spp-toolbar-btn" onClick={() => insertFormat('\n• ')} title="Bullet">• List</button>
         <div className="spp-toolbar-sep" />
         <button className="spp-toolbar-btn" onClick={() => insertFormat('\n## ')} title="Heading"><span style={{fontSize:'0.75rem'}}>H₂</span> H2</button>
       </div>
-      <textarea
-        ref={textareaRef}
-        className="spp-textarea"
-        value={textContent}
-        onChange={(e) => setLocalState({ textContent: e.target.value })}
-        placeholder="Submit your deliverable details here in a professional tone..."
-      />
-      <div className="spp-char-count">{textContent.length} characters written</div>
-      <div className="spp-actions-row">
-        <button className="spp-btn-submit" onClick={onSubmit} disabled={submitting || !textContent.trim()}>
-          {submitting ? '⏳ Kaydediliyor...' : '⏱ Submit to System'}
+      <div className="spp-textarea-wrapper" style={{ position: 'relative' }}>
+        <textarea
+          ref={textareaRef}
+          className="spp-textarea"
+          value={textContent}
+          onChange={(e) => setLocalState({ textContent: e.target.value })}
+          placeholder="Submit your deliverable details here in a professional tone..."
+          style={{ paddingBottom: '40px' }}
+        />
+        <div className="spp-char-count-pill">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 8l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          {textContent.length} CHARACTERS WRITTEN
+        </div>
+      </div>
+      <div className="spp-actions-row" style={{ justifyContent: 'flex-end', marginTop: '16px' }}>
+        <button className="spp-btn-load" onClick={() => alert('Load file feature to be implemented by backend')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 4v12M12 4l-4 4M12 4l4 4M4 20h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          LOAD FILE
+        </button>
+        <button className="spp-btn-submit" onClick={onSubmit} disabled={submitting || !textContent.trim()} style={{ margin: 0 }}>
+          {submitting ? '⏳' : <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          SUBMIT TO SYSTEM
         </button>
       </div>
     </div>
