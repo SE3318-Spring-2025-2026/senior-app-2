@@ -333,9 +333,25 @@ export function getProjectSubmissions(projectId, groupId) {
 }
 
 /**
- * Submission'a ait dosyayı indirir (blob olarak).
+ * Çoklu dosya kaydındaki tek dosyayı indirir (blob). fileId = submission.files[].id
  */
-export async function downloadSubmissionFile(submissionId) {
+export async function downloadSubmissionFile(fileId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/submissions/files/${fileId}/download`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Dosya indirilemedi.');
+  }
+  return response.blob();
+}
+
+/**
+ * Legacy / özet: submission için en son (veya tek) dosyayı indirir.
+ */
+export async function downloadSubmissionLatestFile(submissionId) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_URL}/submissions/${submissionId}/download`, {
     headers: {
@@ -349,9 +365,18 @@ export async function downloadSubmissionFile(submissionId) {
 }
 
 /**
- * Submission'ı siler. Sadece Team Leader silebilir.
+ * Tek bir yüklenmiş dosya satırını siler. Sadece Team Leader.
  */
-export function deleteSubmissionFile(submissionId) {
+export function deleteSubmissionFile(fileId) {
+  return request(`/submissions/files/${fileId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Tüm submission kaydını siler (tüm dosyalar + metin). Sadece Team Leader.
+ */
+export function deleteDeliverableSubmission(submissionId) {
   return request(`/submissions/${submissionId}`, {
     method: 'DELETE',
   });

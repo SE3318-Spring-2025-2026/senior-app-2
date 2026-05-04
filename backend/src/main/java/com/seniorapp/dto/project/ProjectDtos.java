@@ -580,10 +580,19 @@ public final class ProjectDtos {
     }
 
     public static class EvaluationDto {
+        private Long id;
         private String title;
         private Integer weight;
         private boolean autoAddToAllSprints;
         private List<RubricDto> rubrics;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
 
         public String getTitle() {
             return title;

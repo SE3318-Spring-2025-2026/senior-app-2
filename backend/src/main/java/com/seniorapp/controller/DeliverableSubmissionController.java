@@ -3,6 +3,7 @@ package com.seniorapp.controller;
 import com.seniorapp.entity.DeliverableSubmission;
 import com.seniorapp.entity.User;
 import com.seniorapp.service.DeliverableSubmissionService;
+import com.seniorapp.service.DeliverableSubmissionService.FileDownload;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -35,8 +36,7 @@ public class DeliverableSubmissionController {
 
     /**
      * POST /api/submissions/file
-     * Dosya yükleme ile submission oluşturur.
-     * multipart/form-data formatında: file, deliverableId, groupId
+     * multipart/form-data: file, deliverableId, groupId
      */
     @PostMapping(value = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('STUDENT')")
@@ -57,8 +57,6 @@ public class DeliverableSubmissionController {
 
     /**
      * POST /api/submissions/text
-     * Metin editörü ile submission oluşturur.
-     * JSON body: { deliverableId, groupId, textContent }
      */
     @PostMapping("/text")
     @PreAuthorize("hasRole('STUDENT')")
@@ -85,7 +83,6 @@ public class DeliverableSubmissionController {
 
     /**
      * GET /api/submissions/{deliverableId}/group/{groupId}
-     * Belirli bir deliverable ve grup için olan submission'ı getirir.
      */
     @GetMapping("/{deliverableId}/group/{groupId}")
     @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
@@ -109,7 +106,6 @@ public class DeliverableSubmissionController {
 
     /**
      * GET /api/submissions/project/{projectId}/group/{groupId}
-     * Bir projeye ait belirli grubun tüm submission'larını getirir.
      */
     @GetMapping("/project/{projectId}/group/{groupId}")
     @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
@@ -125,25 +121,55 @@ public class DeliverableSubmissionController {
     }
 
     /**
-     * GET /api/submissions/{submissionId}/download
-     * Submission'a ait dosyayı indirir.
+     * GET /api/submissions/files/{fileId}/download
+     */
+    @GetMapping("/files/{fileId}/download")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    public ResponseEntity<Resource> downloadFileByFileId(
+            @PathVariable Long fileId,
+            @AuthenticationPrincipal User principal
+    ) {
+        FileDownload fd = submissionService.downloadFileByFileId(fileId, principal);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDispositionAttachment(fd.filename()))
+                .body(fd.resource());
+    }
+
+    /**
+     * GET /api/submissions/{submissionId}/download — latest file or legacy single file.
      */
     @GetMapping("/{submissionId}/download")
     @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
-    public ResponseEntity<Resource> downloadFile(@PathVariable Long submissionId) {
-        Resource resource = submissionService.downloadFile(submissionId);
-        String fileName = "download";
-
+    public ResponseEntity<Resource> downloadFile(
+            @PathVariable Long submissionId,
+            @AuthenticationPrincipal User principal
+    ) {
+        FileDownload fd = submissionService.downloadFile(submissionId, principal);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .body(resource);
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDispositionAttachment(fd.filename()))
+                .body(fd.resource());
+    }
+
+    /**
+     * DELETE /api/submissions/files/{fileId}
+     */
+    @DeleteMapping("/files/{fileId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Map<String, Object>> deleteSubmissionFile(
+            @PathVariable Long fileId,
+            @AuthenticationPrincipal User principal
+    ) {
+        submissionService.deleteSubmissionFile(fileId, principal.getId());
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Dosya başarıyla silindi."
+        ));
     }
 
     /**
      * DELETE /api/submissions/{submissionId}
-     * Submission'ı siler. Sadece grubun Team Leader'ı silebilir.
-     * Dosya tipindeyse disk'ten de silinir.
      */
     @DeleteMapping("/{submissionId}")
     @PreAuthorize("hasRole('STUDENT')")
@@ -158,8 +184,6 @@ public class DeliverableSubmissionController {
         ));
     }
 
-    // ── Exception Handlers ──
-
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleValidation(IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -168,6 +192,14 @@ public class DeliverableSubmissionController {
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, String>> handleNotFound(NoSuchElementException e) {
         return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+    }
+
+    private static String contentDispositionAttachment(String filename) {
+        if (filename == null || filename.isBlank()) {
+            filename = "download";
+        }
+        String safe = filename.replace("\"", "'");
+        return "attachment; filename=\"" + safe + "\"";
     }
 
     private Long toLong(Object value) {

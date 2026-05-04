@@ -156,7 +156,25 @@ public class ProjectService {
         Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
         Project project = projectRepository.findById(safeProjectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found: " + projectId));
+        warmProjectSprintCollections(project);
         return toDetail(project);
+    }
+
+    /** Force-load sprint deliverables, evaluations and rubrics (avoids empty collections with lazy loading). */
+    private void warmProjectSprintCollections(Project project) {
+        if (project.getTemplate() != null) {
+            project.getTemplate().getId();
+        }
+        for (ProjectSprint sprint : project.getSprints()) {
+            sprint.getDeliverables().size();
+            sprint.getEvaluations().size();
+            for (ProjectDeliverable d : sprint.getDeliverables()) {
+                d.getRubrics().size();
+            }
+            for (ProjectEvaluation ev : sprint.getEvaluations()) {
+                ev.getRubrics().size();
+            }
+        }
     }
 
     @Transactional
@@ -410,6 +428,7 @@ public class ProjectService {
 
     private EvaluationDto toEvaluationDto(ProjectEvaluation evaluation) {
         EvaluationDto dto = new EvaluationDto();
+        dto.setId(evaluation.getId());
         dto.setTitle(evaluation.getTitle());
         dto.setWeight(evaluation.getWeight());
         dto.setAutoAddToAllSprints(evaluation.isAutoAddToAllSprints());
