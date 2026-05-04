@@ -126,9 +126,265 @@ export function getLogs(page = 0, size = 20) {
   return request(`/logs?page=${page}&size=${size}`);
 }
 
+export function createProjectTemplate(payload) {
+  return request('/project-templates', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getProjectTemplates() {
+  return request('/project-templates');
+}
+
+export function getProjects(params = {}) {
+  const query = new URLSearchParams();
+  if (params.term) query.set('term', params.term);
+  if (params.templateId != null) query.set('templateId', String(params.templateId));
+  if (params.groupId != null) query.set('groupId', String(params.groupId));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/projects${suffix}`);
+}
+
+export function getProjectDetail(projectId) {
+  return request(`/projects/${projectId}`);
+}
+
+export function getProjectCommittees(projectId) {
+  return request(`/projects/${projectId}/committees`);
+}
+
+export function createProjectCommittee(projectId, name = '') {
+  return request(`/projects/${projectId}/committees`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getProjectProfessors() {
+  return request('/projects/professors');
+}
+
+export function addProfessorToCommittee(projectId, committeeId, professorUserId) {
+  return request(`/projects/${projectId}/committees/${committeeId}/professors`, {
+    method: 'POST',
+    body: JSON.stringify({ professorUserId }),
+  });
+}
+
+export function deleteProjectCommittee(projectId, committeeId) {
+  return request(`/projects/${projectId}/committees/${committeeId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function removeProfessorFromCommittee(projectId, committeeId, professorUserId) {
+  return request(`/projects/${projectId}/committees/${committeeId}/professors/${professorUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getTemplateCommittees(templateId) {
+  return request(`/project-templates/${templateId}/committees`);
+}
+
+export function createTemplateCommittee(templateId, name = '') {
+  return request(`/project-templates/${templateId}/committees`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getTemplateProfessors() {
+  return request('/project-templates/professors');
+}
+
+export function addProfessorToTemplateCommittee(templateId, committeeId, professorUserId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}/professors`, {
+    method: 'POST',
+    body: JSON.stringify({ professorUserId }),
+  });
+}
+
+export function deleteTemplateCommittee(templateId, committeeId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function removeProfessorFromTemplateCommittee(templateId, committeeId, professorUserId) {
+  return request(`/project-templates/${templateId}/committees/${committeeId}/professors/${professorUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getStudentDashboard() {
+  return request('/students/dashboard/me');
+}
+
+export function respondGroupInvite(inviteId, action) {
+  return request(`/groups/invites/${inviteId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action }),
+  });
+}
+
+export function getMyTeams() {
+  return request('/groups/my-teams');
+}
+
+export function createTeam(groupName) {
+  return request('/groups', {
+    method: 'POST',
+    body: JSON.stringify({ groupName }),
+  });
+}
+
+export function listStudentsForInvite() {
+  return request('/groups/students');
+}
+
+export function inviteStudentToTeam(groupId, studentUserId) {
+  return request(`/groups/${groupId}/invites`, {
+    method: 'POST',
+    body: JSON.stringify({ studentUserId }),
+  });
+}
+
+export function listAdvisorOptionsForTeam(groupId) {
+  return request(`/groups/${groupId}/advisor-options`);
+}
+
+export function createProjectFromTemplateForTeam(groupId, templateId) {
+  return request(`/groups/${groupId}/project`, {
+    method: 'POST',
+    body: JSON.stringify({ templateId }),
+  });
+}
+
+export function getMyStudentProjects() {
+  return request('/students/dashboard/projects');
+}
+
 export function submitGrade(submissionId, graderId, rubricId, grade) {
   return request(`/deliverable-submissions/${submissionId}/grades`, {
     method: 'POST',
     body: JSON.stringify({ graderId, rubricId, grade }),
   });
+}
+
+// ─── Deliverable Submission API ───
+
+/**
+ * Dosya yükleme ile deliverable submission oluşturur.
+ * multipart/form-data kullanır (JSON değil).
+ */
+export async function uploadDeliverableFile(deliverableId, groupId, file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('deliverableId', String(deliverableId));
+  formData.append('groupId', String(groupId));
+
+  const response = await fetch(`${API_URL}/submissions/file`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  const text = await response.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || 'Dosya yüklenemedi.');
+  }
+  return data;
+}
+
+/**
+ * Metin editörü ile deliverable submission oluşturur.
+ */
+export function submitDeliverableText(deliverableId, groupId, textContent) {
+  return request('/submissions/text', {
+    method: 'POST',
+    body: JSON.stringify({ deliverableId, groupId, textContent }),
+  });
+}
+
+/**
+ * Belirli bir deliverable ve grup için olan submission'ı getirir.
+ */
+export function getDeliverableSubmission(deliverableId, groupId) {
+  return request(`/submissions/${deliverableId}/group/${groupId}`);
+}
+
+/**
+ * Bir projeye ait belirli grubun tüm submission'larını getirir.
+ */
+export function getProjectSubmissions(projectId, groupId) {
+  return request(`/submissions/project/${projectId}/group/${groupId}`);
+}
+
+/**
+ * Çoklu dosya kaydındaki tek dosyayı indirir (blob). fileId = submission.files[].id
+ */
+export async function downloadSubmissionFile(fileId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/submissions/files/${fileId}/download`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Dosya indirilemedi.');
+  }
+  return response.blob();
+}
+
+/**
+ * Legacy / özet: submission için en son (veya tek) dosyayı indirir.
+ */
+export async function downloadSubmissionLatestFile(submissionId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/submissions/${submissionId}/download`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Dosya indirilemedi.');
+  }
+  return response.blob();
+}
+
+/**
+ * Tek bir yüklenmiş dosya satırını siler. Sadece Team Leader.
+ */
+export function deleteSubmissionFile(fileId) {
+  return request(`/submissions/files/${fileId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Tüm submission kaydını siler (tüm dosyalar + metin). Sadece Team Leader.
+ */
+export function deleteDeliverableSubmission(submissionId) {
+  return request(`/submissions/${submissionId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Kullanıcının belirli bir gruptaki rolünü getirir (LEADER / MEMBER).
+ */
+export function getMyGroupRole(groupId) {
+  return request(`/groups/${groupId}/my-role`);
 }

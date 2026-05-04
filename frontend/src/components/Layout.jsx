@@ -25,12 +25,54 @@ function Layout() {
             Dashboard
           </NavLink>
 
-          {user?.role === 'COORDINATOR' && (
+          {/* 🚀 BUG #5 FIX: Öğrenciler ve Koordinatörler için Takım Yönetimi sekmesi */}
+          {(user?.role === 'STUDENT' || user?.role === 'COORDINATOR') && (
             <NavLink 
-              to="/panel/whitelist" 
+              to="/panel/create-group" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
-              Student Whitelist
+              Team Management
+            </NavLink>
+          )}
+
+          {user?.role === 'STUDENT' && (
+            <NavLink
+              to="/panel/my-student-projects"
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              My Projects
+            </NavLink>
+          )}
+
+          {user?.role === 'COORDINATOR' && (
+            <>
+              <NavLink 
+                to="/panel/whitelist" 
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Student Whitelist
+              </NavLink>
+              <NavLink
+                to="/panel/template-builder"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                Template Builder
+              </NavLink>
+              <NavLink
+                to="/panel/my-projects"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                My Projects
+              </NavLink>
+            </>
+          )}
+
+          {user?.role === 'PROFESSOR' && (
+            <NavLink
+              to="/panel/my-projects"
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              My Projects
             </NavLink>
           )}
 
