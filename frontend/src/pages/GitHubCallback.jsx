@@ -7,12 +7,17 @@ import './Login.css';
 function GitHubCallback() {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState('');
+  const processedRef = useRef(false);
   const navigate = useNavigate();
   const { loginUser } = useAuth();
   /** GitHub `code` is single-use; StrictMode / dependency churn must not call the API twice. */
   const exchangeStartedForKey = useRef(null);
 
   useEffect(() => {
+    // Prevent double processing in React Strict Mode
+    if (processedRef.current) return;
+    processedRef.current = true;
+    
     const code = searchParams.get('code');
     const state = searchParams.get('state');
 

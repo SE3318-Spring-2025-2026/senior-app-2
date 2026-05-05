@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -52,9 +53,14 @@ public class ProjectController {
     public ResponseEntity<ProjectListResponse> listProjects(
             @RequestParam(required = false) String term,
             @RequestParam(required = false) Long templateId,
-            @RequestParam(required = false) Long groupId
+            @RequestParam(required = false) Long groupId,
+            @AuthenticationPrincipal User principal
     ) {
-        return ResponseEntity.ok(new ProjectListResponse("success", projectService.listProjects(term, templateId, groupId)));
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+        return ResponseEntity.ok(new ProjectListResponse(
+                "success",
+                projectService.listProjects(term, templateId, groupId, user.getId(), user.getRole())
+        ));
     }
 
     @GetMapping("/{projectId}")

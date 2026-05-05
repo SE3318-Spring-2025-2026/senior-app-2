@@ -293,8 +293,9 @@ public class GroupService {
         UserGroup group = userGroupRepository.findById(groupId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
 
-        group.setGithubPatEncrypted(cryptoService.encrypt(request.getGithubPat().trim()));
-        group.setJiraSpaceUrlEncrypted(cryptoService.encrypt(request.getJiraSpaceUrl().trim()));
+        // Persist plaintext values here; JPA lifecycle listener encrypts before INSERT/UPDATE.
+        group.setGithubPatEncrypted(request.getGithubPat().trim());
+        group.setJiraSpaceUrlEncrypted(request.getJiraSpaceUrl().trim());
         userGroupRepository.save(group);
     }
 

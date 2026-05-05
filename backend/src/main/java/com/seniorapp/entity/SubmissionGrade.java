@@ -1,6 +1,7 @@
 package com.seniorapp.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "submission_grades")

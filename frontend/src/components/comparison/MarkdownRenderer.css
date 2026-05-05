@@ -1,0 +1,83 @@
+.markdown-renderer {
+  line-height: 1.6;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.markdown-renderer h1 {
+  font-size: 1.8em;
+  font-weight: 600;
+  margin: 0.5em 0;
+  color: #1a1a1a;
+  border-bottom: 2px solid #e1e4e8;
+  padding-bottom: 0.3em;
+}
+
+.markdown-renderer h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.4em 0;
+  color: #1a1a1a;
+}
+
+.markdown-renderer h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0.3em 0;
+  color: #1a1a1a;
+}
+
+.markdown-renderer h4 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.2em 0;
+  color: #424242;
+}
+
+.markdown-renderer p {
+  margin: 0.5em 0;
+}
+
+.markdown-renderer code {
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 3px;
+  padding: 0.2em 0.4em;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+  color: #d73a49;
+}
+
+.markdown-renderer strong {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.markdown-renderer em {
+  font-style: italic;
+}
+
+.markdown-renderer a {
+  color: #0366d6;
+  text-decoration: none;
+  border-bottom: 1px dotted #0366d6;
+}
+
+.markdown-renderer a:hover {
+  text-decoration: underline;
+}
+
+.markdown-renderer ul {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+  list-style-type: disc;
+}
+
+.markdown-renderer li {
+  margin: 0.25em 0;
+}
+
+.markdown-renderer br {
+  display: block;
+  height: 0;
+}

@@ -21,6 +21,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "user_groups")
+@EntityListeners(UserGroupIntegrationTokenEncryptionListener.class)
 public class UserGroup {
 
     @Id

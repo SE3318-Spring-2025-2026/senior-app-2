@@ -1,6 +1,7 @@
 package com.seniorapp.repository;
 
 import com.seniorapp.entity.GroupInviteStatus;
+import com.seniorapp.entity.User;
 import com.seniorapp.entity.UserGroupMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -24,5 +25,9 @@ public interface UserGroupMemberRepository extends JpaRepository<UserGroupMember
 
     List<UserGroupMember> findByGroupIdOrderByCreatedAtAsc(Long groupId);
 
+    List<UserGroupMember> findByGroupId(Long groupId);
+
     boolean existsByGroupIdAndUserIdAndStatusIn(Long groupId, Long userId, List<GroupInviteStatus> statuses);
+
+    Optional<UserGroupMember> findByUserAndStatus(User user, GroupInviteStatus status);
 }

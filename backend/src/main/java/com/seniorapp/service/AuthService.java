@@ -327,9 +327,14 @@ public class AuthService {
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
+        String clientId = resolvedGithubClientId();
+        String clientSecret = resolvedGithubClientSecret();
+        
+        System.out.println("DEBUG GitHub OAuth - client_id: " + clientId + ", secret length: " + clientSecret.length() + ", redirect_uri: " + githubRedirectUri);
+
         Map<String, String> body = Map.of(
-                "client_id", resolvedGithubClientId(),
-                "client_secret", resolvedGithubClientSecret(),
+                "client_id", clientId,
+                "client_secret", clientSecret,
                 "code", code,
                 "redirect_uri", githubRedirectUri
         );
