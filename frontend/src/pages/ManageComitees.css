@@ -1,168 +1,313 @@
+/* ============================================================
+   ManageComitees — responsive card-based committee management
+   ============================================================ */
+
 .manage-comitees-page {
-  padding: 28px;
+  padding: 28px 32px;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
+/* ---- Page header ---- */
 .manage-comitees-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.manage-comitees-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.5px;
 }
 
 .add-comitees-btn {
-  border: 1px solid #c7d2fe;
-  background: #eef2ff;
-  color: #1e1b4b;
-  border-radius: 8px;
-  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid #818cf8;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  color: #3730a3;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
 }
 
+.add-comitees-btn:hover {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.18);
+  transform: translateY(-1px);
+}
+
+/* ---- State boxes (loading / error / empty) ---- */
+.state-box {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.state-box.error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+/* ---- Grid ---- */
 .committee-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
 }
 
+/* ---- Committee card ---- */
 .committee-card {
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 16px;
   background: #fff;
-  padding: 16px;
-  min-height: 240px;
+  padding: 20px;
+  min-height: 220px;
+  transition: box-shadow 0.18s, border-color 0.18s;
+  display: flex;
+  flex-direction: column;
 }
 
+.committee-card:hover {
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.1);
+  border-color: #c7d2fe;
+}
+
+/* ---- Card header ---- */
 .committee-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+
+.committee-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.35;
 }
 
 .committee-card-actions {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .settings-btn {
   border: 1px solid #d1d5db;
   background: #f9fafb;
   border-radius: 8px;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.settings-btn:hover {
+  background: #e0e7ff;
+  border-color: #818cf8;
 }
 
 .delete-committee-btn {
-  border: 1px solid #fecaca;
-  background: #fff1f2;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
   color: #9f1239;
   border-radius: 8px;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: background 0.15s, box-shadow 0.15s;
 }
 
+.delete-committee-btn:hover {
+  background: #fee2e2;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
+/* ---- Member list inside card ---- */
 .committee-member-list {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
 }
 
 .committee-member-item {
-  border: 1px solid #eef2f7;
+  border: 1px solid #f1f5f9;
   background: #f8fafc;
   border-radius: 10px;
   padding: 10px 12px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
+  transition: background 0.15s;
 }
 
-.committee-member-item small,
-.committee-empty {
-  color: #6b7280;
+.committee-member-item:hover {
+  background: #f0f4ff;
 }
 
 .committee-member-item span {
   display: block;
-  font-size: 17px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
   line-height: 1.3;
 }
 
 .committee-member-item small {
   display: block;
-  margin-top: 4px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.committee-empty {
+  color: #94a3b8;
   font-size: 13px;
+  text-align: center;
+  padding: 16px 0;
+  border: 1px dashed #e2e8f0;
+  border-radius: 10px;
 }
 
 .remove-prof-inline-btn {
-  border: 1px solid #fecaca;
-  background: #fff1f2;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
   color: #9f1239;
   border-radius: 8px;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: background 0.15s;
 }
 
-.state-box {
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  border-radius: 8px;
-  padding: 10px;
+.remove-prof-inline-btn:hover {
+  background: #fee2e2;
 }
 
-.state-box.error {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
+/* ---- Add-professor popup ---- */
 .popup-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.45);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 80;
+  animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .popup-panel {
-  width: min(680px, 92vw);
-  max-height: 78vh;
+  width: min(660px, 94vw);
+  max-height: 76vh;
   overflow: auto;
-  border-radius: 12px;
+  border-radius: 16px;
   background: #fff;
   border: 1px solid #e5e7eb;
-  padding: 14px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
 }
 
 .popup-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 14px;
+}
+
+.popup-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .close-btn {
-  border: none;
-  background: transparent;
-  font-size: 16px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 15px;
   cursor: pointer;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.close-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
 }
 
 .popup-search {
   width: 100%;
-  margin-top: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 8px;
+  box-sizing: border-box;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  margin-bottom: 12px;
+}
+
+.popup-search:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
 }
 
 .popup-list {
-  margin-top: 10px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
@@ -170,24 +315,58 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid #eef2f7;
-  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
   background: #f8fafc;
-  padding: 8px 10px;
+  padding: 10px 12px;
+  gap: 12px;
+  transition: background 0.15s;
+}
+
+.popup-row:hover {
+  background: #f0f4ff;
+}
+
+.popup-row > div > div {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.popup-row > div > small {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .add-prof-btn {
-  border: 1px solid #c7d2fe;
+  border: 1.5px solid #c7d2fe;
   background: #eef2ff;
-  color: #1e1b4b;
+  color: #3730a3;
   border-radius: 8px;
   width: 32px;
   height: 32px;
   cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.add-prof-btn:hover:not(:disabled) {
+  background: #e0e7ff;
+  border-color: #818cf8;
+}
+
+.add-prof-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .readonly-chip {
-  color: #6b7280;
+  color: #64748b;
   font-size: 12px;
   border: 1px solid #e5e7eb;
   background: #f9fafb;
