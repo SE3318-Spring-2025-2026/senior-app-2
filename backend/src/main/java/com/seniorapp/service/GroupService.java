@@ -27,6 +27,7 @@ import com.seniorapp.repository.UserGroupRepository;
 import com.seniorapp.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
@@ -312,5 +313,22 @@ public class GroupService {
         } catch (URISyntaxException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid JIRA workspace URL format.");
         }
+    }
+
+    @Transactional
+    public void deleteGroup(Long groupId, Long currentUserId) {
+        UserGroup group = userGroupRepository.findById(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
+
+        // Only the team leader can delete the group
+        if (group.getTeamLeader() == null || !group.getTeamLeader().getId().equals(currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the Team Leader can delete the group.");
+        }
+
+        // Delete all group memberships
+        userGroupMemberRepository.deleteByGroupId(groupId);
+
+        // Delete the group
+        userGroupRepository.delete(group);
     }
 }

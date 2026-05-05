@@ -124,6 +124,15 @@ public class GroupController {
     public ResponseEntity<GroupIntegrationsResponse> getIntegrations(@PathVariable Long groupId) {
         return ResponseEntity.ok(groupService.getIntegrations(groupId));
     }
+
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<String> deleteGroup(
+            @PathVariable Long groupId,
+            Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        groupService.deleteGroup(groupId, currentUser.getId());
+        return ResponseEntity.ok("{\"message\":\"Group deleted successfully.\"}");
+    }
     /**
      * Endpoint for authorized professors/advisors to manually override AI-generated scores.
      * Acceptance Criteria: Validate studentId exists and is linked to auditId.
@@ -132,11 +141,11 @@ public class GroupController {
     @PreAuthorize("hasAnyRole('ADVISOR', 'PROFESSOR')")
     @PatchMapping("/grading/override/{auditId}")
     public ResponseEntity<String> overrideScore(
-            @PathVariable Long auditId, 
+            @PathVariable Long auditId,
             @Valid @RequestBody ScoreOverrideRequest request) { // <-- @Valid eklendi
-        
+
         // Manuel validation (if bloğu) sildik çünkü @Valid bunu otomatik yapıyor.
-        
+
         // Success response
         return ResponseEntity.ok("Success: Manual override request received for Audit ID " + auditId);
     }
