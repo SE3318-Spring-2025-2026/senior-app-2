@@ -105,15 +105,22 @@ function ManageComitees() {
   return (
     <div className="manage-comitees-page">
       <div className="manage-comitees-header">
-        <h1>Manage Comitees</h1>
+        <h1>Manage Committees</h1>
         {isCoordinator && (
           <button className="add-comitees-btn" onClick={handleCreateCommittee}>
-            + Add Comitees
+            + Add Committee
           </button>
         )}
       </div>
 
-      {loading && <div className="state-box">Loading...</div>}
+      {loading && (
+        <div className="state-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          Loading committees…
+        </div>
+      )}
       {error && !loading && <div className="state-box error">{error}</div>}
 
       {!loading && !error && (
@@ -174,7 +181,9 @@ function ManageComitees() {
             </article>
           ))}
           {committees.length === 0 && (
-            <div className="state-box">No committee yet. Click Add Comitees.</div>
+            <div className="state-box">
+              No committees yet.{isCoordinator ? ' Click “Add Committee” to create one.' : ' Contact your coordinator.'}
+            </div>
           )}
         </div>
       )}
