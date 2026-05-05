@@ -31,6 +31,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -222,10 +223,10 @@ public class AuthService {
 
     private AuthResponse completeStudentGithubFlow(OAuthState savedState, String primaryEmail, GithubProfile gh) {
         String studentId = savedState.getContextStudentId();
-        String flow = savedState.getOauthFlow().trim().toUpperCase();
-
         ValidStudentId entry = validStudentIdRepository.findByStudentId(studentId)
                 .orElseThrow(() -> new RuntimeException("Student ID is no longer valid."));
+
+        String flow = resolveStudentOAuthFlow(savedState.getOauthFlow(), entry);
 
         if ("LINK".equals(flow)) {
             if (entry.getAccount() != null) {
@@ -274,7 +275,18 @@ public class AuthService {
             return new AuthResponse(jwt, toUserInfo(linked));
         }
 
-        throw new RuntimeException("Invalid OAuth flow.");
+        throw new RuntimeException("Invalid OAuth flow: expected LINK or LOGIN, got \"" + flow + "\".");
+    }
+
+    /**
+     * Same rules as {@link #generateGithubAuthUrl(String, String)}: infer LINK vs LOGIN when flow is missing or junk.
+     */
+    private String resolveStudentOAuthFlow(String rawFlow, ValidStudentId entry) {
+        if (rawFlow == null || rawFlow.isBlank() || "undefined".equalsIgnoreCase(rawFlow.trim()) || "null".equalsIgnoreCase(rawFlow.trim())) {
+            return entry.getAccount() == null ? "LINK" : "LOGIN";
+        }
+        // Locale.ROOT: Turkish default locale would turn "link" into "LİNK" (dotted I), not ASCII "LINK".
+        return rawFlow.trim().toUpperCase(Locale.ROOT);
     }
 
     private GithubProfile fetchGithubProfile(String accessToken) {
@@ -330,25 +342,24 @@ public class AuthService {
         HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
         ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
 
-        // Debug logging
-        System.out.println("GitHub token response: " + response.getBody());
-        
-        if (response.getBody() == null) {
-            throw new RuntimeException("GitHub returned empty response");
+        Map<?, ?> raw = response.getBody();
+        if (raw == null) {
+            throw new RuntimeException("Failed to retrieve access token from GitHub: empty response body.");
         }
-        
-        // Check for error
-        if (response.getBody().containsKey("error")) {
-            String error = (String) response.getBody().get("error");
-            String errorDesc = (String) response.getBody().get("error_description");
-            throw new RuntimeException("GitHub OAuth error: " + error + " - " + errorDesc);
+        Object tokenObj = raw.get("access_token");
+        if (tokenObj instanceof String s && !s.isBlank()) {
+            return s;
         }
-
-        String accessToken = (String) response.getBody().get("access_token");
-        if (accessToken == null) {
-            throw new RuntimeException("Failed to retrieve access token from GitHub. Response: " + response.getBody());
+        Object err = raw.get("error");
+        Object desc = raw.get("error_description");
+        StringBuilder msg = new StringBuilder("Failed to retrieve access token from GitHub.");
+        if (err != null) {
+            msg.append(' ').append(err);
         }
-        return accessToken;
+        if (desc != null) {
+            msg.append(" — ").append(desc);
+        }
+        throw new RuntimeException(msg.toString());
     }
 
     /**
@@ -416,7 +427,7 @@ public class AuthService {
             if (flow == null || flow.isBlank() || "undefined".equalsIgnoreCase(flow) || "null".equalsIgnoreCase(flow)) {
                 f = (entry.getAccount() == null) ? "LINK" : "LOGIN";
             } else {
-                f = flow.trim().toUpperCase();
+                f = flow.trim().toUpperCase(Locale.ROOT);
             }
 
             // Artık hata fırlatmak yerine güvenli bir şekilde kaydediyoruz

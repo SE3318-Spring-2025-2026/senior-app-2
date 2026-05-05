@@ -1,12 +1,16 @@
 package com.seniorapp.entity;
 
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Bir öğrenci grubunun belirli bir deliverable için yaptığı submission.
  * Dosya yükleme veya metin editörü ile içerik girişi desteklenir.
- * Dosyalar disk üzerinde storage/{templateId}/{groupId}/{deliverableId}/ altında saklanır.
+ * Dosyalar çoğunlukla {@link DeliverableSubmissionFile} üzerinden saklanır; eski kayıtlar için
+ * file_path / original_file_name alanları legacy olarak kullanılabilir.
  */
 @Entity
 @Table(name = "deliverable_submissions", uniqueConstraints = {
@@ -59,6 +63,9 @@ public class DeliverableSubmission {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @OneToMany(mappedBy = "submission", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<DeliverableSubmissionFile> files = new ArrayList<>();
+
     @PrePersist
     void onCreate() {
         LocalDateTime now = LocalDateTime.now();
@@ -108,4 +115,12 @@ public class DeliverableSubmission {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public List<DeliverableSubmissionFile> getFiles() {
+        return files;
+    }
+
+    public void setFiles(List<DeliverableSubmissionFile> files) {
+        this.files = files;
+    }
 }

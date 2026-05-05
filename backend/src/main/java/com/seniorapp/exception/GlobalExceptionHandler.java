@@ -71,8 +71,11 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         log.warn("Access denied: {} {}", request.getMethod(), request.getRequestURI());
-        return buildResponse(HttpStatus.FORBIDDEN,
-                "You do not have permission to access this resource.", request);
+        String msg = ex.getMessage();
+        if (msg == null || msg.isBlank()) {
+            msg = "You do not have permission to access this resource.";
+        }
+        return buildResponse(HttpStatus.FORBIDDEN, msg, request);
     }
 
     // -------------------------------------------------------
@@ -109,7 +112,11 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         log.debug("Client error {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+        String msg = ex.getMessage();
+        if (msg == null || msg.isBlank()) {
+            msg = "Invalid request.";
+        }
+        return buildResponse(HttpStatus.BAD_REQUEST, msg, request);
     }
 
     // -------------------------------------------------------
@@ -131,8 +138,26 @@ public class GlobalExceptionHandler {
         } catch (Exception auditEx) {
             log.warn("Could not persist error audit log", auditEx);
         }
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred. Please try again later.", request);
+        String detail = ex.getClass().getSimpleName();
+        String msg = ex.getMessage();
+        if (msg == null || msg.isBlank()) {
+            Throwable c = ex.getCause();
+            while (c != null && (msg == null || msg.isBlank())) {
+                msg = c.getMessage();
+                if (msg != null && !msg.isBlank()) {
+                    detail += " [" + c.getClass().getSimpleName() + "]";
+                    break;
+                }
+                c = c.getCause();
+            }
+        }
+        if (msg != null && !msg.isBlank()) {
+            detail += ": " + msg;
+        }
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred (" + detail + "). Backend restart may be needed after schema changes.",
+                request);
     }
 
     // -------------------------------------------------------
