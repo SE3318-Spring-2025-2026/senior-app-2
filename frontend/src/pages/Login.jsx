@@ -15,6 +15,7 @@ function Login() {
   const [studentId, setStudentId] = useState('');
   const [studentCheck, setStudentCheck] = useState(null);
   const [error, setError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { loginUser } = useAuth();
@@ -71,23 +72,22 @@ function Login() {
       setError('Please enter your email address in the field above to reset your password.');
       return;
     }
-
+    setError('');
+    setForgotSuccess(false);
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/auth/reset-password/forgot', {
+      await fetch('http://localhost:8080/auth/reset-password/forgot', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate password reset process');
-      }
-
-      alert('If the email exists in our system, a reset link has been sent to it.');
-    } catch (err) {
-      setError(err.message);
+      // Always show the same message regardless of whether the email exists
+      // to prevent email enumeration.
+      setForgotSuccess(true);
+    } catch {
+      setError('Failed to send reset link. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -153,21 +153,28 @@ function Login() {
               />
             </div>
 
+            {forgotSuccess && (
+              <div style={{ background: '#dcfce7', color: '#166534', padding: '10px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px', border: '1px solid #bbf7d0' }}>
+                If that email exists in our system, a reset link has been sent to it.
+              </div>
+            )}
             <div style={{ textAlign: 'right', marginBottom: '20px' }}>
               <button
                 type="button"
                 onClick={handleForgotPassword}
+                disabled={loading}
                 style={{
                   background: 'none',
                   border: 'none',
                   color: '#4f46e5',
                   fontSize: '13px',
-                  cursor: 'pointer',
+                  cursor: loading ? 'not-allowed' : 'pointer',
                   padding: 0,
                   textDecoration: 'underline',
+                  opacity: loading ? 0.6 : 1,
                 }}
               >
-                Forgot Password?
+                {loading ? 'Sending...' : 'Forgot Password?'}
               </button>
             </div>
 
