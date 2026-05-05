@@ -8,6 +8,12 @@ import {
   submitEvaluationRubricGrade,
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import {
+  LETTER_GRADE_OPTIONS,
+  letterGradeToPoints,
+  pointsToNearestLetterGrade,
+  isValidLetterGrade,
+} from '../utils/letterGrade';
 
 function pickRubricId(r) {
   if (!r || typeof r !== 'object') return null;
@@ -75,7 +81,7 @@ export default function InspectorRubricGradePanel({
           const rid = g.rubricId != null ? Number(g.rubricId) : NaN;
           if (!Number.isFinite(rid)) return;
           next[rid] = {
-            grade: g.grade != null ? String(g.grade) : '',
+            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade) : '',
             comment: g.comment ?? '',
           };
         });
@@ -92,7 +98,7 @@ export default function InspectorRubricGradePanel({
           const rid = g.rubricId != null ? Number(g.rubricId) : NaN;
           if (!Number.isFinite(rid)) return;
           next[rid] = {
-            grade: g.grade != null ? String(g.grade) : '',
+            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade) : '',
             comment: g.comment ?? '',
           };
         });
@@ -109,7 +115,7 @@ export default function InspectorRubricGradePanel({
           const rid = g.evaluationRubricId != null ? Number(g.evaluationRubricId) : NaN;
           if (!Number.isFinite(rid)) return;
           next[rid] = {
-            grade: g.grade != null ? String(g.grade) : '',
+            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade) : '',
             comment: g.comment ?? '',
           };
         });
@@ -148,21 +154,29 @@ export default function InspectorRubricGradePanel({
     setLoading(true);
     setMsg(null);
     try {
+      const toSave = [];
       for (const r of rubricsNorm) {
         const rid = r.id;
         if (rid == null) continue;
         const st = rows[Number(rid)] || {};
-        const g = st.grade?.trim();
-        if (g === '' || g == null) continue;
-        const num = parseFloat(g);
-        if (Number.isNaN(num)) continue;
-
+        const letter = st.grade?.trim();
+        if (letter === '' || letter == null) continue;
+        if (!isValidLetterGrade(letter)) {
+          setMsg({ type: 'error', text: `Geçersiz harf notu: "${letter}". Lütfen listeden seçin.` });
+          setLoading(false);
+          return;
+        }
+        const num = letterGradeToPoints(letter);
+        if (num == null) continue;
+        toSave.push({ rid, num, comment: st.comment });
+      }
+      for (const { rid, num, comment } of toSave) {
         if (mode === 'submission') {
-          await submitGrade(submissionId, rid, num, st.comment);
+          await submitGrade(submissionId, rid, num, comment);
         } else if (mode === 'deliverableContext') {
-          await submitDeliverableContextGrade(groupId, deliverableId, rid, num, st.comment);
+          await submitDeliverableContextGrade(groupId, deliverableId, rid, num, comment);
         } else {
-          await submitEvaluationRubricGrade(groupId, rid, num, st.comment);
+          await submitEvaluationRubricGrade(groupId, rid, num, comment);
         }
       }
       setMsg({ type: 'success', text: 'Notlar kaydedildi.' });
@@ -244,15 +258,19 @@ export default function InspectorRubricGradePanel({
                   />
                 </td>
                 <td>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.5}
+                  <select
                     value={rows[r.id]?.grade ?? ''}
                     onChange={(e) => setCell(r.id, 'grade', e.target.value)}
-                    className="insp-rubric-grade"
-                    placeholder="0"
-                  />
+                    className="insp-rubric-grade insp-rubric-grade-select"
+                    aria-label={`${r.title || 'Rubric'} harf notu`}
+                  >
+                    <option value="">Not</option>
+                    {LETTER_GRADE_OPTIONS.map((L) => (
+                      <option key={L} value={L}>
+                        {L}
+                      </option>
+                    ))}
+                  </select>
                 </td>
               </tr>
             ) : (

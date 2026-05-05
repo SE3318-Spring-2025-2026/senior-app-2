@@ -39,8 +39,10 @@ public class EvaluationRubricGradeController {
     @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<List<EvaluationGradeResponse>> listForEvaluation(
             @PathVariable Long groupId,
-            @PathVariable Long evaluationId) {
-        List<EvaluationRubricGrade> list = evaluationRubricGradeService.listForGroupAndEvaluation(groupId, evaluationId);
+            @PathVariable Long evaluationId,
+            @AuthenticationPrincipal User principal) {
+        List<EvaluationRubricGrade> list =
+                evaluationRubricGradeService.listForGroupAndEvaluation(groupId, evaluationId, principal);
         return ResponseEntity.ok(list.stream().map(EvaluationGradeResponse::new).collect(Collectors.toList()));
     }
 }

@@ -18,4 +18,10 @@ public interface EvaluationRubricGradeRepository extends JpaRepository<Evaluatio
                     + "where g.groupId = :groupId and er.evaluation.id = :evaluationId")
     List<EvaluationRubricGrade> findAllForGroupAndEvaluation(
             @Param("groupId") Long groupId, @Param("evaluationId") Long evaluationId);
+
+    @Query(
+            "select avg(g.grade) from EvaluationRubricGrade g join g.evaluationRubric er "
+                    + "where g.groupId = :groupId and er.evaluation.id = :evaluationId")
+    Double averageGradeForGroupAndEvaluation(
+            @Param("groupId") Long groupId, @Param("evaluationId") Long evaluationId);
 }

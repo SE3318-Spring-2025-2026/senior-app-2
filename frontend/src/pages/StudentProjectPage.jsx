@@ -182,6 +182,23 @@ function StudentProjectPage() {
   const currentSprint = sprints[activeSprint];
   const totalDel = sprints.reduce((a, s) => a + (s.deliverables?.length || 0), 0);
   const submittedCount = submissions.filter((s) => s.status === 'SUBMITTED' || s.status === 'GRADED').length;
+  const gs = project.gradingSummary;
+  const pdfPrimary =
+    gs?.adjustedIndividualGrade != null ? gs.adjustedIndividualGrade : gs?.cumulativeTeamGrade;
+  const cumulativeHeader =
+    pdfPrimary != null
+      ? (typeof pdfPrimary === 'number' ? pdfPrimary.toFixed(1) : String(pdfPrimary))
+      : totalDel > 0
+        ? String(Math.round((submittedCount / totalDel) * 100))
+        : '-';
+  const successSub =
+    gs?.overallSuccessGrade != null
+      ? `Success (deliverables avg): ${typeof gs.overallSuccessGrade === 'number' ? gs.overallSuccessGrade.toFixed(1) : gs.overallSuccessGrade}`
+      : null;
+  const delGradingById = {};
+  (gs?.deliverableLines || []).forEach((row) => {
+    if (row?.deliverableId != null) delGradingById[row.deliverableId] = row;
+  });
 
   return (
     <div className="student-project-page">
@@ -201,8 +218,9 @@ function StudentProjectPage() {
           <p className="spp-project-meta">{project.department || 'Management Information Systems'} • Year {project.year || '4'}</p>
         </div>
         <div className="spp-header-right">
-          <div className="spp-cumulative-label">Cumulative Grade</div>
-          <div className="spp-cumulative-grade">{totalDel > 0 ? Math.round((submittedCount / totalDel) * 100) : '-'}</div>
+          <div className="spp-cumulative-label">Cumulative grade</div>
+          <div className="spp-cumulative-grade">{cumulativeHeader}</div>
+          {successSub && <div className="spp-cumulative-sub">{successSub}</div>}
         </div>
       </div>
 
@@ -281,6 +299,7 @@ function StudentProjectPage() {
                     onDeleteSubmission={(sid) => handleDeleteSubmission(sid, del.id)}
                     isTeamLead={isTeamLead}
                     sprintClosed={sprintClosed}
+                    teamGradingLine={delGradingById[del.id]}
                   />
                 );
               })
@@ -338,6 +357,7 @@ function DeliverableCard({
   onDeleteSubmission,
   isTeamLead,
   sprintClosed,
+  teamGradingLine,
 }) {
   const isFileType = !!deliverable.fileUploadDeliverable;
   const hasExisting = !!existingSubmission && Object.keys(existingSubmission).length > 0;
@@ -390,6 +410,11 @@ function DeliverableCard({
           <div className="spp-grade-display">
             <span className="spp-grade-value">{existingSubmission.grade}</span>
             <span className="spp-grade-label">Grade</span>
+            {teamGradingLine?.scaledGrade != null && (
+              <span className="spp-grade-team-scaled" title="Sprint süreç ortalaması ile ölçeklenmiş takım notu">
+                Team scaled: {typeof teamGradingLine.scaledGrade === 'number' ? teamGradingLine.scaledGrade.toFixed(1) : teamGradingLine.scaledGrade}
+              </span>
+            )}
           </div>
         ) : (
           <SubmissionStatusBadge submission={existingSubmission} />

@@ -2,10 +2,12 @@ const API_URL = 'http://localhost:8080/api';
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('token');
+  const redirectOn403 = options.redirectOn403 !== false;
+  const { redirectOn403: _omit403, ...fetchOptions } = options;
 
   const headers = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...fetchOptions.headers,
   };
 
   if (token) {
@@ -13,7 +15,7 @@ async function request(endpoint, options = {}) {
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     headers,
   });
 
@@ -32,8 +34,10 @@ async function request(endpoint, options = {}) {
       throw new Error('Session expired');
     }
     if (response.status === 403) {
-      window.location.href = '/access-denied';
-      throw new Error('Access denied');
+      if (redirectOn403) {
+        window.location.href = '/access-denied';
+      }
+      throw new Error(data.message || data.error || 'Access denied');
     }
     throw new Error(data.message || data.error || 'Something went wrong');
   }
@@ -375,6 +379,19 @@ export function getDeliverableSubmission(deliverableId, groupId) {
  */
 export function getProjectSubmissions(projectId, groupId) {
   return request(`/submissions/project/${projectId}/group/${groupId}`);
+}
+
+/** Komite veya grup koordinatörü: takım öğrencileri ve manuel story point alanları (403 yönlendirmez). */
+export function getProjectGroupStoryPoints(projectId, groupId) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points`, { redirectOn403: false });
+}
+
+export function putProjectGroupStoryPoints(projectId, groupId, entries) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points`, {
+    method: 'PUT',
+    body: JSON.stringify({ entries }),
+    redirectOn403: false,
+  });
 }
 
 /**

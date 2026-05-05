@@ -12,6 +12,7 @@ import com.seniorapp.repository.ProjectGroupAssignmentRepository;
 import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectTemplateRepository;
 import com.seniorapp.repository.UserRepository;
+import com.seniorapp.service.grading.PdfGradingEngineService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,7 @@ public class ProjectService {
     private final ProjectEvaluationRubricRepository projectEvaluationRubricRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final PdfGradingEngineService pdfGradingEngineService;
 
     public ProjectService(
             ProjectRepository projectRepository,
@@ -48,7 +50,8 @@ public class ProjectService {
             ProjectDeliverableRubricRepository projectDeliverableRubricRepository,
             ProjectEvaluationRubricRepository projectEvaluationRubricRepository,
             UserRepository userRepository,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            PdfGradingEngineService pdfGradingEngineService
     ) {
         this.projectRepository = projectRepository;
         this.projectTemplateRepository = projectTemplateRepository;
@@ -59,6 +62,7 @@ public class ProjectService {
         this.projectEvaluationRubricRepository = projectEvaluationRubricRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
+        this.pdfGradingEngineService = pdfGradingEngineService;
     }
 
     @Transactional
@@ -196,7 +200,12 @@ public class ProjectService {
                             .collect(Collectors.groupingBy(r -> r.getEvaluation().getId()));
         }
 
-        return toDetail(project, deliverableRubricsFromDb, evaluationRubricsFromDb);
+        ProjectDetail detail = toDetail(project, deliverableRubricsFromDb, evaluationRubricsFromDb);
+        Long gid = project.getGroupId();
+        if (gid != null && gid > 0) {
+            detail.setGradingSummary(pdfGradingEngineService.buildSummary(project, gid));
+        }
+        return detail;
     }
 
     /** Force-load sprint deliverables, evaluations and rubrics (avoids empty collections with lazy loading). */

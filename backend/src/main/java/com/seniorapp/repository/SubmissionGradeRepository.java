@@ -19,4 +19,7 @@ public interface SubmissionGradeRepository extends JpaRepository<SubmissionGrade
     boolean existsBySubmissionIdAndGraderIdAndRubricId(Long submissionId, Long graderId, Long rubricId);
 
     Optional<SubmissionGrade> findBySubmission_IdAndGrader_IdAndRubricId(Long submissionId, Long graderId, Long rubricId);
+
+    @Query("select avg(g.grade) from SubmissionGrade g where g.submission.id = :submissionId")
+    Double averageGradeBySubmissionId(@Param("submissionId") Long submissionId);
 }

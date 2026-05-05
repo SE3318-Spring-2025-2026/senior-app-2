@@ -365,6 +365,8 @@ public final class ProjectDtos {
         private List<SprintDto> sprints;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+        /** Server-computed PDF-style grades for {@link #activeGroupId}; null when no group on project. */
+        private ProjectGradingSummaryDto gradingSummary;
 
         public Long getProjectId() {
             return projectId;
@@ -444,6 +446,14 @@ public final class ProjectDtos {
 
         public void setUpdatedAt(LocalDateTime updatedAt) {
             this.updatedAt = updatedAt;
+        }
+
+        public ProjectGradingSummaryDto getGradingSummary() {
+            return gradingSummary;
+        }
+
+        public void setGradingSummary(ProjectGradingSummaryDto gradingSummary) {
+            this.gradingSummary = gradingSummary;
         }
     }
 

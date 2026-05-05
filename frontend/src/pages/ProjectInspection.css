@@ -69,6 +69,174 @@
 
 .insp-embedded {
   padding: 0;
+  min-width: 0;
+  /* Not sütunu: A+/B- gibi harf notları kesilmesin, ekranı bozmadan biraz genişletildi. */
+  --insp-not-col-w: 4.9rem;
+}
+
+/* ── Proje incelemesi: sprint içi iki sütun — sağ dar, sticky yok (üst üste binmeyi önler) ── */
+.insp-embedded .spp-sprint-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 268px);
+  gap: 18px;
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .insp-embedded .spp-sprint-content {
+    grid-template-columns: minmax(0, 1fr) 268px;
+  }
+}
+
+@media (min-width: 1320px) {
+  .insp-embedded .spp-sprint-content {
+    grid-template-columns: minmax(0, 1fr) 288px;
+  }
+}
+
+.insp-embedded .spp-main-col,
+.insp-embedded .spp-sidebar {
+  min-width: 0;
+}
+
+.insp-embedded .spp-main-col {
+  position: relative;
+  z-index: 1;
+}
+
+.insp-embedded .spp-sidebar {
+  position: relative;
+  z-index: 0;
+  align-self: start;
+}
+
+.insp-embedded .spp-eval-card.insp-eval-card {
+  padding: 10px 10px 12px;
+}
+
+.insp-embedded .insp-eval-card .insp-rubric-table {
+  table-layout: fixed;
+  width: 100%;
+  font-size: 0.78rem;
+}
+
+.insp-embedded .insp-eval-card .insp-rubric-table th,
+.insp-embedded .insp-eval-card .insp-rubric-table td {
+  padding: 6px 8px;
+}
+
+.insp-embedded .insp-eval-card .insp-rubric-comment {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.78rem;
+  padding: 6px;
+  min-height: 48px;
+  resize: vertical;
+}
+
+.insp-embedded .insp-eval-card .insp-rubric-grade-select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 32px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 18px 4px 6px;
+}
+
+.insp-embedded .insp-eval-card .insp-rubric-actions {
+  margin-top: 10px;
+}
+
+.insp-embedded .insp-eval-card .insp-rubric-actions .spp-btn-submit {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+}
+
+.insp-embedded .spp-eval-header {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.insp-embedded .spp-eval-title {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.insp-embedded .insp-eval-rubric-title {
+  font-size: 0.65rem;
+  margin-top: 6px;
+}
+
+@media (max-width: 1050px) {
+  .insp-embedded .spp-sprint-content {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+/* Deliverable (sol) rubric tablosu */
+.insp-embedded .insp-deliverable .insp-rubric-table {
+  table-layout: fixed;
+  width: 100%;
+  font-size: 0.78rem;
+}
+
+.insp-embedded .insp-deliverable .insp-rubric-table th,
+.insp-embedded .insp-deliverable .insp-rubric-table td {
+  padding: 6px 8px;
+}
+
+/* Sol + sağ: Not = sabit rem (her iki kartta piksel eşit); Yorum = kalan */
+.insp-embedded .insp-eval-card .insp-rubric-table th:nth-child(1),
+.insp-embedded .insp-eval-card .insp-rubric-table td:nth-child(1),
+.insp-embedded .insp-deliverable .insp-rubric-table th:nth-child(1),
+.insp-embedded .insp-deliverable .insp-rubric-table td:nth-child(1) {
+  width: 25%;
+  word-break: break-word;
+}
+
+.insp-embedded .insp-eval-card .insp-rubric-table th:nth-child(2),
+.insp-embedded .insp-eval-card .insp-rubric-table td:nth-child(2),
+.insp-embedded .insp-deliverable .insp-rubric-table th:nth-child(2),
+.insp-embedded .insp-deliverable .insp-rubric-table td:nth-child(2) {
+  width: calc(75% - var(--insp-not-col-w));
+}
+
+.insp-embedded .insp-eval-card .insp-rubric-table th:nth-child(3),
+.insp-embedded .insp-eval-card .insp-rubric-table td:nth-child(3),
+.insp-embedded .insp-deliverable .insp-rubric-table th:nth-child(3),
+.insp-embedded .insp-deliverable .insp-rubric-table td:nth-child(3) {
+  width: var(--insp-not-col-w);
+  min-width: var(--insp-not-col-w);
+  max-width: var(--insp-not-col-w);
+  box-sizing: border-box;
+}
+
+.insp-embedded .insp-deliverable .insp-rubric-comment {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.78rem;
+  padding: 6px;
+  min-height: 48px;
+  resize: vertical;
+}
+
+.insp-embedded .insp-deliverable .insp-rubric-grade-select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 18px 4px 6px;
+  box-sizing: border-box;
 }
 
 .insp-deliverable {
@@ -126,6 +294,24 @@
   border-radius: 8px;
   padding: 8px;
   font: inherit;
+}
+
+.insp-rubric-grade-select {
+  max-width: 140px;
+  min-width: 132px;
+  min-height: 40px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #111827;
+  background-color: #fff;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.insp-rubric-grade-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
 .insp-rubric-actions {
@@ -241,6 +427,11 @@
   margin: 4px 0 8px;
 }
 
+.insp-embedded .insp-eval-by-caption {
+  font-size: 0.72rem;
+  margin: 2px 0 6px;
+}
+
 .insp-rubric-readonly-banner {
   font-size: 0.84rem;
   color: #475569;
@@ -267,6 +458,119 @@
 
 .insp-rubric-row-readonly td {
   background: #fafafa;
+}
+
+.insp-committee-gate {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
+.insp-embedded .insp-story-points {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.insp-story-points-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.insp-story-points-help {
+  margin: 0 0 14px;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+
+.insp-story-points-muted {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.insp-story-points-error {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: #b91c1c;
+}
+
+.insp-story-points-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.insp-story-points-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.insp-story-points-table th,
+.insp-story-points-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.insp-story-points-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #334155;
+}
+
+.insp-story-points-table tr:last-child td {
+  border-bottom: none;
+}
+
+.insp-story-points-email {
+  color: #64748b;
+  max-width: 14rem;
+  word-break: break-all;
+}
+
+.insp-story-points-input {
+  width: 7rem;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.insp-story-points-input:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.insp-story-points-actions {
+  margin-top: 12px;
+}
+
+.insp-story-points-save {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #1d4ed8;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.insp-story-points-save:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 @media (max-width: 960px) {

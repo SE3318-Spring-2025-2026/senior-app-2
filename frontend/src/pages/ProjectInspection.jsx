@@ -5,6 +5,7 @@ import {
   getProjects,
   getProjectSubmissions,
   getProjectCommittees,
+  getTemplateCommittees,
   downloadSubmissionFile,
   downloadSubmissionLatestFile,
 } from '../services/api';
@@ -17,6 +18,7 @@ import {
   formatSprintDate,
 } from '../utils/sprintView';
 import InspectorRubricGradePanel from '../components/InspectorRubricGradePanel';
+import InspectorTeamStoryPoints from '../components/InspectorTeamStoryPoints';
 import './StudentProjectPage.css';
 import './ProjectInspection.css';
 
@@ -36,6 +38,7 @@ function InspectorDeliverableCard({
   onGradesSaved,
   viewGraderId,
   viewGraderName,
+  allowGrading,
 }) {
   const isFileType = !!deliverable.fileUploadDeliverable;
   const hasExisting = !!submission && Object.keys(submission).length > 0;
@@ -114,15 +117,19 @@ function InspectorDeliverableCard({
         <div className="spp-dual-submit-area">
           <div className="spp-submit-block">
             <div className="spp-submit-block-title">Rubric değerlendirme</div>
-            <InspectorRubricGradePanel
-              mode="deliverableContext"
-              groupId={groupId}
-              deliverableId={deliverable.id}
-              rubrics={rubrics}
-              viewGraderId={viewGraderId}
-              graderDisplayName={viewGraderName}
-              onSaved={onGradesSaved}
-            />
+            {allowGrading ? (
+              <InspectorRubricGradePanel
+                mode="deliverableContext"
+                groupId={groupId}
+                deliverableId={deliverable.id}
+                rubrics={rubrics}
+                viewGraderId={viewGraderId}
+                graderDisplayName={viewGraderName}
+                onSaved={onGradesSaved}
+              />
+            ) : (
+              <p className="insp-readonly-empty">Proje veya şablon komitesinde değilsiniz; rubric puanı veremezsiniz.</p>
+            )}
           </div>
           {submissionContent}
         </div>
@@ -130,15 +137,19 @@ function InspectorDeliverableCard({
         <div className="spp-dual-submit-area">
           <div className="spp-submit-block">
             <div className="spp-submit-block-title">Rubric değerlendirme</div>
-            <InspectorRubricGradePanel
-              mode="deliverableContext"
-              groupId={groupId}
-              deliverableId={deliverable.id}
-              rubrics={rubrics}
-              viewGraderId={viewGraderId}
-              graderDisplayName={viewGraderName}
-              onSaved={onGradesSaved}
-            />
+            {allowGrading ? (
+              <InspectorRubricGradePanel
+                mode="deliverableContext"
+                groupId={groupId}
+                deliverableId={deliverable.id}
+                rubrics={rubrics}
+                viewGraderId={viewGraderId}
+                graderDisplayName={viewGraderName}
+                onSaved={onGradesSaved}
+              />
+            ) : (
+              <p className="insp-readonly-empty">Proje veya şablon komitesinde değilsiniz; rubric puanı veremezsiniz.</p>
+            )}
           </div>
           {submissionContent}
         </div>
@@ -177,53 +188,36 @@ export default function ProjectInspection() {
   }, [templateId]);
 
   useEffect(() => {
-    if (!selectedProjectId) {
+    if (!selectedProjectId || templateId == null || templateId === '') {
       setCommitteeGraders([]);
       return;
     }
     let cancelled = false;
-    getProjectCommittees(selectedProjectId)
-      .then((res) => {
+    const tid = Number(templateId);
+    Promise.all([getProjectCommittees(selectedProjectId), getTemplateCommittees(tid)])
+      .then(([projRes, tmplRes]) => {
         if (cancelled) return;
-        const committees = Array.isArray(res?.data) ? res.data : [];
         const map = new Map();
-        for (const c of committees) {
-          for (const p of c.professors || []) {
-            const uid = p.userId != null ? Number(p.userId) : null;
-            if (uid == null || !Number.isFinite(uid)) continue;
-            if (!map.has(uid)) {
-              map.set(uid, {
-                userId: uid,
-                fullName: (p.fullName || '').trim() || p.email || `Hoca #${uid}`,
-                email: p.email,
-              });
+        const ingest = (committees) => {
+          for (const c of Array.isArray(committees) ? committees : []) {
+            for (const p of c.professors || []) {
+              const uid = p.userId != null ? Number(p.userId) : null;
+              if (uid == null || !Number.isFinite(uid)) continue;
+              if (!map.has(uid)) {
+                map.set(uid, {
+                  userId: uid,
+                  fullName: (p.fullName || '').trim() || p.email || `Hoca #${uid}`,
+                  email: p.email,
+                });
+              }
             }
           }
-        }
-        let list = [...map.values()].sort((a, b) =>
+        };
+        ingest(projRes?.data);
+        ingest(tmplRes?.data);
+        const list = [...map.values()].sort((a, b) =>
           (a.fullName || '').localeCompare(b.fullName || '', 'tr', { sensitivity: 'base' }),
         );
-        const myId = user?.id != null ? Number(user.id) : null;
-        const canGrade = ['PROFESSOR', 'COORDINATOR', 'ADMIN'].includes(user?.role);
-        if (myId != null && canGrade && Number.isFinite(myId) && !map.has(myId)) {
-          list.push({
-            userId: myId,
-            fullName: (user?.fullName || '').trim() || user?.email || 'Siz',
-            email: user?.email,
-          });
-          list.sort((a, b) =>
-            (a.fullName || '').localeCompare(b.fullName || '', 'tr', { sensitivity: 'base' }),
-          );
-        }
-        if (list.length === 0 && myId != null && canGrade) {
-          list = [
-            {
-              userId: myId,
-              fullName: (user?.fullName || '').trim() || user?.email || 'Siz',
-              email: user?.email,
-            },
-          ];
-        }
         setCommitteeGraders(list);
       })
       .catch(() => {
@@ -232,7 +226,7 @@ export default function ProjectInspection() {
     return () => {
       cancelled = true;
     };
-  }, [selectedProjectId, user?.id, user?.fullName, user?.email, user?.role]);
+  }, [selectedProjectId, templateId]);
 
   useEffect(() => {
     if (!committeeGraders.length) {
@@ -326,7 +320,15 @@ export default function ProjectInspection() {
     [committeeGraders, selectedGraderId],
   );
 
-  const useCommitteeTabs = committeeGraders.length > 0;
+  const myUserId = user?.id != null ? Number(user.id) : null;
+  /** Proje komitesi veya şablon komitesi (Manage Comitees) — ikisi de burada birleştirildi. */
+  const allowCommitteeGrading =
+    user?.role === 'ADMIN' ||
+    (myUserId != null &&
+      Number.isFinite(myUserId) &&
+      committeeGraders.some((g) => Number(g.userId) === myUserId));
+
+  const useCommitteeTabs = allowCommitteeGrading && committeeGraders.length > 0;
   const viewGraderIdProp = useCommitteeTabs ? selectedGraderId : undefined;
   const viewGraderNameProp =
     useCommitteeTabs && selectedCommitteeGrader
@@ -382,6 +384,14 @@ export default function ProjectInspection() {
                   onSelect={(id) => setSelectedGraderId(id)}
                 />
               )}
+              {projectDetail &&
+                groupId &&
+                !allowCommitteeGrading &&
+                ['PROFESSOR', 'COORDINATOR'].includes(user?.role || '') && (
+                  <p className="insp-committee-gate">
+                    Bu projenin veya bu şablonun komitesinde tanımlı değilsiniz. Puanlama yalnızca bu üyelere açıktır.
+                  </p>
+                )}
 
               {sprints.length > 0 && (
                 <div className="spp-timeline-section">
@@ -468,6 +478,7 @@ export default function ProjectInspection() {
                           onGradesSaved={refreshSubmissions}
                           viewGraderId={viewGraderIdProp}
                           viewGraderName={viewGraderNameProp}
+                          allowGrading={allowCommitteeGrading}
                         />
                       ))
                     )}
@@ -488,20 +499,24 @@ export default function ProjectInspection() {
                             {Array.isArray(ev.rubrics) && ev.rubrics.length > 0 && ev.id != null ? (
                               <>
                                 <div className="spp-submit-block-title insp-eval-rubric-title">Rubric değerlendirme</div>
-                                {viewGraderNameProp && (
+                                {allowCommitteeGrading && viewGraderNameProp && (
                                   <div className="insp-eval-by-caption">
                                     Görünüm — <strong>{viewGraderNameProp}</strong>
                                   </div>
                                 )}
-                                <InspectorRubricGradePanel
-                                  mode="evaluation"
-                                  groupId={groupId}
-                                  evaluationId={ev.id}
-                                  rubrics={ev.rubrics}
-                                  viewGraderId={viewGraderIdProp}
-                                  graderDisplayName={viewGraderNameProp}
-                                  onSaved={refreshSubmissions}
-                                />
+                                {allowCommitteeGrading ? (
+                                  <InspectorRubricGradePanel
+                                    mode="evaluation"
+                                    groupId={groupId}
+                                    evaluationId={ev.id}
+                                    rubrics={ev.rubrics}
+                                    viewGraderId={viewGraderIdProp}
+                                    graderDisplayName={viewGraderNameProp}
+                                    onSaved={refreshSubmissions}
+                                  />
+                                ) : (
+                                  <p className="insp-readonly-empty">Proje veya şablon komitesinde değilsiniz; sprint değerlendirme notu veremezsiniz.</p>
+                                )}
                               </>
                             ) : (
                               <div className="spp-eval-waiting">Rubric tanımı yok veya değerlendirme kimliği eksik</div>
@@ -512,6 +527,10 @@ export default function ProjectInspection() {
                     )}
                   </aside>
                 </div>
+              )}
+
+              {groupId && selectedProjectId && (
+                <InspectorTeamStoryPoints projectId={selectedProjectId} groupId={groupId} />
               )}
             </div>
           )}
