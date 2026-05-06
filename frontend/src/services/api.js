@@ -491,3 +491,12 @@ export function getPerformanceTrends(groupId) {
 export function getStudentPerformance(studentId) {
   return request(`/analytics/students/${studentId}/performance`);
 }
+
+export function getComparisonData(projectId) {
+  return request(`/comparison/${projectId}`);
+}
+
+export async function getAIFeedback(projectId) {
+  const data = await request(`/comparison/${projectId}/ai-feedback`);
+  return Array.isArray(data) ? data : [];
+}
