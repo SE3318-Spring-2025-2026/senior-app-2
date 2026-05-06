@@ -226,6 +226,10 @@ export function getStudentDashboard() {
   return request('/students/dashboard/me');
 }
 
+export function getMyGroupInvites() {
+  return request('/groups/invites/me');
+}
+
 export function respondGroupInvite(inviteId, action) {
   return request(`/groups/invites/${inviteId}`, {
     method: 'PATCH',
@@ -235,6 +239,10 @@ export function respondGroupInvite(inviteId, action) {
 
 export function getMyTeams() {
   return request('/groups/my-teams');
+}
+
+export function getAllTeams() {
+  return request('/groups');
 }
 
 export function createTeam(groupName) {
