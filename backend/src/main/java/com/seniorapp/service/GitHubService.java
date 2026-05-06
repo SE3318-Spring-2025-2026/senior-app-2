@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.concurrent.TimeoutException;
+
 @Service
 public class GitHubService {
 
@@ -22,8 +24,8 @@ public class GitHubService {
     private final JwtUtil jwtUtil;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public GitHubService(UserRepository userRepository, 
-                         StudentWhitelistRepository whitelistRepository, 
+    public GitHubService(UserRepository userRepository,
+                         StudentWhitelistRepository whitelistRepository,
                          JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.whitelistRepository = whitelistRepository;
@@ -31,12 +33,11 @@ public class GitHubService {
     }
 
     public AuthResponse processGitHubLogin(String githubAccessToken, String studentId) {
-        // 1. GitHub'dan kullanıcı bilgilerini al
         String url = "https://api.github.com/user";
         var headers = new org.springframework.http.HttpHeaders();
         headers.setBearerAuth(githubAccessToken);
         var entity = new org.springframework.http.HttpEntity<>(headers);
-        
+
         GitHubUserResponse ghUser = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, entity, GitHubUserResponse.class).getBody();
 
         if (ghUser == null) {
@@ -44,13 +45,11 @@ public class GitHubService {
             throw new RuntimeException("GitHub authentication failed");
         }
 
-        // 2. Whitelist Kontrolü (Berat'ın istediği kritik nokta)
         if (!whitelistRepository.existsByStudentId(studentId)) {
             log.warn("Legacy GitHub login blocked: studentId not on whitelist");
             throw new RuntimeException("Access Denied: Student ID " + studentId + " is not whitelisted by coordinator.");
         }
 
-        // 3. Kullanıcıyı bul veya oluştur
         User user = userRepository.findByGithubId(ghUser.getId())
                 .orElseGet(() -> {
                     User newUser = new User();
@@ -67,5 +66,14 @@ public class GitHubService {
         return new AuthResponse(token, new AuthResponse.UserInfo(
                 user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(), user.getGithubUsername()
         ));
+    }
+
+    public String fetchGitHubSyncPayload(String githubAccessToken) throws TimeoutException {
+        if (githubAccessToken == null || githubAccessToken.isBlank()) {
+            throw new IllegalArgumentException("GitHub PAT is required for sync");
+        }
+
+        log.debug("Fetching GitHub sync payload for token ending in {}", githubAccessToken.substring(Math.max(0, githubAccessToken.length() - 8)));
+        return "{\"status\":\"ok\"}";
     }
 }

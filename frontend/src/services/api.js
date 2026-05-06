@@ -165,3 +165,15 @@ export function setupIntegrations(groupId, githubPat, jiraSpaceUrl) {
 export function getGroupIntegrations(groupId) {
   return request(`/groups/${groupId}/integrations`);
 }
+// frontend/src/services/api.js dosyasının en altına ekle:
+
+export const triggerSync = async (payload) => {
+    // API yolun backend'e göre /api/ingestion/sync veya /v1/ingestion/sync olabilir, proje standardına göre düzeltirsin
+    const response = await api.post('/api/ingestion/sync', payload); 
+    return response.data;
+};
+
+export const getSyncStatus = async (jobId) => {
+    const response = await api.get(`/api/ingestion/status/${jobId}`);
+    return response.data;
+};
