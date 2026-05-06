@@ -339,6 +339,17 @@ public class GroupService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the Team Leader can delete the group.");
         }
 
+        projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId).ifPresent(assignment -> {
+            assignment.setActive(false);
+            projectGroupAssignmentRepository.save(assignment);
+
+            Project project = assignment.getProject();
+            if (project != null && groupId.equals(project.getGroupId())) {
+                project.setGroupId(null);
+                projectRepository.save(project);
+            }
+        });
+
         // Delete all group memberships
         userGroupMemberRepository.deleteByGroupId(groupId);
 
