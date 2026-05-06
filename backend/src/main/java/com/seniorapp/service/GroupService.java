@@ -279,6 +279,14 @@ public class GroupService {
         dto.setInviteStatus(membership.getStatus().name());
         return dto;
     }
+
+    public String getMyRoleInGroup(Long groupId, Long userId) {
+        UserGroupMember membership = userGroupMemberRepository
+                .findByGroupIdAndUserIdAndStatus(groupId, userId, GroupInviteStatus.ACCEPTED)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bu grubun üyesi değilsiniz."));
+        return membership.getRole().name();
+    }
+
     public void saveIntegrations(Long groupId, GroupIntegrationsRequest request) {
         validateJiraUrl(request.getJiraSpaceUrl());
 
