@@ -4,6 +4,7 @@ import {
   createProjectFromTemplateForTeam,
   createTeam,
   deleteGroup,
+  getAllTeams,
   getMyTeams,
   getProjectTemplates,
   inviteStudentToTeam,
@@ -35,8 +36,9 @@ function TeamManagement() {
 
   const load = async () => {
     try {
+      const teamsReq = user?.role === 'PROFESSOR' ? getAllTeams() : getMyTeams();
       const [teamsRes, studentsRes, templatesRes] = await Promise.all([
-        getMyTeams(),
+        teamsReq,
         listStudentsForInvite(),
         getProjectTemplates(),
       ]);
@@ -166,14 +168,16 @@ function TeamManagement() {
       <h1 className="team-title">Team Management</h1>
       {error && <div className="team-error">{error}</div>}
 
-      <form className="team-create-form" onSubmit={onCreateTeam}>
-        <input
-          value={groupName}
-          onChange={(e) => setGroupName(e.target.value)}
-          placeholder="Enter new team name"
-        />
-        <button type="submit" className="primary-btn">Create Team</button>
-      </form>
+      {(user?.role === 'STUDENT' || user?.role === 'COORDINATOR') && (
+        <form className="team-create-form" onSubmit={onCreateTeam}>
+          <input
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            placeholder="Enter new team name"
+          />
+          <button type="submit" className="primary-btn">Create Team</button>
+        </form>
+      )}
 
       <div className="team-grid">
         {teams.map((team) => (
@@ -229,14 +233,13 @@ function TeamManagement() {
                   setStudentInviteStatus({ loading: false, success: null, error: null });
                   setSelectedStudent(null);
                 }}
-                disabled={!team.currentUserLeader}
+                disabled={!team.currentUserLeader && user?.role !== 'PROFESSOR'}
               >
                 Invite Student
               </button>
               <button
                 className="ghost-btn"
                 onClick={() => openAdvisorModal(team)}
-                 disabled={!team.project}
               >
                 Invite Advisor
               </button>

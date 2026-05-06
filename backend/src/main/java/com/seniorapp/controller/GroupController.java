@@ -82,6 +82,12 @@ public class GroupController {
         return ResponseEntity.ok("{\"message\":\"Invite updated successfully.\"}");
     }
 
+    @GetMapping("/invites/me")
+    public ResponseEntity<Map<String, Object>> getMyInvites(Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        return ResponseEntity.ok(Map.of("status", "success", "data", groupService.getMyInvites(currentUser.getId())));
+    }
+
     @GetMapping("/my-teams")
     public ResponseEntity<TeamListResponse> getMyTeams(Authentication authentication) {
         User currentUser = (User) authentication.getPrincipal();

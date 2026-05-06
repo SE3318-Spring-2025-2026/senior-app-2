@@ -26,7 +26,7 @@ function Layout() {
           </NavLink>
 
           {/* 🚀 BUG #5 FIX: Öğrenciler ve Koordinatörler için Takım Yönetimi sekmesi */}
-          {(user?.role === 'STUDENT' || user?.role === 'COORDINATOR') && (
+          {(user?.role === 'STUDENT' || user?.role === 'COORDINATOR' || user?.role === 'PROFESSOR') && (
             <NavLink 
               to="/panel/create-group" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -36,12 +36,20 @@ function Layout() {
           )}
 
           {user?.role === 'STUDENT' && (
-            <NavLink
-              to="/panel/my-student-projects"
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            >
-              My Projects
-            </NavLink>
+            <>
+              <NavLink
+                to="/panel/my-student-projects"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                My Projects
+              </NavLink>
+              <NavLink
+                to="/panel/github-profile"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              >
+                My Github
+              </NavLink>
+            </>
           )}
 
           {user?.role === 'COORDINATOR' && (
