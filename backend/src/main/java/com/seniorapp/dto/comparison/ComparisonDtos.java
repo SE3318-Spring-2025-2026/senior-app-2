@@ -11,6 +11,7 @@ public final class ComparisonDtos {
         private String diff;
         private List<AIFeedbackItem> feedback;
         private List<HighlightedLine> highlightedLines;
+        private Float accuracyScore;
 
         public ComparisonResponse() {}
 
@@ -22,7 +23,10 @@ public final class ComparisonDtos {
         public void setFeedback(List<AIFeedbackItem> feedback) { this.feedback = feedback; }
         public List<HighlightedLine> getHighlightedLines() { return highlightedLines; }
         public void setHighlightedLines(List<HighlightedLine> highlightedLines) { this.highlightedLines = highlightedLines; }
+        public Float getAccuracyScore() { return accuracyScore; }
+        public void setAccuracyScore(Float accuracyScore) { this.accuracyScore = accuracyScore; }
     }
+
 
     // Jira requirement
     public static class JiraRequirement {
@@ -105,6 +109,25 @@ public final class ComparisonDtos {
         public void setMessage(String message) { this.message = message; }
     }
 
+    // AI validator output DTO (strict JSON payload)
+    public static class AIFeedbackItemList {
+        private Float accuracyScore;
+        private List<String> discrepancies;
+        private List<String> evidence;
+        private String summary;
+
+        public AIFeedbackItemList() {}
+
+        public Float getAccuracyScore() { return accuracyScore; }
+        public void setAccuracyScore(Float accuracyScore) { this.accuracyScore = accuracyScore; }
+        public List<String> getDiscrepancies() { return discrepancies; }
+        public void setDiscrepancies(List<String> discrepancies) { this.discrepancies = discrepancies; }
+        public List<String> getEvidence() { return evidence; }
+        public void setEvidence(List<String> evidence) { this.evidence = evidence; }
+        public String getSummary() { return summary; }
+        public void setSummary(String summary) { this.summary = summary; }
+    }
+
     // Feedback status update request
     public static class FeedbackStatusUpdate {
         private String status;
@@ -115,3 +138,4 @@ public final class ComparisonDtos {
         public void setStatus(String status) { this.status = status; }
     }
 }
+

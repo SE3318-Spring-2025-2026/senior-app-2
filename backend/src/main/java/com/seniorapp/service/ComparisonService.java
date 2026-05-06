@@ -14,10 +14,17 @@ import java.util.UUID;
 public class ComparisonService {
 
     private final ProjectRepository projectRepository;
+    private final com.seniorapp.service.ai.TaskCodeAlignmentValidatorService taskCodeAlignmentValidatorService;
 
-    public ComparisonService(ProjectRepository projectRepository) {
+    public ComparisonService(
+            ProjectRepository projectRepository,
+            com.seniorapp.service.ai.TaskCodeAlignmentValidatorService taskCodeAlignmentValidatorService
+    ) {
         this.projectRepository = projectRepository;
+        this.taskCodeAlignmentValidatorService = taskCodeAlignmentValidatorService;
     }
+
+
 
     @Transactional(readOnly = true)
     public ComparisonResponse getComparisonData(Long projectId) {
@@ -64,29 +71,39 @@ index 1234567..abcdefg 100644
 """;
         response.setDiff(sampleDiff);
 
-        // Placeholder AI feedback
-        List<AIFeedbackItem> feedback = new ArrayList<>();
-        AIFeedbackItem item1 = new AIFeedbackItem();
-        item1.setId(UUID.randomUUID().toString());
-        item1.setLineNumber(12);
-        item1.setSeverity("warning");
-        item1.setTitle("Use logger instead of System.out");
-        item1.setMessage("Using `System.out.println` is not recommended for production code. Use a proper logging framework.");
-        item1.setSuggestion("Replace with `logger.info(\"Processing data\")`");
-        item1.setStatus("open");
-        feedback.add(item1);
+        // AI validation (Process 5.3)
+        // NOTE: currently Jira requirement and diff are placeholders; the validator will still compute alignment.
+        @SuppressWarnings("unchecked")
+        List<String> acceptanceCriteria = requirement.getAcceptanceCriteria() instanceof List ? (List<String>) requirement.getAcceptanceCriteria() : List.of();
 
-        AIFeedbackItem item2 = new AIFeedbackItem();
-        item2.setId(UUID.randomUUID().toString());
-        item2.setLineNumber(15);
-        item2.setSeverity("info");
-        item2.setTitle("Input validation added");
-        item2.setMessage("Good practice to validate input before processing.");
-        item2.setSuggestion("Consider adding more specific validation rules");
-        item2.setStatus("open");
-        feedback.add(item2);
+        com.seniorapp.dto.comparison.ComparisonDtos.AIFeedbackItemList aiResult = taskCodeAlignmentValidatorService.validate(
+                requirement.getSummary(),
+                requirement.getDescription(),
+                acceptanceCriteria,
+                sampleDiff
+        );
+
+        // Map validator output into the existing feedback list shape.
+        // We keep highlightedLines/feedback minimal for now.
+        List<AIFeedbackItem> feedback = new ArrayList<>();
+        if (aiResult.getDiscrepancies() != null) {
+            int line = 1;
+            for (String d : aiResult.getDiscrepancies()) {
+                AIFeedbackItem item = new AIFeedbackItem();
+                item.setId(UUID.randomUUID().toString());
+                item.setLineNumber(line++);
+                item.setSeverity("warning");
+                item.setTitle("Task-code discrepancy: " + d);
+                item.setMessage("Discrepancy detected by AI validation.");
+                item.setSuggestion("Review acceptance criteria vs diff evidence.");
+                item.setStatus("open");
+                feedback.add(item);
+            }
+        }
 
         response.setFeedback(feedback);
+        response.setAccuracyScore(aiResult.getAccuracyScore());
+
 
         // Highlighted lines
         List<HighlightedLine> highlightedLines = new ArrayList<>();
