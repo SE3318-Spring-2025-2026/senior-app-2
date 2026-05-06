@@ -1,7 +1,9 @@
 package com.seniorapp.exception;
 
+import com.seniorapp.exception.AiValidationTimeoutException;
 import com.seniorapp.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -120,7 +122,19 @@ public class GlobalExceptionHandler {
     }
 
     // -------------------------------------------------------
+    // 504 – AI validation timeout
+
+    @ExceptionHandler(AiValidationTimeoutException.class)
+    public ResponseEntity<Map<String, Object>> handleAiValidationTimeout(
+            AiValidationTimeoutException ex,
+            HttpServletRequest request) {
+
+        log.warn("AI validation timeout: path={} message={}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.GATEWAY_TIMEOUT, ex.getMessage(), request);
+    }
+
     // 500 – Unexpected exceptions
+
     // -------------------------------------------------------
 
     /**
