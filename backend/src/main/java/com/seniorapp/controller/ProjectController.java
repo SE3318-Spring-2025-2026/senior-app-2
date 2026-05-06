@@ -134,7 +134,9 @@ public class ProjectController {
 
     public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable Long projectId, @AuthenticationPrincipal User principal) {
 
-        return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId, principal.getId())));
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+
+        return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId, user.getId(), user.getRole())));
 
     }
 
