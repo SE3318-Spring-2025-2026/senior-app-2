@@ -30,4 +30,6 @@ public interface UserGroupMemberRepository extends JpaRepository<UserGroupMember
     boolean existsByGroupIdAndUserIdAndStatusIn(Long groupId, Long userId, List<GroupInviteStatus> statuses);
 
     Optional<UserGroupMember> findByUserAndStatus(User user, GroupInviteStatus status);
+
+    void deleteByGroupId(Long groupId);
 }

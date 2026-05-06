@@ -266,6 +266,12 @@ export function createProjectFromTemplateForTeam(groupId, templateId) {
   });
 }
 
+export function deleteGroup(groupId) {
+  return request(`/groups/${groupId}`, {
+    method: 'DELETE',
+  });
+}
+
 export function getMyStudentProjects() {
   return request('/students/dashboard/projects');
 }
