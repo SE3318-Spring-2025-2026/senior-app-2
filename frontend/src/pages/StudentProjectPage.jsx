@@ -73,10 +73,10 @@ function StudentProjectPage() {
     setDelState(id, { submitting: true, feedback: null });
     try {
       await uploadDeliverableFile(id, groupId, st.selectedFile);
-      setDelState(id, { submitting: false, selectedFile: null, feedback: { type: 'success', msg: 'Dosya başarıyla yüklendi!' }, showResubmit: false });
+      setDelState(id, { submitting: false, selectedFile: null, feedback: { type: 'success', msg: 'File uploaded successfully!' }, showResubmit: false });
       refreshSubmissions();
     } catch (e) {
-      setDelState(id, { submitting: false, feedback: { type: 'error', msg: e.message || 'Dosya yüklenemedi.' } });
+      setDelState(id, { submitting: false, feedback: { type: 'error', msg: e.message || 'File upload failed.' } });
     }
   };
 
@@ -86,10 +86,10 @@ function StudentProjectPage() {
     setDelState(id, { submitting: true, feedback: null });
     try {
       await submitDeliverableText(id, groupId, st.textContent);
-      setDelState(id, { submitting: false, feedback: { type: 'success', msg: 'Metin başarıyla kaydedildi!' }, showResubmit: false });
+      setDelState(id, { submitting: false, feedback: { type: 'success', msg: 'Text submitted successfully!' }, showResubmit: false });
       refreshSubmissions();
     } catch (e) {
-      setDelState(id, { submitting: false, feedback: { type: 'error', msg: e.message || 'Metin kaydedilemedi.' } });
+      setDelState(id, { submitting: false, feedback: { type: 'error', msg: e.message || 'Text submission failed.' } });
     }
   };
 
@@ -101,26 +101,26 @@ function StudentProjectPage() {
       a.href = url; a.download = fileName || 'download';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-    } catch { alert('Dosya indirilemedi.'); }
+    } catch { alert('File download failed.'); }
   };
 
   const handleDelete = async (subId, delId) => {
-    if (!window.confirm('Bu dosyayı silmek istediğinizden emin misiniz?')) return;
+    if (!window.confirm('Are you sure you want to delete this submission?')) return;
     setDelState(delId, { deleting: true, feedback: null });
     try {
       await deleteSubmissionFile(subId);
-      setDelState(delId, { deleting: false, feedback: { type: 'success', msg: 'Dosya başarıyla silindi.' }, showResubmit: false });
+      setDelState(delId, { deleting: false, feedback: { type: 'success', msg: 'Submission deleted successfully.' }, showResubmit: false });
       refreshSubmissions();
     } catch (e) {
-      setDelState(delId, { deleting: false, feedback: { type: 'error', msg: e.message || 'Dosya silinemedi.' } });
+      setDelState(delId, { deleting: false, feedback: { type: 'error', msg: e.message || 'Deletion failed.' } });
     }
   };
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
 
-  if (loading) return <div className="spp-loading"><div className="spp-loading-spinner" /><p>Proje yükleniyor...</p></div>;
+  if (loading) return <div className="spp-loading"><div className="spp-loading-spinner" /><p>Loading project...</p></div>;
   if (error) return <div className="spp-error">{error}</div>;
-  if (!project) return <div className="spp-error">Proje bulunamadı.</div>;
+  if (!project) return <div className="spp-error">Project not found.</div>;
 
   const sprints = project.sprints || [];
   const currentSprint = sprints[activeSprint];
@@ -204,7 +204,7 @@ function StudentProjectPage() {
               <span className="spp-deliverables-dates">{formatDate(currentSprint.startDate)} - {formatDate(currentSprint.endDate)}</span>
             </div>
             {(!currentSprint.deliverables || currentSprint.deliverables.length === 0) ? (
-              <div className="spp-no-deliverables">Bu sprint'te deliverable yok.</div>
+              <div className="spp-no-deliverables">No deliverables in this sprint.</div>
             ) : (
               currentSprint.deliverables.map((del) => (
                 <DeliverableCard
@@ -400,17 +400,22 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
               </div>
             ) : (
               <div className="spp-existing-details">
-                <span className="spp-existing-label">Metin gönderildi</span>
-                <span className="spp-existing-size">{existingSubmission.textContent?.length || 0} karakter</span>
+                <span className="spp-existing-label">Text Submitted</span>
+                <span className="spp-existing-size">{existingSubmission.textContent?.length || 0} characters</span>
               </div>
             )}
           </div>
-          {existingSubmission.submissionType === 'FILE_UPLOAD' && (
-            <span className="spp-uploaded-badge">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Uploaded
-            </span>
-          )}
+          <div className="spp-existing-meta">
+            {existingSubmission.updatedAt && (
+              <span className="spp-existing-date">Updated: {new Date(existingSubmission.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            )}
+            {existingSubmission.submissionType === 'FILE_UPLOAD' && (
+              <span className="spp-uploaded-badge">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Uploaded
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -424,7 +429,9 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
 
       {!isGraded && isDemoType && (
         <div className="spp-demo-box">
-          MID-SPRINT DEMO - THIS DELIVERABLE TYPE DOES NOT REQUIRE A DIGITAL SUBMISSION.
+          <div className="spp-demo-icon">🎤</div>
+          <div className="spp-demo-title">Live Demo Presentation</div>
+          <div className="spp-demo-desc">This deliverable is evaluated through a live presentation. No digital submission is required.</div>
         </div>
       )}
 
@@ -443,7 +450,7 @@ function DeliverableCard({ deliverable, existingSubmission, localState, setLocal
         <div className="spp-actions-row">
           {isTeamLead && existingSubmission.id && (
             <button className="spp-btn-delete" onClick={() => onDelete(existingSubmission.id)} disabled={localState.deleting}>
-              🗑️ {localState.deleting ? 'Siliniyor...' : 'Delete Submission'}
+              🗑️ {localState.deleting ? 'Deleting...' : 'Delete Submission'}
             </button>
           )}
           {existingSubmission.submissionType === 'FILE_UPLOAD' && existingSubmission.id && (
@@ -515,7 +522,7 @@ function FileUploadArea({ localState, onFileSelect, onSubmit }) {
           </div>
           <div className="spp-actions-row">
             <button className="spp-btn-submit" onClick={onSubmit} disabled={submitting}>
-              {submitting ? '⏳ Yükleniyor...' : '⏱ Submit to System'}
+              {submitting ? '⏳ Uploading...' : '⏱ Submit to System'}
             </button>
           </div>
         </>
@@ -547,17 +554,15 @@ function TextEditorArea({ localState, setLocalState, onSubmit, existingText }) {
   return (
     <div className="spp-text-editor-area">
       <div className="spp-text-toolbar">
-        <button className="spp-toolbar-btn" onClick={() => insertFormat('**', '**')} title="Bold"><b>B</b></button>
         <button className="spp-toolbar-btn" onClick={() => insertFormat('**', '**')} title="Bold" style={{fontWeight:800}}>B</button>
-        <button className="spp-toolbar-btn" onClick={() => insertFormat('_', '_')} title="İtalik" style={{fontStyle:'italic'}}>I</button>
-        <button className="spp-toolbar-btn" onClick={() => insertFormat('_', '_')} title="Underline" style={{textDecoration:'underline'}}>I</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('_', '_')} title="Italic" style={{fontStyle:'italic'}}>I</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('<u>', '</u>')} title="Underline" style={{textDecoration:'underline'}}>U</button>
         <div className="spp-toolbar-sep" />
-        <button className="spp-toolbar-btn" onClick={() => insertFormat('`', '`')} title="Code" style={{fontFamily:'monospace'}}>{'<>'}</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('`', '`')} title="Inline Code" style={{fontFamily:'monospace'}}>{'<>'}</button>
         <button className="spp-toolbar-btn" onClick={() => insertFormat('```\n', '\n```')} title="Code Block" style={{fontFamily:'monospace'}}>{'</>'}</button>
         <div className="spp-toolbar-sep" />
-        <button className="spp-toolbar-btn" onClick={() => insertFormat('\n- ')} title="List">≡ List</button>
-        <div className="spp-toolbar-sep" />
-        <button className="spp-toolbar-btn" onClick={() => insertFormat('\n## ')} title="Heading"><span style={{fontSize:'0.75rem'}}>H₂</span> H2</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('\n- ')} title="Bullet List">☰ List</button>
+        <button className="spp-toolbar-btn" onClick={() => insertFormat('\n## ')} title="Heading">H2</button>
       </div>
       <div className="spp-textarea-wrapper" style={{ position: 'relative' }}>
         <textarea

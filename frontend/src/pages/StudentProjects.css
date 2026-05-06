@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════════════
    StudentProjects.css – "My Projects" Premium Light Dashboard
-   Matches the exact design specification from Image 3
    ═══════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -15,14 +14,29 @@
 
 /* ── Header ── */
 .sp-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
   margin-bottom: 32px;
+}
+
+.sp-header-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border-radius: 14px;
+  color: #fff;
+  flex-shrink: 0;
 }
 
 .sp-header h1 {
   font-size: 2rem;
   font-weight: 800;
   color: #111827;
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
   letter-spacing: -0.02em;
 }
 
@@ -31,6 +45,33 @@
   color: #6b7280;
   margin: 0;
   font-weight: 500;
+}
+
+.sp-header-count {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #f1f5f9;
+  border-radius: 14px;
+  padding: 12px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.sp-count-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #6366f1;
+  line-height: 1;
+}
+
+.sp-count-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
 }
 
 /* ── Grid ── */
@@ -63,6 +104,11 @@
   border-color: #e2e8f0;
 }
 
+.sp-card:hover .sp-card-footer {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .sp-card:active {
   transform: translateY(-2px) scale(0.995);
 }
@@ -85,13 +131,17 @@
 }
 
 /* ── Card Content ── */
-.sp-card-top, .sp-card-title, .sp-card-desc, .sp-stats-row, .sp-progress-row {
+.sp-card-top, .sp-card-title, .sp-card-desc, .sp-stats-row, .sp-progress-row, .sp-group-info, .sp-card-footer {
   position: relative;
   z-index: 1;
 }
 
 .sp-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 /* Status Badge */
@@ -132,6 +182,20 @@
   color: #d97706;
 }
 
+/* Term Badge */
+.sp-term-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
 /* Card Title */
 .sp-card-title {
   font-size: 1.15rem;
@@ -145,7 +209,7 @@
 .sp-card-desc {
   font-size: 0.78rem;
   color: #64748b;
-  margin: 0 0 24px 0;
+  margin: 0 0 16px 0;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -154,11 +218,30 @@
   flex: 1;
 }
 
+/* Group Info */
+.sp-group-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.sp-group-info svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
 /* ── Stats Row ── */
 .sp-stats-row {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .sp-stat {
@@ -193,6 +276,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-bottom: 16px;
 }
 
 .sp-progress-label {
@@ -215,7 +299,7 @@
 .sp-progress-fill {
   height: 100%;
   border-radius: 99px;
-  background: #818cf8;
+  background: linear-gradient(90deg, #818cf8, #6366f1);
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -226,6 +310,29 @@
   white-space: nowrap;
   min-width: 30px;
   text-align: right;
+}
+
+/* ── Card Footer ── */
+.sp-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.sp-card-action {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.sp-card-footer svg {
+  color: #6366f1;
 }
 
 /* ── Loading / Error States ── */
@@ -268,15 +375,27 @@
 
 .sp-empty {
   text-align: center;
-  padding: 48px 20px;
+  padding: 60px 20px;
   color: #9ca3af;
-  font-size: 0.92rem;
 }
 
 .sp-empty-icon {
-  font-size: 2.5rem;
-  margin-bottom: 12px;
-  opacity: 0.6;
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.sp-empty h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0 0 8px 0;
+}
+
+.sp-empty p {
+  font-size: 0.88rem;
+  color: #9ca3af;
+  margin: 0;
 }
 
 /* ── Responsive ── */
@@ -285,8 +404,19 @@
     padding: 20px 16px;
   }
 
+  .sp-header {
+    flex-wrap: wrap;
+  }
+
   .sp-header h1 {
     font-size: 1.5rem;
+  }
+
+  .sp-header-count {
+    margin-left: 0;
+    flex-direction: row;
+    gap: 8px;
+    padding: 8px 16px;
   }
 
   .sp-grid {

@@ -33,6 +33,13 @@ public class DeliverableSubmissionService {
 
     private static final Logger log = LoggerFactory.getLogger(DeliverableSubmissionService.class);
 
+    /** Dangerous file extensions that should be blocked */
+    private static final Set<String> BLOCKED_EXTENSIONS = Set.of(
+            ".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".pif",
+            ".vbs", ".vbe", ".js", ".jse", ".wsh", ".wsf",
+            ".ps1", ".psm1", ".psd1", ".reg", ".inf", ".hta"
+    );
+
     private final DeliverableSubmissionRepository submissionRepository;
     private final ProjectDeliverableRepository deliverableRepository;
     private final UserGroupMemberRepository userGroupMemberRepository;
@@ -53,24 +60,25 @@ public class DeliverableSubmissionService {
     /**
      * Dosya yükleme ile submission oluşturur veya günceller.
      * Dosya storage/{templateId}/{groupId}/{deliverableId}/ altına kaydedilir.
+     * Eğer mevcut bir submission varsa, eski dosya disk'ten silinir.
      */
     @Transactional
     public DeliverableSubmission submitFile(Long deliverableId, Long groupId, Long userId, MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Dosya boş olamaz.");
+            throw new IllegalArgumentException("File cannot be empty.");
         }
 
         ProjectDeliverable deliverable = deliverableRepository.findById(deliverableId)
-                .orElseThrow(() -> new NoSuchElementException("Deliverable bulunamadı: " + deliverableId));
+                .orElseThrow(() -> new NoSuchElementException("Deliverable not found: " + deliverableId));
 
         // Template ID'yi bul (Project → Template)
         Long templateId = deliverable.getSprint().getProject().getTemplate().getId();
 
-        // Dosyayı diske kaydet
-        String originalFileName = file.getOriginalFilename();
-        if (originalFileName == null || originalFileName.isBlank()) {
-            originalFileName = "unnamed_file";
-        }
+        // Dosya adını sanitize et
+        String originalFileName = sanitizeFileName(file.getOriginalFilename());
+
+        // Dosya uzantısı kontrolü
+        validateFileExtension(originalFileName);
 
         Path storagePath = Paths.get(storageBasePath,
                 String.valueOf(templateId),
@@ -80,16 +88,20 @@ public class DeliverableSubmissionService {
         try {
             Files.createDirectories(storagePath);
 
-            // Aynı isimde dosya varsa üzerine yaz
+            // Mevcut submission varsa eski dosyayı sil
+            Optional<DeliverableSubmission> existingSubmission =
+                    submissionRepository.findByDeliverableIdAndGroupId(deliverableId, groupId);
+            if (existingSubmission.isPresent() && existingSubmission.get().getFilePath() != null) {
+                deleteFileFromDisk(existingSubmission.get().getFilePath());
+            }
+
             Path targetFile = storagePath.resolve(originalFileName);
             Files.copy(file.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
 
-            log.info("Dosya kaydedildi: {} (boyut: {} byte)", targetFile, file.getSize());
+            log.info("File saved: {} (size: {} bytes)", targetFile, file.getSize());
 
             // Submission oluştur veya güncelle
-            DeliverableSubmission submission = submissionRepository
-                    .findByDeliverableIdAndGroupId(deliverableId, groupId)
-                    .orElse(new DeliverableSubmission());
+            DeliverableSubmission submission = existingSubmission.orElse(new DeliverableSubmission());
 
             submission.setDeliverable(deliverable);
             submission.setGroupId(groupId);
@@ -104,8 +116,8 @@ public class DeliverableSubmissionService {
             return submissionRepository.save(submission);
 
         } catch (IOException e) {
-            log.error("Dosya kaydetme hatası: {}", e.getMessage(), e);
-            throw new RuntimeException("Dosya kaydedilemedi: " + e.getMessage());
+            log.error("File save error: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to save file: " + e.getMessage());
         }
     }
 
@@ -115,15 +127,20 @@ public class DeliverableSubmissionService {
     @Transactional
     public DeliverableSubmission submitText(Long deliverableId, Long groupId, Long userId, String textContent) {
         if (textContent == null || textContent.isBlank()) {
-            throw new IllegalArgumentException("Metin içeriği boş olamaz.");
+            throw new IllegalArgumentException("Text content cannot be empty.");
         }
 
         ProjectDeliverable deliverable = deliverableRepository.findById(deliverableId)
-                .orElseThrow(() -> new NoSuchElementException("Deliverable bulunamadı: " + deliverableId));
+                .orElseThrow(() -> new NoSuchElementException("Deliverable not found: " + deliverableId));
 
         DeliverableSubmission submission = submissionRepository
                 .findByDeliverableIdAndGroupId(deliverableId, groupId)
                 .orElse(new DeliverableSubmission());
+
+        // Eğer mevcut submission dosya tipindeyse, eski dosyayı sil
+        if (submission.getSubmissionType() == SubmissionType.FILE_UPLOAD && submission.getFilePath() != null) {
+            deleteFileFromDisk(submission.getFilePath());
+        }
 
         submission.setDeliverable(deliverable);
         submission.setGroupId(groupId);
@@ -168,14 +185,14 @@ public class DeliverableSubmissionService {
     @Transactional(readOnly = true)
     public Resource downloadFile(Long submissionId) {
         DeliverableSubmission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new NoSuchElementException("Submission bulunamadı: " + submissionId));
+                .orElseThrow(() -> new NoSuchElementException("Submission not found: " + submissionId));
 
         if (submission.getSubmissionType() != SubmissionType.FILE_UPLOAD) {
-            throw new IllegalArgumentException("Bu submission dosya tipinde değil.");
+            throw new IllegalArgumentException("This submission is not a file upload type.");
         }
 
         if (submission.getFilePath() == null) {
-            throw new IllegalArgumentException("Dosya yolu bulunamadı.");
+            throw new IllegalArgumentException("File path not found for this submission.");
         }
 
         try {
@@ -184,10 +201,10 @@ public class DeliverableSubmissionService {
             if (resource.exists() && resource.isReadable()) {
                 return resource;
             } else {
-                throw new RuntimeException("Dosya okunamadı: " + filePath);
+                throw new RuntimeException("File not readable: " + filePath);
             }
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Dosya URL hatası: " + e.getMessage());
+            throw new RuntimeException("File URL error: " + e.getMessage());
         }
     }
 
@@ -198,32 +215,26 @@ public class DeliverableSubmissionService {
     @Transactional
     public void deleteSubmission(Long submissionId, Long userId) {
         DeliverableSubmission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new NoSuchElementException("Submission bulunamadı: " + submissionId));
+                .orElseThrow(() -> new NoSuchElementException("Submission not found: " + submissionId));
 
         Long groupId = submission.getGroupId();
 
         // Kullanıcının bu grupta LEADER olup olmadığını kontrol et
         UserGroupMember membership = userGroupMemberRepository
                 .findByGroupIdAndUserIdAndStatus(groupId, userId, GroupInviteStatus.ACCEPTED)
-                .orElseThrow(() -> new IllegalArgumentException("Bu grubun üyesi değilsiniz."));
+                .orElseThrow(() -> new IllegalArgumentException("You are not a member of this group."));
 
         if (membership.getRole() != GroupMembershipRole.LEADER) {
-            throw new IllegalArgumentException("Sadece Team Leader dosya silebilir.");
+            throw new IllegalArgumentException("Only the Team Leader can delete submissions.");
         }
 
         // Dosya tipindeyse disk'ten sil
         if (submission.getSubmissionType() == SubmissionType.FILE_UPLOAD && submission.getFilePath() != null) {
-            try {
-                Path filePath = Paths.get(submission.getFilePath());
-                Files.deleteIfExists(filePath);
-                log.info("Dosya disk'ten silindi: {}", filePath);
-            } catch (IOException e) {
-                log.warn("Dosya disk'ten silinemedi: {}", e.getMessage());
-            }
+            deleteFileFromDisk(submission.getFilePath());
         }
 
         submissionRepository.delete(submission);
-        log.info("Submission silindi: id={}, groupId={}, userId={}", submissionId, groupId, userId);
+        log.info("Submission deleted: id={}, groupId={}, userId={}", submissionId, groupId, userId);
     }
 
     /**
@@ -254,5 +265,53 @@ public class DeliverableSubmissionService {
      */
     public List<Map<String, Object>> toDtoList(List<DeliverableSubmission> submissions) {
         return submissions.stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    // ── Private Helpers ──
+
+    /**
+     * Sanitizes file name to prevent path traversal and XSS.
+     */
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "unnamed_file";
+        }
+        // Remove path components
+        String sanitized = Paths.get(fileName).getFileName().toString();
+        // Remove control characters and special chars
+        sanitized = sanitized.replaceAll("[\\x00-\\x1F\\x7F]", "");
+        // Ensure it's not empty after sanitization
+        if (sanitized.isBlank()) {
+            sanitized = "unnamed_file";
+        }
+        return sanitized;
+    }
+
+    /**
+     * Validates file extension against blocked list.
+     */
+    private void validateFileExtension(String fileName) {
+        if (fileName == null) return;
+        String lower = fileName.toLowerCase();
+        for (String ext : BLOCKED_EXTENSIONS) {
+            if (lower.endsWith(ext)) {
+                throw new IllegalArgumentException(
+                        "File type '" + ext + "' is not allowed. Please upload a safe file type.");
+            }
+        }
+    }
+
+    /**
+     * Safely deletes a file from disk.
+     */
+    private void deleteFileFromDisk(String filePathStr) {
+        try {
+            Path filePath = Paths.get(filePathStr);
+            if (Files.deleteIfExists(filePath)) {
+                log.info("File deleted from disk: {}", filePath);
+            }
+        } catch (IOException e) {
+            log.warn("Failed to delete file from disk: {}", e.getMessage());
+        }
     }
 }

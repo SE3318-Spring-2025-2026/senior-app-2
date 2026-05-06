@@ -1,6 +1,7 @@
 package com.seniorapp.controller;
 
 import com.seniorapp.entity.DeliverableSubmission;
+import com.seniorapp.entity.SubmissionType;
 import com.seniorapp.entity.User;
 import com.seniorapp.service.DeliverableSubmissionService;
 import org.springframework.core.io.Resource;
@@ -46,11 +47,18 @@ public class DeliverableSubmissionController {
             @RequestParam("groupId") Long groupId,
             @AuthenticationPrincipal User principal
     ) {
+        // Validate file is not empty
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "File cannot be empty. Please select a valid file."
+            ));
+        }
+
         DeliverableSubmission submission = submissionService.submitFile(
                 deliverableId, groupId, principal.getId(), file);
         return ResponseEntity.ok(Map.of(
                 "status", "success",
-                "message", "Dosya başarıyla yüklendi.",
+                "message", "File uploaded successfully.",
                 "data", submissionService.toDto(submission)
         ));
     }
@@ -71,14 +79,22 @@ public class DeliverableSubmissionController {
         String textContent = (String) body.get("textContent");
 
         if (deliverableId == null || groupId == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "deliverableId ve groupId zorunludur."));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Both deliverableId and groupId are required."
+            ));
+        }
+
+        if (textContent == null || textContent.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Text content cannot be empty."
+            ));
         }
 
         DeliverableSubmission submission = submissionService.submitText(
                 deliverableId, groupId, principal.getId(), textContent);
         return ResponseEntity.ok(Map.of(
                 "status", "success",
-                "message", "Metin başarıyla kaydedildi.",
+                "message", "Text submitted successfully.",
                 "data", submissionService.toDto(submission)
         ));
     }
@@ -127,16 +143,26 @@ public class DeliverableSubmissionController {
     /**
      * GET /api/submissions/{submissionId}/download
      * Submission'a ait dosyayı indirir.
+     * Content-Disposition header'ında orijinal dosya adı döndürülür.
      */
     @GetMapping("/{submissionId}/download")
     @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long submissionId) {
+        DeliverableSubmission submission = submissionService.getSubmissionById(submissionId)
+                .orElseThrow(() -> new NoSuchElementException("Submission not found: " + submissionId));
+
         Resource resource = submissionService.downloadFile(submissionId);
-        String fileName = "download";
+
+        // Return with original file name in Content-Disposition
+        String fileName = submission.getOriginalFileName();
+        if (fileName == null || fileName.isBlank()) {
+            fileName = "download";
+        }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + sanitizeFileName(fileName) + "\"")
                 .body(resource);
     }
 
@@ -154,7 +180,7 @@ public class DeliverableSubmissionController {
         submissionService.deleteSubmission(submissionId, principal.getId());
         return ResponseEntity.ok(Map.of(
                 "status", "success",
-                "message", "Submission başarıyla silindi."
+                "message", "Submission deleted successfully."
         ));
     }
 
@@ -170,6 +196,13 @@ public class DeliverableSubmissionController {
         return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
     }
 
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException e) {
+        return ResponseEntity.status(500).body(Map.of(
+                "error", "An unexpected error occurred: " + e.getMessage()
+        ));
+    }
+
     private Long toLong(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).longValue();
@@ -178,5 +211,15 @@ public class DeliverableSubmissionController {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    /**
+     * Sanitizes file name for Content-Disposition header.
+     * Removes potentially dangerous characters.
+     */
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null) return "download";
+        // Remove path separators, control chars, and quotes
+        return fileName.replaceAll("[\\\\/:*?\"<>|\\x00-\\x1F]", "_");
     }
 }

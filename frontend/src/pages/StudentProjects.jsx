@@ -41,8 +41,16 @@ function StudentProjects() {
     return (
       <div className="student-projects-page">
         <div className="sp-header">
-          <h1>My Projects</h1>
-          <p>Select a workspace to track your academic progress.</p>
+          <div className="sp-header-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+          </div>
+          <div>
+            <h1>My Projects</h1>
+            <p>Select a workspace to track your academic progress.</p>
+          </div>
         </div>
         <div className="sp-loading">
           <div className="sp-spinner" />
@@ -55,8 +63,22 @@ function StudentProjects() {
   return (
     <div className="student-projects-page">
       <div className="sp-header">
-        <h1>My Projects</h1>
-        <p>Select a workspace to track your academic progress.</p>
+        <div className="sp-header-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+          </svg>
+        </div>
+        <div>
+          <h1>My Projects</h1>
+          <p>Select a workspace to track your academic progress.</p>
+        </div>
+        {projects.length > 0 && (
+          <div className="sp-header-count">
+            <span className="sp-count-number">{projects.length}</span>
+            <span className="sp-count-label">Active</span>
+          </div>
+        )}
       </div>
 
       {error && <div className="sp-error">{error}</div>}
@@ -64,7 +86,8 @@ function StudentProjects() {
       {!error && projects.length === 0 && (
         <div className="sp-empty">
           <div className="sp-empty-icon">📂</div>
-          <p>No projects assigned yet.</p>
+          <h3>No Projects Yet</h3>
+          <p>You don't have any active project assignments. Please check with your coordinator.</p>
         </div>
       )}
 
@@ -101,12 +124,26 @@ function StudentProjects() {
                   <span className={`sp-status-badge ${getStatusClass(project.status)}`}>
                     {getStatusLabel(project.status)}
                   </span>
+                  {project.term && (
+                    <span className="sp-term-badge">{project.term}</span>
+                  )}
                 </div>
                 
                 <h3 className="sp-card-title">{project.projectTitle}</h3>
                 <p className="sp-card-desc">
                   {project.description || `Project #${project.projectId} • Group #${project.groupId}`}
                 </p>
+
+                {/* Group Info */}
+                <div className="sp-group-info">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  <span>Group #{project.groupId}</span>
+                </div>
 
                 {/* Stats */}
                 <div className="sp-stats-row">
@@ -130,6 +167,15 @@ function StudentProjects() {
                     />
                   </div>
                   <span className="sp-progress-pct">{progress}%</span>
+                </div>
+
+                {/* Footer Arrow */}
+                <div className="sp-card-footer">
+                  <span className="sp-card-action">View Details</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
                 </div>
               </div>
             );
