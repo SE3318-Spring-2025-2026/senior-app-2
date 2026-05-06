@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 @Service
 public class ProjectStoryPointService {
 
-    private static final double MAX_STORY_POINTS = 1_000_000.0;
+    private static final double MAX_STORY_POINTS = 100.0;
 
     private final ProjectCommitteeGradeAccessService committeeGradeAccessService;
     private final ProjectRepository projectRepository;

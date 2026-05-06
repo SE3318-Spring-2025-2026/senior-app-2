@@ -10,9 +10,11 @@ function parseSpInput(raw) {
 }
 
 export default function InspectorTeamStoryPoints({ projectId, groupId }) {
+  const MAX_STORY_POINTS = 100;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [editable, setEditable] = useState(false);
   const [rows, setRows] = useState([]);
   const [draft, setDraft] = useState({});
@@ -21,6 +23,7 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
     if (!projectId || !groupId) return;
     setLoading(true);
     setError(null);
+    setSuccess(null);
     getProjectGroupStoryPoints(projectId, groupId)
       .then((res) => {
         const data = res?.data ?? res;
@@ -48,6 +51,7 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
   }, [load]);
 
   const onChangeField = (studentUserId, value) => {
+    setSuccess(null);
     setDraft((prev) => ({ ...prev, [studentUserId]: value }));
   };
 
@@ -62,10 +66,15 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
         setError(`Geçersiz sayı: ${r.fullName || id}`);
         return;
       }
+      if (sp != null && (sp < 0 || sp > MAX_STORY_POINTS)) {
+        setError(`Story point 0 ile ${MAX_STORY_POINTS} arasında olmalı: ${r.fullName || id}`);
+        return;
+      }
       entries.push({ studentUserId: id, storyPoints: sp });
     }
     setSaving(true);
     setError(null);
+    setSuccess(null);
     putProjectGroupStoryPoints(projectId, groupId, entries)
       .then((res) => {
         const data = res?.data ?? res;
@@ -79,6 +88,7 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
           next[id] = r.storyPoints != null && r.storyPoints !== '' ? String(r.storyPoints) : '';
         }
         setDraft(next);
+        setSuccess('Story pointler kaydedildi.');
       })
       .catch((e) => {
         setError(e.message || 'Kaydedilemedi.');
@@ -93,7 +103,7 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
   return (
     <section className="insp-story-points" aria-labelledby="insp-story-points-title">
       <h3 id="insp-story-points-title" className="insp-story-points-title">
-        Öğrenci story point (manuel)
+        Öğrenci story point
       </h3>
       <p className="insp-story-points-help">
         Grading / PDF tarafında eksik kalan bireysel story point değerlerini buradan girebilirsiniz. Kayıt, proje ve
@@ -101,6 +111,7 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
       </p>
       {loading && <p className="insp-story-points-muted">Yükleniyor…</p>}
       {error && <p className="insp-story-points-error">{error}</p>}
+      {success && <p className="insp-story-points-success">{success}</p>}
       {!loading && rows.length === 0 && !error && (
         <p className="insp-story-points-muted">Bu grupta kabul edilmiş öğrenci üyesi yok.</p>
       )}
