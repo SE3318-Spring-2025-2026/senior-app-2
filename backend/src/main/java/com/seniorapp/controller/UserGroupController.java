@@ -11,16 +11,18 @@ import com.seniorapp.dto.GroupTransferResponse;
 import com.seniorapp.service.UserGroupService;
 
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RestController
-@AllArgsConstructor
 public class UserGroupController {
   private static final Logger log = LoggerFactory.getLogger(UserGroupController.class);
   private final UserGroupService userGroupService;
+
+  public UserGroupController(UserGroupService userGroupService) {
+    this.userGroupService = userGroupService;
+  }
 
   @PostMapping("/api/admin/groups/{groupId}/transfer")
   public ResponseEntity<GroupTransferResponse> forceTransferGroup(@Valid @RequestBody ForceGroupTransferRequest request) {

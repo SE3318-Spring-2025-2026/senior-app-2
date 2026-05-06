@@ -3,12 +3,31 @@ package com.seniorapp.dto;
 import java.util.List;
 
 public class ProjectTemplateResponse {
+    private List<ProjectTemplateItem> projects;
+
+    public ProjectTemplateResponse(List<ProjectTemplateItem> projects) {
+        this.projects = projects;
+    }
+
+    public ProjectTemplateResponse(String projectId, String name, int sprintCount, List<String> deliverables) {
+        this.projects = List.of(new ProjectTemplateItem(projectId, name, sprintCount, deliverables));
+    }
+
+    public List<ProjectTemplateItem> getProjects() {
+        return projects;
+    }
+
+    public void setProjects(List<ProjectTemplateItem> projects) {
+        this.projects = projects;
+    }
+
+    public static class ProjectTemplateItem {
     private String projectId;
     private String name;
     private int sprintCount;
     private List<String> deliverables;
 
-    public ProjectTemplateResponse(String projectId, String name, int sprintCount, List<String> deliverables) {
+    public ProjectTemplateItem(String projectId, String name, int sprintCount, List<String> deliverables) {
         this.projectId = projectId;
         this.name = name;
         this.sprintCount = sprintCount;
@@ -45,5 +64,6 @@ public class ProjectTemplateResponse {
 
     public void setDeliverables(List<String> deliverables) {
         this.deliverables = deliverables;
+    }
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { githubCallback } from '../services/api';
@@ -7,10 +7,17 @@ import './Login.css';
 function GitHubCallback() {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState('');
+  const processedRef = useRef(false);
   const navigate = useNavigate();
   const { loginUser } = useAuth();
+  /** GitHub `code` is single-use; StrictMode / dependency churn must not call the API twice. */
+  const exchangeStartedForKey = useRef(null);
 
   useEffect(() => {
+    // Prevent double processing in React Strict Mode
+    if (processedRef.current) return;
+    processedRef.current = true;
+    
     const code = searchParams.get('code');
     const state = searchParams.get('state');
 
@@ -18,6 +25,12 @@ function GitHubCallback() {
       setError('Missing authorization parameters from GitHub.');
       return;
     }
+
+    const key = `${code}:${state}`;
+    if (exchangeStartedForKey.current === key) {
+      return;
+    }
+    exchangeStartedForKey.current = key;
 
     githubCallback(code, state)
       .then((data) => {

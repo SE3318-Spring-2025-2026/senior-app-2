@@ -3,14 +3,28 @@ package com.seniorapp.dto;
 import com.seniorapp.entity.User;
 import com.seniorapp.entity.UserGroup;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import jakarta.validation.constraints.NotNull;
 
-@Data
 public class ForceGroupTransferRequest {
-  @NotBlank
+  @NotNull
   private UserGroup group;
 
-  @NotBlank
+  @NotNull
   private User coordinator;
+
+  public UserGroup getGroup() {
+    return group;
+  }
+
+  public void setGroup(UserGroup group) {
+    this.group = group;
+  }
+
+  public User getCoordinator() {
+    return coordinator;
+  }
+
+  public void setCoordinator(User coordinator) {
+    this.coordinator = coordinator;
+  }
 }

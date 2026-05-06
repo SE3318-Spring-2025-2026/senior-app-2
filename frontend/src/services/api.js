@@ -2,10 +2,12 @@ const API_URL = 'http://localhost:8080/api';
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('token');
+  const redirectOn403 = options.redirectOn403 !== false;
+  const { redirectOn403: _omit403, ...fetchOptions } = options;
 
   const headers = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...fetchOptions.headers,
   };
 
   if (token) {
@@ -13,7 +15,7 @@ async function request(endpoint, options = {}) {
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     headers,
   });
 
@@ -32,8 +34,10 @@ async function request(endpoint, options = {}) {
       throw new Error('Session expired');
     }
     if (response.status === 403) {
-      window.location.href = '/access-denied';
-      throw new Error('Access denied');
+      if (redirectOn403) {
+        window.location.href = '/access-denied';
+      }
+      throw new Error(data.message || data.error || 'Access denied');
     }
     throw new Error(data.message || data.error || 'Something went wrong');
   }
@@ -41,139 +45,47 @@ async function request(endpoint, options = {}) {
   return data;
 }
 
+// --- Auth & User ---
 export function login(email, password) {
-  return request('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password }),
-  });
+  return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
 }
+export function getMe() { return request('/auth/me'); }
 
-export function getMe() {
-  return request('/auth/me');
-}
-
-export function resetPassword(token, newPassword) {
-  return request('/auth/reset-password', {
-    method: 'POST',
-    body: JSON.stringify({ token, newPassword }),
-  });
-}
-
-export async function getGithubLoginUrl(studentId, flow) {
-  const qs = new URLSearchParams();
-  if (studentId) qs.set('studentId', studentId);
-  if (flow) qs.set('flow', flow);
-  const suffix = qs.toString() ? `?${qs.toString()}` : '';
-  const data = await request(`/auth/github/login${suffix}`);
-  return data.authUrl;
-}
-
-export function checkStudentIdValidity(studentId) {
-  return request('/students/student-ids/check-id-validity', {
-    method: 'POST',
-    body: JSON.stringify({ studentId }),
-  });
-}
-
-export function githubCallback(code, state) {
-  return request(`/auth/github/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
-}
-
-export function getUsers() {
-  return request('/auth/users');
-}
-
-export function changeUserRole(userId, role) {
-  return request('/auth/users/role', {
-    method: 'PUT',
-    body: JSON.stringify({ userId, role }),
-  });
-}
-
-export function registerStaff(email, fullName, role) {
-  return request('/auth/register-staff', {
-    method: 'POST',
-    body: JSON.stringify({ email, fullName, role }),
-  });
-}
-
-export function uploadStudentWhitelist(studentIds) {
-  return request('/coordinator/valid-students', {
-    method: 'POST',
-    body: JSON.stringify({ studentIds }),
-  });
-}
-
-export function getStudentWhitelist() {
-  return request('/coordinator/valid-students');
-}
-
-export function deleteStudentWhitelistEntry(id) {
-  return request(`/coordinator/valid-students/${id}`, {
-    method: 'DELETE',
-  });
-}
-
-export function getGitHubAuthUrl() {
-  return 'http://localhost:8080/api/auth/github';
-}
-
-export function getLogs(page = 0, size = 20) {
-  return request(`/logs?page=${page}&size=${size}`);
-}
-
-// Group Management APIs
-export function getGroup(groupId) {
-  return request(`/groups/${groupId}`);
-}
-
-export function getProjectTemplates() {
-  return request('/projects');
-}
-
-export function createGroup(groupName, projectId) {
-  return request('/groups', {
-    method: 'POST',
-    body: JSON.stringify({
-      groupName,
-      projectId,
-    }),
-  });
-}
-
-export function addOrRemoveGroupMember(groupId, studentId, action) {
-  return request(`/groups/${groupId}/members`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      studentId,
-      action // 'add' or 'remove'
-    }),
-  });
-}
-
-// Group Integration APIs
-export function setupIntegrations(groupId, githubPat, jiraSpaceUrl) {
-  return request(`/groups/${groupId}/integrations`, {
-    method: 'POST',
-    body: JSON.stringify({
-      githubPat,
-      jiraSpaceUrl
-    }),
-  });
-}
-
+// --- Issue #125: Sync & Ingestion ---
 export function getGroupIntegrations(groupId) {
   return request(`/groups/${groupId}/integrations`);
 }
-// frontend/src/services/api.js dosyasının en altına ekle:
+export function triggerSync(payload) {
+  return request('/ingestion/sync', { method: 'POST', body: JSON.stringify(payload) });
+}
+export function getSyncStatus(jobId) {
+  return request(`/ingestion/status/${jobId}`);
+}
 
-export const triggerSync = async (payload) => {
-    // API yolun backend'e göre /api/ingestion/sync veya /v1/ingestion/sync olabilir, proje standardına göre düzeltirsin
-    const response = await api.post('/api/ingestion/sync', payload); 
-    return response.data;
-};
+// --- Teams & Projects ---
+export function getMyTeams() { return request('/groups/my-teams'); }
+export function getProjects(params = {}) {
+  const query = new URLSearchParams();
+  if (params.groupId != null) query.set('groupId', String(params.groupId));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/projects${suffix}`);
+}
 
-export const getSyncStatus = async (jobId) => {
-    const response = await api.get(`/api/ingestion/status/${jobId}`);
-    return response.data;
-};
+// --- Grading & Submissions ---
+export function submitGrade(submissionId, rubricId, grade, comment) {
+  const body = { rubricId, grade };
+  if (comment) body.comment = comment.trim();
+  return request(`/deliverable-submissions/${submissionId}/grades`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+export async function getSubmissionGrades(submissionId) {
+  const data = await request(`/deliverable-submissions/${submissionId}/grades`);
+  return Array.isArray(data) ? data : [];
+}
+
+// --- Analytics ---
+export function getGroupPerformance(groupId) {
+  return request(`/analytics/groups/${groupId}/performance`);
+}

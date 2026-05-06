@@ -1,0 +1,322 @@
+/* ═══════════════════════════════════════════════════════
+   StudentProjects.css – "My Projects" Premium Dashboard
+   Dark-themed cards with status badges, stats & progress
+   ═══════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.student-projects-page {
+  padding: 32px 40px;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  max-width: 1200px;
+}
+
+/* ── Header ── */
+.sp-header {
+  margin-bottom: 32px;
+}
+
+.sp-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.02em;
+}
+
+.sp-header p {
+  font-size: 0.92rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ── Grid ── */
+.sp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 20px;
+}
+
+/* ── Project Card ── */
+.sp-card {
+  background: #1e1e2d;
+  border-radius: 18px;
+  padding: 24px 24px 20px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sp-card::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.sp-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.sp-card:active {
+  transform: translateY(-2px) scale(0.995);
+}
+
+/* ── Card Top Row ── */
+.sp-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sp-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Status Badge */
+.sp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.sp-status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.sp-status-research {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.sp-status-planning {
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.25);
+}
+
+.sp-status-completed {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.sp-status-default {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+/* Card Title */
+.sp-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.sp-card-desc {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  margin: 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Card Icon */
+.sp-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.sp-card-icon svg {
+  width: 28px;
+  height: 28px;
+  opacity: 0.4;
+}
+
+/* ── Stats Row ── */
+.sp-stats-row {
+  display: flex;
+  gap: 12px;
+}
+
+.sp-stat {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.sp-stat-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.sp-stat-value {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.sp-stat-value.gpa { color: #60a5fa; }
+.sp-stat-value.contribution { color: #34d399; }
+
+/* ── Progress Row ── */
+.sp-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sp-progress-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.sp-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.sp-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sp-progress-pct {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #9ca3af;
+  white-space: nowrap;
+  min-width: 30px;
+  text-align: right;
+}
+
+/* ── Loading / Error States ── */
+.sp-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+}
+
+.sp-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: sp-spin 0.7s linear infinite;
+}
+
+@keyframes sp-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sp-loading-text {
+  font-size: 0.88rem;
+  color: #6b7280;
+}
+
+.sp-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.sp-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: #9ca3af;
+  font-size: 0.92rem;
+}
+
+.sp-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .student-projects-page {
+    padding: 20px 16px;
+  }
+
+  .sp-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .sp-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .sp-card {
+    padding: 18px 18px 16px;
+  }
+}
