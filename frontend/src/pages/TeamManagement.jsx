@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import {
   createProjectFromTemplateForTeam,
   createTeam,
@@ -12,6 +13,8 @@ import {
 import './TeamManagement.css';
 
 function TeamManagement() {
+  const { user } = useAuth();
+  const isStaff = user?.role === 'PROFESSOR' || user?.role === 'ADMIN' || user?.role === 'COORDINATOR';
   const [teams, setTeams] = useState([]);
   const [students, setStudents] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -234,17 +237,18 @@ function TeamManagement() {
               <button
                 className="ghost-btn"
                 onClick={() => openAdvisorModal(team)}
-                disabled={!team.currentUserLeader || !team.project}
+                 disabled={!team.project}
               >
                 Invite Advisor
               </button>
-              <button
-                className="delete-btn"
-                onClick={() => setDeleteModalGroup(team)}
-                disabled={!team.currentUserLeader}
-              >
-                Delete
-              </button>
+              {isStaff && (
+                <button
+                  className="delete-btn"
+                  onClick={() => setDeleteModalGroup(team)}
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         ))}

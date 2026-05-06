@@ -125,14 +125,28 @@ public class GroupService {
     public void inviteMember(Long groupId, Long studentUserId, Long currentUserId) {
         UserGroup group = userGroupRepository.findById(groupId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
-        if (group.getTeamLeader() == null || !group.getTeamLeader().getId().equals(currentUserId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the Team Leader can invite members.");
+
+        // Check if current user is a member of the group
+        boolean isGroupMember = userGroupMemberRepository
+                .existsByGroupIdAndUserIdAndStatusIn(groupId, currentUserId,
+                    List.of(GroupInviteStatus.ACCEPTED));
+        if (!isGroupMember) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must be a group member to invite others.");
         }
+
         User targetUser = userRepository.findById(studentUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target student not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target user not found."));
+
+        // Only team leader can invite students, but any group member can invite professors
+        boolean isLeader = group.getTeamLeader() != null && group.getTeamLeader().getId().equals(currentUserId);
+        boolean isTargetStudent = targetUser.getRole() == Role.STUDENT;
+
+        if (isTargetStudent && !isLeader) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the Team Leader can invite students.");
+        }
 
         if (userGroupMemberRepository.existsByGroupIdAndUserIdAndStatus(groupId, studentUserId, GroupInviteStatus.ACCEPTED)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student is already in this group.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already in this group.");
         }
 
         List<UserGroupMember> existingInvites = userGroupMemberRepository
@@ -140,7 +154,7 @@ public class GroupService {
         boolean alreadyPendingForSameGroup = existingInvites.stream()
                 .anyMatch(invite -> invite.getGroup().getId().equals(groupId));
         if (alreadyPendingForSameGroup) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student already has a pending invite for this group.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has a pending invite for this group.");
         }
 
         UserGroupMember invite = new UserGroupMember();

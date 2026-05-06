@@ -126,6 +126,7 @@ public class GroupController {
     }
 
     @DeleteMapping("/{groupId}")
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN', 'COORDINATOR')")
     public ResponseEntity<String> deleteGroup(
             @PathVariable Long groupId,
             Authentication authentication) {
