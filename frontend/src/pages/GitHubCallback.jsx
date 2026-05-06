@@ -10,6 +10,8 @@ function GitHubCallback() {
   const processedRef = useRef(false);
   const navigate = useNavigate();
   const { loginUser } = useAuth();
+  /** GitHub `code` is single-use; StrictMode / dependency churn must not call the API twice. */
+  const exchangeStartedForKey = useRef(null);
 
   useEffect(() => {
     // Prevent double processing in React Strict Mode
@@ -23,6 +25,12 @@ function GitHubCallback() {
       setError('Missing authorization parameters from GitHub.');
       return;
     }
+
+    const key = `${code}:${state}`;
+    if (exchangeStartedForKey.current === key) {
+      return;
+    }
+    exchangeStartedForKey.current = key;
 
     githubCallback(code, state)
       .then((data) => {

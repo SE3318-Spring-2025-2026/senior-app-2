@@ -36,20 +36,12 @@ function Layout() {
           )}
 
           {user?.role === 'STUDENT' && (
-            <>
-              <NavLink
-                to="/panel/my-student-projects"
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              >
-                Projelerim
-              </NavLink>
-              <NavLink
-                to="/panel/github-profile"
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              >
-                🐙 GitHub Profile
-              </NavLink>
-            </>
+            <NavLink
+              to="/panel/my-student-projects"
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              My Projects
+            </NavLink>
           )}
 
           {user?.role === 'COORDINATOR' && (

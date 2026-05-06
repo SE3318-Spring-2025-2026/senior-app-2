@@ -1,483 +1,430 @@
 /* ═══════════════════════════════════════════════════════
-   StudentProjectPage.css - Deliverable Submission Page
-   Projenin mevcut tasarımıyla uyumlu, sade ve şık
+   StudentProjectPage.css – Premium Project Detail & Upload
+   Matches dark sidebar theme with modern card design
    ═══════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 .student-project-page {
-  padding: 24px 32px;
-  max-width: 1100px;
-  margin: 0 auto;
+  padding: 28px 36px;
+  max-width: 1200px;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
-/* ── Proje Header ── */
-.spp-header {
-  margin-bottom: 28px;
-}
-
-.spp-header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 6px 0;
-}
-
-.spp-header-meta {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+/* ── Back Link ── */
+.spp-back-link {
+  display: inline-flex;
   align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+  cursor: pointer;
+  transition: color 0.15s;
+  background: none;
+  border: none;
+  padding: 0;
 }
+.spp-back-link:hover { color: #4f46e5; }
 
+/* ── Header Section ── */
+.spp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 20px;
+}
+.spp-header-left { flex: 1; }
+
+.spp-header-badges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
 .spp-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
   padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  border-radius: 14px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.spp-badge-term { background: #eef2ff; color: #4338ca; }
+.spp-badge-status { background: rgba(16,185,129,0.12); color: #059669; border: 1px solid rgba(16,185,129,0.2); }
+.spp-badge-leader { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid rgba(245,158,11,0.2); }
+
+.spp-project-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+.spp-project-meta {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
 }
 
-.spp-badge-term {
-  background: #eef2ff;
-  color: #4338ca;
+/* Cumulative Grade */
+.spp-header-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+.spp-cumulative-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+.spp-cumulative-grade {
+  font-size: 3.2rem;
+  font-weight: 800;
+  color: #6366f1;
+  line-height: 1;
+}
+.spp-cumulative-sub {
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin-top: 6px;
+  max-width: 220px;
+  margin-left: auto;
+  line-height: 1.25;
 }
 
-.spp-badge-status {
-  background: #f0fdf4;
-  color: #15803d;
-}
-
-.spp-badge-group {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-/* ── Loading / Error ── */
-.spp-loading,
-.spp-error {
-  text-align: center;
-  padding: 60px 20px;
-  font-size: 0.95rem;
-}
-
-.spp-error {
-  color: #b91c1c;
-}
-
-.spp-loading-spinner {
-  display: inline-block;
-  width: 28px;
-  height: 28px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #6366f1;
-  border-radius: 50%;
-  animation: spp-spin 0.7s linear infinite;
-  margin-bottom: 10px;
-}
-
-@keyframes spp-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── Sprint Accordion ── */
-.spp-sprint {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  margin-bottom: 14px;
+/* ── Timeline Progress ── */
+.spp-timeline-section {
   background: #fff;
-  overflow: hidden;
-  transition: box-shadow 0.2s;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
 }
-
-.spp-sprint:hover {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-}
-
-.spp-sprint-header {
+.spp-timeline-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  cursor: pointer;
-  user-select: none;
-  background: #fafbfc;
-  border-bottom: 1px solid transparent;
-  transition: background 0.15s;
+  margin-bottom: 20px;
 }
-
-.spp-sprint-header:hover {
-  background: #f1f5f9;
-}
-
-.spp-sprint.open .spp-sprint-header {
-  border-bottom-color: #e5e7eb;
-}
-
-.spp-sprint-title-group {
+.spp-timeline-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.spp-sprint-chevron {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  transition: transform 0.2s;
-}
-
-.spp-sprint.open .spp-sprint-chevron {
-  transform: rotate(90deg);
-}
-
-.spp-sprint-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #334155;
-}
-
-.spp-sprint-dates {
+  gap: 8px;
   font-size: 0.78rem;
-  color: #94a3b8;
-  white-space: nowrap;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #374151;
+}
+.spp-timeline-title svg { color: #6366f1; }
+.spp-timeline-legend {
+  display: flex;
+  gap: 16px;
+}
+.spp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+.spp-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.spp-legend-dot.active { background: #6366f1; }
+.spp-legend-dot.completed { background: #10b981; }
+
+/* Sprint Steps */
+.spp-step-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  color: #9ca3af;
+  transition: all 0.25s;
+}
+.spp-step-circle.completed {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+.spp-step-circle.active {
+  background: #fff;
+  border-color: #6366f1;
+  color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
+}
+.spp-step-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+}
+.spp-step-label.active { color: #6366f1; }
+.spp-step-label.completed { color: #10b981; }
+
+.spp-step-line {
+  flex: 1;
+  height: 3px;
+  background: #e5e7eb;
+  position: relative;
+  top: -15px;
+  z-index: 0;
+}
+.spp-step-line.completed { background: #10b981; }
+
+.spp-legend-dot.inspected { background: #818cf8; }
+
+.spp-sprint-steps {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  justify-content: center;
+  flex-wrap: wrap;
+  row-gap: 10px;
+  column-gap: 0;
+  padding: 20px 8px 8px;
 }
 
-.spp-sprint-body {
-  padding: 16px 18px;
+/* Sadece iki sprint adımı arasında; ilk sola / son sağa uzamaz */
+.spp-sprint-steps-connector {
+  flex: 1 1 12px;
+  min-width: 8px;
+  height: 0;
+  margin-top: 52px;
+  border-top: 2px dashed #cbd5e1;
+  z-index: 0;
+  pointer-events: none;
+  align-self: flex-start;
 }
 
-.spp-no-deliverables {
+.spp-sprint-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 72px;
+  max-width: 160px;
+  z-index: 1;
+  padding: 8px 6px 10px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+.spp-sprint-step.inspected {
+  background: rgba(99, 102, 241, 0.11);
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+}
+.spp-sprint-step.completed:not(.inspected) {
+  opacity: 0.92;
+}
+.spp-step-circle.inspected {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+.spp-step-circle.current:not(.completed) {
+  border-width: 3px;
+  border-color: #6366f1;
+  color: #6366f1;
+  background: #fff;
+}
+.spp-step-label.inspected { color: #4f46e5; }
+.spp-step-dates {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #9ca3af;
   text-align: center;
-  color: #94a3b8;
-  font-size: 0.88rem;
-  padding: 20px;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.spp-step-dates.current { color: #6366f1; }
+.spp-step-dates.inspected { color: #4f46e5; }
+.spp-step-dates.completed { color: #059669; }
+
+.spp-current-pill {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #4338ca;
+  background: #eef2ff;
+  padding: 3px 8px;
+  border-radius: 8px;
 }
 
-/* ── Deliverable Kartı ── */
+/* ── Sprint Content (2 column layout) ── */
+.spp-sprint-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* ── Sprint Deliverables Header ── */
+.spp-deliverables-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.spp-deliverables-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+}
+.spp-deliverables-dates {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+/* ── Deliverable Card ── */
 .spp-deliverable {
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 16px 18px;
-  margin-bottom: 12px;
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 14px;
   background: #fff;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-
-.spp-deliverable:last-child {
-  margin-bottom: 0;
-}
-
 .spp-deliverable:hover {
   border-color: #c7d2fe;
+  box-shadow: 0 2px 16px rgba(99,102,241,0.06);
+}
+.spp-deliverable:last-child { margin-bottom: 0; }
+.spp-deliverable--sprint-closed {
+  border-color: #e2e8f0;
+  background: #fafafa;
+}
+.spp-sprint-closed-notice {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
 }
 
 .spp-deliverable-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  gap: 12px;
 }
-
 .spp-deliverable-info h4 {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
   margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-
+.spp-deliverable-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6366f1;
+  display: inline-block;
+  flex-shrink: 0;
+}
 .spp-deliverable-desc {
   font-size: 0.82rem;
-  color: #64748b;
-  line-height: 1.45;
-  margin: 0 0 6px 0;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0 0 10px 0;
 }
-
 .spp-deliverable-tags {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-
 .spp-tag {
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 2px 10px;
+  padding: 4px 14px;
   border-radius: 14px;
-  background: #f1f5f9;
-  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
+.spp-tag-file { background: #ede9fe; color: #6d28d9; }
+.spp-tag-text { background: #dbeafe; color: #1d4ed8; }
+.spp-tag-weight { background: #f1f5f9; color: #475569; }
 
-.spp-tag-file {
-  background: #ede9fe;
-  color: #6d28d9;
-}
-
-.spp-tag-text {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.spp-tag-weight {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-/* ── Submission Status ── */
+/* ── Submission Status Badge ── */
 .spp-submission-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 16px;
-  white-space: nowrap;
-}
-
-.spp-status-submitted {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.spp-status-draft {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.spp-status-graded {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.spp-status-none {
-  background: #f1f5f9;
-  color: #94a3b8;
-}
-
-/* ── Dosya Yükleme Alanı ── */
-.spp-upload-area {
-  margin-top: 12px;
-}
-
-.spp-dropzone {
-  border: 2px dashed #d1d5db;
-  border-radius: 10px;
-  padding: 28px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-  background: #fafbfc;
-}
-
-.spp-dropzone:hover,
-.spp-dropzone.dragging {
-  border-color: #818cf8;
-  background: #eef2ff;
-}
-
-.spp-dropzone-icon {
-  font-size: 2rem;
-  margin-bottom: 6px;
-  opacity: 0.6;
-}
-
-.spp-dropzone-text {
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.spp-dropzone-text strong {
-  color: #6366f1;
-  cursor: pointer;
-}
-
-.spp-dropzone-hint {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-top: 4px;
-}
-
-/* ── Seçili Dosya Önizleme ── */
-.spp-file-preview {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  margin-top: 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.spp-file-icon {
-  font-size: 1.5rem;
-}
-
-.spp-file-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.spp-file-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.spp-file-size {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
-
-.spp-file-remove {
-  background: none;
-  border: none;
-  color: #ef4444;
-  cursor: pointer;
-  font-size: 1.1rem;
-  padding: 4px;
-  border-radius: 4px;
-  transition: background 0.15s;
-}
-
-.spp-file-remove:hover {
-  background: #fee2e2;
-}
-
-/* ── Metin Editörü ── */
-.spp-text-editor-area {
-  margin-top: 12px;
-}
-
-.spp-text-toolbar {
-  display: flex;
-  gap: 2px;
-  padding: 6px 8px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-}
-
-.spp-toolbar-btn {
-  background: none;
-  border: 1px solid transparent;
-  padding: 5px 9px;
-  cursor: pointer;
-  font-size: 0.82rem;
-  color: #475569;
-  border-radius: 5px;
-  transition: all 0.15s;
-  font-weight: 600;
-}
-
-.spp-toolbar-btn:hover {
-  background: #e5e7eb;
-}
-
-.spp-toolbar-btn.active {
-  background: #eef2ff;
-  color: #4338ca;
-  border-color: #c7d2fe;
-}
-
-.spp-textarea {
-  width: 100%;
-  min-height: 180px;
-  padding: 14px 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 0 0 8px 8px;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  font-size: 0.88rem;
-  line-height: 1.6;
-  color: #1e293b;
-  resize: vertical;
-  outline: none;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-}
-
-.spp-textarea:focus {
-  border-color: #818cf8;
-}
-
-.spp-char-count {
-  text-align: right;
   font-size: 0.72rem;
-  color: #94a3b8;
-  margin-top: 4px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
+.spp-status-none { background: #f1f5f9; color: #6b7280; }
+.spp-status-submitted { background: #dcfce7; color: #15803d; }
+.spp-status-graded { background: #dbeafe; color: #1d4ed8; }
+.spp-status-draft { background: #fef3c7; color: #92400e; }
 
-/* ── Submit Butonu ── */
-.spp-submit-row {
+/* Grade Display */
+.spp-grade-display {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 2px;
 }
-
-.spp-btn-submit {
-  padding: 9px 22px;
-  background: #6366f1;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
+.spp-grade-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #10b981;
+  line-height: 1;
+}
+.spp-grade-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+.spp-grade-team-scaled {
+  font-size: 0.65rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.spp-btn-submit:hover:not(:disabled) {
-  background: #4f46e5;
-}
-
-.spp-btn-submit:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.spp-btn-submit:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.spp-btn-download {
-  padding: 8px 18px;
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.spp-btn-download:hover {
-  background: #e2e8f0;
-}
-
-/* ── Feedback Messages ── */
-.spp-feedback {
-  font-size: 0.82rem;
-  padding: 8px 14px;
-  border-radius: 8px;
-  margin-top: 10px;
-}
-
-.spp-feedback-success {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.spp-feedback-error {
-  background: #fee2e2;
-  color: #b91c1c;
+  color: #6366f1;
+  margin-top: 4px;
+  text-align: center;
+  max-width: 120px;
+  line-height: 1.2;
 }
 
 /* ── Existing Submission Info ── */
@@ -485,54 +432,551 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  margin-top: 10px;
+  padding: 14px 18px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
-
 .spp-existing-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.82rem;
-  color: #15803d;
+  gap: 12px;
+  font-size: 0.84rem;
+  color: #374151;
 }
+.spp-file-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #eef2ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.spp-existing-details { display: flex; flex-direction: column; gap: 1px; }
+.spp-existing-label { font-weight: 700; color: #111827; font-size: 0.88rem; }
+.spp-existing-size { color: #9ca3af; font-size: 0.75rem; }
+
+.spp-uploaded-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #059669;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.spp-uploaded-badge svg { color: #10b981; }
 
 .spp-existing-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.spp-btn-resubmit {
-  padding: 5px 14px;
+.spp-file-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.spp-file-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fafbfc;
+}
+.spp-file-list-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.spp-dual-submit-area {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 10px;
+  align-items: stretch;
+}
+.spp-submit-block-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+.spp-submit-block--full { max-width: 100%; }
+
+.spp-no-upload-required {
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.spp-deliverable.dragging {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+
+.spp-upload-actions-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.spp-drop-hint {
   font-size: 0.78rem;
+  color: #6b7280;
+  margin: 10px 0 0;
+  line-height: 1.45;
+}
+
+.spp-sidebar-evaluations {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.spp-sidebar-empty {
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin: 0;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px dashed #e5e7eb;
+}
+.spp-eval-meta {
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin: 0 0 8px;
+}
+.spp-eval-rubric-list {
+  margin: 0;
+  padding: 0 0 0 16px;
+  list-style: disc;
+  font-size: 0.78rem;
+  color: #374151;
+}
+.spp-eval-rubric {
+  margin-bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+.spp-eval-rubric-title { font-weight: 600; }
+.spp-eval-rubric-type {
+  font-size: 0.68rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.spp-delete-all-wrap {
+  margin-top: 12px;
+}
+.spp-btn-delete--ghost {
+  background: transparent;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.spp-btn-delete--ghost:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+/* ── Dropzone ── */
+.spp-upload-area { margin-top: 14px; }
+.spp-upload-area--locked {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+}
+.spp-upload-locked-msg {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.spp-dropzone {
+  border: 2px dashed #d1d5db;
+  border-radius: 14px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafbfc;
+}
+.spp-dropzone:hover, .spp-dropzone.dragging {
+  border-color: #818cf8;
+  background: #eef2ff;
+}
+.spp-dropzone-text {
+  font-size: 0.82rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   font-weight: 600;
+}
+.spp-dropzone-text strong { color: #6366f1; cursor: pointer; }
+
+/* File Preview */
+.spp-file-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-top: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.spp-file-details { flex: 1; min-width: 0; }
+.spp-file-name { font-size: 0.85rem; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spp-file-size { font-size: 0.75rem; color: #9ca3af; }
+.spp-file-remove { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; padding: 6px; border-radius: 6px; }
+.spp-file-remove:hover { background: #fee2e2; }
+
+/* ── Text Editor ── */
+.spp-text-editor-area { margin-top: 14px; }
+
+.spp-text-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+}
+.spp-toolbar-btn {
+  background: none;
+  border: 1px solid transparent;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #475569;
+  border-radius: 6px;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+.spp-toolbar-btn:hover { background: #e5e7eb; }
+.spp-toolbar-sep {
+  width: 1px;
+  background: #e5e7eb;
+  margin: 4px 6px;
+}
+
+.spp-textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 0 0 12px 12px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #1e293b;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.spp-textarea::placeholder { color: #9ca3af; }
+.spp-textarea:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.08); }
+.spp-char-count { text-align: left; font-size: 0.68rem; color: #9ca3af; margin-top: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── Action Buttons ── */
+.spp-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.spp-btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: #fff;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.spp-btn-delete:hover:not(:disabled) { background: #fef2f2; border-color: #f87171; }
+.spp-btn-delete:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.spp-btn-load {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: #fff;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.spp-btn-load:hover { background: #f1f5f9; }
+
+.spp-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 28px;
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 10px rgba(99,102,241,0.25);
+  margin-left: auto;
+}
+.spp-btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(99,102,241,0.35); }
+.spp-btn-submit:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+
+.spp-btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.spp-btn-download:hover { background: #e2e8f0; }
+
+.spp-btn-resubmit {
+  padding: 8px 16px;
+  font-size: 0.78rem;
+  font-weight: 700;
   background: #fff;
   color: #6366f1;
   border: 1px solid #c7d2fe;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
+}
+.spp-btn-resubmit:hover { background: #eef2ff; }
+
+/* ── Sprint Report Sidebar ── */
+.spp-sidebar {
+  position: sticky;
+  top: 28px;
+}
+.spp-sidebar-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin-bottom: 14px;
 }
 
-.spp-btn-resubmit:hover {
-  background: #eef2ff;
+.spp-report-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 14px;
+  transition: box-shadow 0.2s;
+}
+.spp-report-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+
+.spp-report-contribution {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.spp-contribution-score {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.spp-contribution-number {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #111827;
+}
+.spp-contribution-total {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+}
+.spp-contribution-info { flex: 1; }
+.spp-contribution-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+.spp-contribution-text {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111827;
+}
+.spp-excellent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  background: #1e1e2d;
+  color: #10b981;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Evaluation Cards */
+.spp-eval-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.spp-eval-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.spp-eval-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.spp-eval-status {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #9ca3af;
+}
+.spp-eval-icon {
+  font-size: 1.6rem;
+  color: #d1d5db;
+  margin-bottom: 4px;
+}
+.spp-eval-waiting {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Feedback Messages ── */
+.spp-feedback {
+  font-size: 0.82rem;
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin-top: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: spp-feedback-in 0.3s ease-out;
+}
+@keyframes spp-feedback-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.spp-feedback-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.spp-feedback-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* ── Loading / Error ── */
+.spp-loading, .spp-error {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 0.95rem;
+}
+.spp-error { color: #b91c1c; }
+.spp-loading-spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spp-spin 0.7s linear infinite;
+  margin-bottom: 10px;
+}
+@keyframes spp-spin { to { transform: rotate(360deg); } }
+
+.spp-no-deliverables {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  padding: 24px;
 }
 
 /* ── Responsive ── */
+@media (max-width: 900px) {
+  .spp-sprint-content { grid-template-columns: 1fr; }
+  .spp-sidebar { position: static; }
+}
 @media (max-width: 768px) {
-  .student-project-page {
-    padding: 16px;
-  }
-
-  .spp-deliverable-top {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .spp-header-meta {
-    gap: 8px;
-  }
+  .student-project-page { padding: 16px; }
+  .spp-header { flex-direction: column; }
+  .spp-project-title { font-size: 1.5rem; }
+  .spp-deliverable-top { flex-direction: column; gap: 8px; }
+  .spp-actions-row { flex-wrap: wrap; }
 }

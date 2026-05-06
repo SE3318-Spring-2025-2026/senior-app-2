@@ -132,9 +132,9 @@ public class ProjectController {
 
     @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
 
-    public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable Long projectId) {
+    public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable Long projectId, @AuthenticationPrincipal User principal) {
 
-        return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId)));
+        return ResponseEntity.ok(new ProjectDetailResponse("success", projectService.getProjectDetail(projectId, principal.getId())));
 
     }
 

@@ -8,6 +8,7 @@ public class GradeResponse {
     private Long graderId;
     private Long rubricId;
     private Double grade;
+    private String comment;
 
     public GradeResponse() {}
 
@@ -21,6 +22,7 @@ public class GradeResponse {
         }
         this.rubricId = entity.getRubricId();
         this.grade = entity.getGrade();
+        this.comment = entity.getComment();
     }
 
     public Long getId() { return id; }
@@ -37,4 +39,7 @@ public class GradeResponse {
 
     public Double getGrade() { return grade; }
     public void setGrade(Double grade) { this.grade = grade; }
+
+    public String getComment() { return comment; }
+    public void setComment(String comment) { this.comment = comment; }
 }

@@ -3,25 +3,14 @@ package com.seniorapp.dto;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
-public class GradeSubmitRequest {
-
-    @NotNull(message = "Rubric ID cannot be null")
-    private Long rubricId;
+/** Body for POST evaluation rubric grade (rubric id is in the path). */
+public class EvaluationGradeSubmitRequest {
 
     @NotNull(message = "Grade cannot be null")
     @PositiveOrZero(message = "Grade must be positive or zero")
     private Double grade;
 
-    /** Optional grader feedback; persisted on submission_grades.comment */
     private String comment;
-
-    public Long getRubricId() {
-        return rubricId;
-    }
-
-    public void setRubricId(Long rubricId) {
-        this.rubricId = rubricId;
-    }
 
     public Double getGrade() {
         return grade;
