@@ -456,3 +456,38 @@ export function deleteDeliverableSubmission(submissionId) {
 export function getMyGroupRole(groupId) {
   return request(`/groups/${groupId}/my-role`);
 }
+
+/**
+ * Analytics için kullanılabilir grupları getirir.
+ */
+export function getAvailableGroupsForAnalytics() {
+  return request('/analytics/groups');
+}
+
+/**
+ * Analytics için kullanılabilir öğrencileri getirir.
+ */
+export function getAvailableStudentsForAnalytics() {
+  return request('/analytics/students');
+}
+
+/**
+ * Grup performans verilerini getirir.
+ */
+export function getGroupPerformance(groupId) {
+  return request(`/analytics/groups/${groupId}/performance`);
+}
+
+/**
+ * Performans trend verilerini getirir.
+ */
+export function getPerformanceTrends(groupId) {
+  return request(`/analytics/groups/${groupId}/trends`);
+}
+
+/**
+ * Öğrenci performans verilerini getirir.
+ */
+export function getStudentPerformance(studentId) {
+  return request(`/analytics/students/${studentId}/performance`);
+}

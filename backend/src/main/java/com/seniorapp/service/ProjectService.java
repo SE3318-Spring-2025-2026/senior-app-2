@@ -11,6 +11,7 @@ import com.seniorapp.repository.ProjectEvaluationRubricRepository;
 import com.seniorapp.repository.ProjectGroupAssignmentRepository;
 import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectTemplateRepository;
+import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserRepository;
 import com.seniorapp.service.grading.PdfGradingEngineService;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class ProjectService {
     private final ProjectDeliverableRubricRepository projectDeliverableRubricRepository;
     private final ProjectEvaluationRubricRepository projectEvaluationRubricRepository;
     private final UserRepository userRepository;
+    private final UserGroupMemberRepository userGroupMemberRepository;
     private final ObjectMapper objectMapper;
     private final PdfGradingEngineService pdfGradingEngineService;
 
@@ -52,6 +54,7 @@ public class ProjectService {
             ProjectDeliverableRubricRepository projectDeliverableRubricRepository,
             ProjectEvaluationRubricRepository projectEvaluationRubricRepository,
             UserRepository userRepository,
+            UserGroupMemberRepository userGroupMemberRepository,
             ObjectMapper objectMapper,
             PdfGradingEngineService pdfGradingEngineService
     ) {
@@ -63,6 +66,7 @@ public class ProjectService {
         this.projectDeliverableRubricRepository = projectDeliverableRubricRepository;
         this.projectEvaluationRubricRepository = projectEvaluationRubricRepository;
         this.userRepository = userRepository;
+        this.userGroupMemberRepository = userGroupMemberRepository;
         this.objectMapper = objectMapper;
         this.pdfGradingEngineService = pdfGradingEngineService;
     }

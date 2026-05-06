@@ -14,7 +14,6 @@ import './TeamManagement.css';
 
 function TeamManagement() {
   const { user } = useAuth();
-  const isStaff = user?.role === 'PROFESSOR' || user?.role === 'ADMIN' || user?.role === 'COORDINATOR';
   const [teams, setTeams] = useState([]);
   const [students, setStudents] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -241,7 +240,7 @@ function TeamManagement() {
               >
                 Invite Advisor
               </button>
-              {isStaff && (
+              {team.currentUserLeader && (
                 <button
                   className="delete-btn"
                   onClick={() => setDeleteModalGroup(team)}
@@ -356,7 +355,7 @@ function TeamManagement() {
               <div className="warning-content">
                 <p className="warning-title">This action cannot be undone</p>
                 <p className="warning-text">
-                  You are about to delete <strong>{deleteModalGroup.groupName}</strong>. All team members will be removed and any associated data will be lost.
+                  You are about to delete <strong>{deleteModalGroup.groupName}</strong>. All team members will be removed and this team will no longer be available.
                 </p>
               </div>
             </div>
