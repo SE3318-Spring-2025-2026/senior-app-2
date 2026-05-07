@@ -126,8 +126,22 @@ export function getGitHubAuthUrl() {
   return 'http://localhost:8080/api/auth/github';
 }
 
-export function getLogs(page = 0, size = 20) {
-  return request(`/logs?page=${page}&size=${size}`);
+/** * GÜNCELLENDİ: Filtreleme destekli getLogs 
+ * @param {number} page - sayfa numarası
+ * @param {number} size - sayfa başı kayıt
+ * @param {object} filters - { module, severity, action, status, ipAddress }
+ */
+export function getLogs(page = 0, size = 20, filters = {}) {
+  const query = new URLSearchParams({ page, size });
+  
+  // Boş olmayan filtreleri query string'e ekle
+  Object.keys(filters).forEach(key => {
+    if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+      query.set(key, filters[key]);
+    }
+  });
+
+  return request(`/audit-logs?${query.toString()}`);
 }
 
 export function createProjectTemplate(payload) {
