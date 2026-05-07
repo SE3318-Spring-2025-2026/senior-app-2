@@ -1,8 +1,10 @@
 package com.seniorapp.repository;
 
 import com.seniorapp.entity.User;
+import com.seniorapp.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -22,4 +24,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** Check whether an e-mail is already registered. */
     boolean existsByEmail(String email);
+
+    /** Check whether a GitHub username is already registered. */
+    boolean existsByGithubUsername(String githubUsername);
+
+    List<User> findByRole(Role role);
 }

@@ -1,0 +1,83 @@
+.my-projects-page {
+  padding: 28px;
+}
+
+.my-projects-header h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  color: #111827;
+}
+
+.my-projects-header p {
+  margin: 0 0 18px;
+  color: #4b5563;
+}
+
+.my-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.my-project-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.my-project-card:hover {
+  transform: translateY(-1px);
+  border-color: #cfd8e5;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.my-project-card h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+  color: #111827;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: #374151;
+  padding: 4px 0;
+}
+
+.meta-row .label {
+  color: #6b7280;
+}
+
+.card-actions {
+  margin-top: 10px;
+}
+
+.manage-comitees-btn {
+  border: 1px solid #c7d2fe;
+  color: #1e1b4b;
+  background: #eef2ff;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.my-projects-state {
+  margin-top: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.my-projects-state.error {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fef2f2;
+}

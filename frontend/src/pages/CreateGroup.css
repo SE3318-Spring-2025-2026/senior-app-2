@@ -1,0 +1,133 @@
+.create-group-page {
+  min-height: 80vh;
+  background: #f4f7fe;
+  padding: 32px 20px;
+}
+
+.create-group-layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.create-group-card,
+.template-browser {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  padding: 24px;
+}
+
+.create-group-card h2,
+.template-browser h3 {
+  margin-top: 0;
+  color: #4318ff;
+}
+
+.create-group-error {
+  color: #d92d20;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.create-group-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.create-group-form label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.create-group-form input,
+.create-group-form select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e5f2;
+  outline: none;
+  background: #fff;
+}
+
+.create-group-button {
+  padding: 12px;
+  cursor: pointer;
+  background: #4318ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.template-browser-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  margin-bottom: 16px;
+}
+
+.template-browser-header p {
+  margin: 0;
+  color: #475467;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.template-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  background: #f8faff;
+}
+
+.template-card.selected {
+  border-color: #4318ff;
+  box-shadow: 0 0 0 1px #4318ff inset;
+}
+
+.template-card h4 {
+  margin: 0 0 10px;
+  color: #101828;
+}
+
+.template-meta {
+  margin: 0 0 10px;
+  color: #344054;
+  font-size: 14px;
+}
+
+.template-deliverables-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #344054;
+  margin-bottom: 8px;
+}
+
+.template-card ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #475467;
+}
+
+.template-loading,
+.template-empty {
+  color: #475467;
+}
+
+@media (max-width: 900px) {
+  .create-group-layout {
+    grid-template-columns: 1fr;
+  }
+}

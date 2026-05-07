@@ -1,0 +1,22 @@
+/* Group Management Page Styles */
+
+.group-management-page {
+  padding: 2rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.group-management-page .alert {
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin: 2rem auto;
+  max-width: 800px;
+  font-size: 1.1rem;
+}
+
+.group-management-page .alert-error {
+  background: #ffe0e0;
+  color: #d32f2f;
+  border: 2px solid #ffcdd2;
+  text-align: center;
+}
