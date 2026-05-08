@@ -31,6 +31,9 @@ public class ProjectTemplate {
     @Column
     private LocalDate projectStartDate;
 
+    @Column
+    private LocalDate groupFormationDeadline;
+
     @Column(nullable = false)
     private Integer version = 1;
 
@@ -121,6 +124,14 @@ public class ProjectTemplate {
 
     public void setProjectStartDate(LocalDate projectStartDate) {
         this.projectStartDate = projectStartDate;
+    }
+
+    public LocalDate getGroupFormationDeadline() {
+        return groupFormationDeadline;
+    }
+
+    public void setGroupFormationDeadline(LocalDate groupFormationDeadline) {
+        this.groupFormationDeadline = groupFormationDeadline;
     }
 
     public boolean isActive() {

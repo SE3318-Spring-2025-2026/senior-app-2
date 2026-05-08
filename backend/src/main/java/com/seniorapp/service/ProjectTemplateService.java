@@ -72,6 +72,7 @@ public class ProjectTemplateService {
             throw new IllegalArgumentException("Authenticated user id is required.");
         }
         LocalDate projectStartDate = parseProjectStartDate(request.getProjectStartDate());
+        LocalDate groupFormationDeadline = parseOptionalDate(request.getGroupFormationDeadline());
 
         Map<String, Object> payload = new LinkedHashMap<>();
         JsonNode normalizedSprints = removeEvaluationTypeField(request.getSprints());
@@ -79,6 +80,9 @@ public class ProjectTemplateService {
         payload.put("description", request.getDescription());
         payload.put("term", request.getTerm());
         payload.put("projectStartDate", request.getProjectStartDate());
+        if (request.getGroupFormationDeadline() != null) {
+            payload.put("groupFormationDeadline", request.getGroupFormationDeadline());
+        }
         payload.put("sprints", normalizedSprints);
         payload.put("fixedGradePoints", FIXED_GRADE_POINTS);
 
@@ -89,6 +93,7 @@ public class ProjectTemplateService {
         template.setCreatedBy(String.valueOf(createdByUserId));
         template.setCreatedByUserId(createdByUserId);
         template.setProjectStartDate(projectStartDate);
+        template.setGroupFormationDeadline(groupFormationDeadline);
         template.setVersion(1);
         template.setActive(true);
         template.setTemplateJson(serialize(payload));
@@ -316,6 +321,15 @@ public class ProjectTemplateService {
             return LocalDate.parse(value);
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("projectStartDate must be in ISO format: YYYY-MM-DD");
+        }
+    }
+
+    private LocalDate parseOptionalDate(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("groupFormationDeadline must be in ISO format: YYYY-MM-DD");
         }
     }
 
