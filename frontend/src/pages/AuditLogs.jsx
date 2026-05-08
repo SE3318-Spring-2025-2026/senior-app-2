@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getLogs } from '../services/api';
 import './AuditLogs.css';
 
@@ -9,36 +9,50 @@ function AuditLogs() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  useEffect(() => {
-    fetchLogs(page);
-  }, [page]);
+  // Filtre State'leri
+  const [filters, setFilters] = useState({
+    module: '',
+    severity: '',
+    action: '',
+    status: '',
+    ipAddress: ''
+  });
 
-  async function fetchLogs(pageNumber) {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getLogs(pageNumber, 20);
+      const data = await getLogs(page, 20, filters);
       setLogs(data.content || []);
       setTotalPages(data.totalPages || 0);
+      setError('');
     } catch (err) {
-      setError(err.message);
+      setError('Loglar yüklenirken bir hata oluştu.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, filters]);
 
-  function handlePrev() {
-    if (page > 0) setPage(page - 1);
-  }
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchLogs();
+    }, 400); // Debounce
+    return () => clearTimeout(handler);
+  }, [fetchLogs]);
 
-  function handleNext() {
-    if (page < totalPages - 1) setPage(page + 1);
-  }
-
-  if (loading && page === 0) return <div className="logs-loading">Loading logs...</div>;
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+    setPage(0); // Filtre değişince ilk sayfaya dön
+  };
 
   return (
     <div className="logs-page">
-      <h1>Audit Logs</h1>
+      <div className="logs-header">
+        <h1>Audit Logs</h1>
+        {loading && <span className="loading-spinner">Yükleniyor...</span>}
+      </div>
+
       {error && <div className="logs-error">{error}</div>}
 
       <div className="logs-table-wrapper">
@@ -47,43 +61,54 @@ function AuditLogs() {
             <tr>
               <th>ID</th>
               <th>Action</th>
-              <th>User ID</th>
               <th>Module</th>
               <th>Severity</th>
+              <th>Status</th>
               <th>IP Address</th>
               <th>Date</th>
             </tr>
+            <tr className="filter-row">
+              <td></td>
+              <td><input name="action" placeholder="Filtrele..." value={filters.action} onChange={handleFilterChange} /></td>
+              <td><input name="module" placeholder="Filtrele..." value={filters.module} onChange={handleFilterChange} /></td>
+              <td>
+                <select name="severity" value={filters.severity} onChange={handleFilterChange}>
+                  <option value="">Hepsi</option>
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </td>
+              <td><input name="status" placeholder="Filtrele..." value={filters.status} onChange={handleFilterChange} /></td>
+              <td><input name="ipAddress" placeholder="IP Ara..." value={filters.ipAddress} onChange={handleFilterChange} /></td>
+              <td></td>
+            </tr>
           </thead>
           <tbody>
-            {logs.map((log) => (
-              <tr key={log.id} className={`severity-${log.severity?.toLowerCase()}`}>
-                <td>{log.id}</td>
-                <td>{log.action}</td>
-                <td>{log.userId || 'System'}</td>
+            {logs.length > 0 ? logs.map((log) => (
+              <tr key={log.id}>
+                <td className="id-col">#{log.id}</td>
+                <td><strong>{log.action}</strong></td>
                 <td>{log.module}</td>
                 <td>
                   <span className={`severity-badge ${log.severity?.toLowerCase()}`}>
                     {log.severity}
                   </span>
                 </td>
+                <td>{log.status}</td>
                 <td>{log.ipAddress || '-'}</td>
                 <td>{new Date(log.createdAt).toLocaleString()}</td>
               </tr>
-            ))}
-            {logs.length === 0 && (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center' }}>No logs found.</td>
-              </tr>
-            )}
+            )) : !loading && <tr><td colSpan="7" className="no-data">Kayıt bulunamadı.</td></tr>}
           </tbody>
         </table>
       </div>
 
       {totalPages > 1 && (
         <div className="pagination">
-          <button onClick={handlePrev} disabled={page === 0}>Previous</button>
-          <span>Page {page + 1} of {totalPages}</span>
-          <button onClick={handleNext} disabled={page >= totalPages - 1}>Next</button>
+          <button onClick={() => setPage(p => p - 1)} disabled={page === 0}>Önceki</button>
+          <span>{page + 1} / {totalPages}</span>
+          <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>Sonraki</button>
         </div>
       )}
     </div>

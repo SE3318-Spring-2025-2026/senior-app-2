@@ -111,3 +111,28 @@
   font-size: 0.9rem;
   color: var(--color-text-light);
 }
+.filter-row td {
+  background-color: #f3f4f6;
+  padding: 0.5rem !important;
+}
+
+.filter-row input, 
+.filter-row select {
+  width: 100%;
+  padding: 0.4rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.filter-row input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.1);
+}
+
+.logs-table th {
+  position: relative;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
