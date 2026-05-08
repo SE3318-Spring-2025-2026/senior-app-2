@@ -86,15 +86,38 @@
 }
 
 .template-card {
-  border: 1px solid #e5e7eb;
+  border: 1.5px solid #e5e7eb;
   border-radius: 12px;
   padding: 16px;
   background: #f8faff;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.12s;
+}
+
+.template-card:hover {
+  border-color: #818cf8;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+  transform: translateY(-2px);
 }
 
 .template-card.selected {
-  border-color: #4318ff;
-  box-shadow: 0 0 0 1px #4318ff inset;
+  border-color: #4f46e5;
+  background: #eef2ff;
+  box-shadow: 0 0 0 2px #4f46e5 inset;
+}
+
+.template-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4f46e5;
+  background: #e0e7ff;
+  border-radius: 20px;
+  padding: 2px 10px;
+  margin-bottom: 8px;
 }
 
 .template-card h4 {
@@ -123,7 +146,21 @@
 
 .template-loading,
 .template-empty {
-  color: #475467;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.create-group-form input:focus,
+.create-group-form select:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
 }
 
 @media (max-width: 900px) {

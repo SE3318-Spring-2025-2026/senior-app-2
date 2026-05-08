@@ -26,14 +26,18 @@ const CreateGroup = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (!groupName || !projectId) {
-      setError("Please fill in all fields.");
+
+    if (!groupName.trim()) {
+      setError('Please enter a group name.');
+      return;
+    }
+    if (!projectId) {
+      setError('Please select a project template.');
       return;
     }
 
     setError('');
-    console.log("Submitting Group Data:", { groupName, projectId });
+    console.log('Submitting Group Data:', { groupName, projectId });
     alert(`Group "${groupName}" has been created successfully!`);
   };
 
@@ -86,7 +90,15 @@ const CreateGroup = () => {
             <p>Review sprint count and deliverables before creating a group.</p>
           </div>
 
-          {loadingTemplates && <div className="template-loading">Loading templates...</div>}
+          {loadingTemplates && (
+            <div className="template-loading">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                style={{ animation: 'spin 1s linear infinite', verticalAlign: 'middle', marginRight: 8 }}>
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+              Loading templates…
+            </div>
+          )}
 
           {!loadingTemplates && templates.length === 0 && (
             <div className="template-empty">No project templates are currently available.</div>
@@ -97,8 +109,16 @@ const CreateGroup = () => {
               {templates.map((template) => (
                 <article
                   key={template.projectId}
-                  className={`template-card${projectId === template.projectId ? ' selected' : ''}`}
+                  className={`template-card${projectId === String(template.projectId) ? ' selected' : ''}`}
+                  onClick={() => setProjectId(String(template.projectId))}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && setProjectId(String(template.projectId))}
+                  aria-pressed={projectId === String(template.projectId)}
                 >
+                  {projectId === String(template.projectId) && (
+                    <div className="template-selected-badge">✓ Selected</div>
+                  )}
                   <h4>{template.name}</h4>
                   <p className="template-meta">Sprint count: {template.sprintCount}</p>
                   <div className="template-deliverables-title">Deliverables</div>
