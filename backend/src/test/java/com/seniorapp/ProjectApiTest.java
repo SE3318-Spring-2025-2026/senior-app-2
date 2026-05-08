@@ -219,4 +219,111 @@ class ProjectApiTest {
                 .andExpect(jsonPath("$.data[0].title").value("P1"))
                 .andExpect(jsonPath("$.data[0].activeGroupId").value(42));
     }
+
+    @Test
+    @WithMockUser(username = "1", roles = "COORDINATOR")
+    void listProfessors_includesCoordinatorsAndProfessorsOnly() throws Exception {
+        String suffix = String.valueOf(System.nanoTime());
+        String professorEmail = "project-committee-prof-" + suffix + "@test.com";
+        String coordinatorEmail = "project-committee-coord-" + suffix + "@test.com";
+        String studentEmail = "project-committee-student-" + suffix + "@test.com";
+
+        insertUser(professorEmail, "Project Committee Professor", "PROFESSOR");
+        insertUser(coordinatorEmail, "Project Committee Coordinator", "COORDINATOR");
+        insertUser(studentEmail, "Project Committee Student", "STUDENT");
+
+        mockMvc.perform(get("/api/projects/professors").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.data[?(@.email=='" + professorEmail + "')]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.email=='" + coordinatorEmail + "')]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.email=='" + studentEmail + "')]").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "COORDINATOR")
+    void addProfessorToCommittee_acceptsCoordinatorAndRejectsInvalidRole() throws Exception {
+        String suffix = String.valueOf(System.nanoTime());
+        Long coordinatorId = insertUser("project-assign-coord-" + suffix + "@test.com", "Assignable Coordinator", "COORDINATOR");
+        Long studentId = insertUser("project-assign-student-" + suffix + "@test.com", "Not Assignable Student", "STUDENT");
+        Long projectId = createProjectForCommitteeTests();
+
+        String committeeResponse = mockMvc.perform(post("/api/projects/{projectId}/committees", projectId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long committeeId = objectMapper.readTree(committeeResponse).path("data").path("committeeId").asLong();
+
+        String assignCoordinatorRequest = """
+                {
+                  "professorUserId": %d
+                }
+                """.formatted(coordinatorId);
+
+        mockMvc.perform(post("/api/projects/{projectId}/committees/{committeeId}/professors", projectId, committeeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(assignCoordinatorRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.professors[0].userId").value(coordinatorId));
+
+        String assignStudentRequest = """
+                {
+                  "professorUserId": %d
+                }
+                """.formatted(studentId);
+
+        mockMvc.perform(post("/api/projects/{projectId}/committees/{committeeId}/professors", projectId, committeeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(assignStudentRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Selected user must be a professor or coordinator."));
+    }
+
+    private Long insertUser(String email, String fullName, String role) {
+        jdbcTemplate.update("""
+                INSERT INTO users (email, password, full_name, role, enabled, status, created_at)
+                VALUES (?, 'pwd', ?, ?, true, 'ACTIVE', NOW())
+                """, email, fullName, role);
+        return jdbcTemplate.queryForObject("SELECT id FROM users WHERE email = ?", Long.class, email);
+    }
+
+    private Long createProjectForCommitteeTests() throws Exception {
+        String templatePayload = """
+                {
+                  "name": "Project Committee Template",
+                  "description": "template for project committee tests",
+                  "term": "Spring 2026",
+                  "projectStartDate": "2026-02-10",
+                  "sprints": [
+                    {
+                      "sprintNo": 1,
+                      "evaluations": [
+                        {"title": "Eval", "weight": 100, "rubrics": [{"title": "R1", "criteriaType": "SOFT"}]}
+                      ],
+                      "deliverables": [
+                        {"type": "DEMO", "title": "Demo", "weight": 100, "rubrics": [{"title": "R2", "criteriaType": "SOFT"}]}
+                      ]
+                    }
+                  ]
+                }
+                """;
+        String templateResponse = mockMvc.perform(post("/api/project-templates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(templatePayload))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String templateId = objectMapper.readTree(templateResponse).path("data").path("templateId").asText();
+
+        String projectResponse = mockMvc.perform(post("/api/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"templateId": %s, "title": "Project Committee Test", "term": "Spring 2026"}
+                                """.formatted(templateId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(projectResponse).path("data").path("projectId").asLong();
+    }
 }
