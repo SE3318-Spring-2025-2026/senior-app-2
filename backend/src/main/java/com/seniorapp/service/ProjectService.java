@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -294,8 +295,8 @@ public class ProjectService {
 
         User professor = userRepository.findById(professorUserId)
                 .orElseThrow(() -> new NoSuchElementException("Professor not found: " + professorUserId));
-        if (professor.getRole() != Role.PROFESSOR) {
-            throw new IllegalArgumentException("Selected user is not a professor.");
+        if (!isCommitteeAssignableRole(professor.getRole())) {
+            throw new IllegalArgumentException("Selected user must be a professor or coordinator.");
         }
 
         boolean alreadyExists = committee.getProfessors().stream()
@@ -347,9 +348,13 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public List<ProfessorOptionDto> listProfessors() {
-        return userRepository.findByRole(Role.PROFESSOR).stream()
+        return userRepository.findByRoleIn(EnumSet.of(Role.PROFESSOR, Role.COORDINATOR)).stream()
                 .map(this::toProfessorOptionDto)
                 .toList();
+    }
+
+    private boolean isCommitteeAssignableRole(Role role) {
+        return role == Role.PROFESSOR || role == Role.COORDINATOR;
     }
 
     private List<ProjectSprint> buildProjectSprints(Project project, JsonNode sprintsNode) {
