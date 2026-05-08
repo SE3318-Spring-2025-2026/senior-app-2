@@ -9,7 +9,7 @@ import {
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
-  LETTER_GRADE_OPTIONS,
+  getLetterGradeOptions,
   letterGradeToPoints,
   pointsToNearestLetterGrade,
   isValidLetterGrade,
@@ -80,8 +80,9 @@ export default function InspectorRubricGradePanel({
         mine.forEach((g) => {
           const rid = g.rubricId != null ? Number(g.rubricId) : NaN;
           if (!Number.isFinite(rid)) return;
+          const rubric = rubricsNorm.find((x) => Number(x.id) === rid);
           next[rid] = {
-            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade) : '',
+            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade, rubric?.criteriaType) : '',
             comment: g.comment ?? '',
           };
         });
@@ -97,8 +98,9 @@ export default function InspectorRubricGradePanel({
         mine.forEach((g) => {
           const rid = g.rubricId != null ? Number(g.rubricId) : NaN;
           if (!Number.isFinite(rid)) return;
+          const rubric = rubricsNorm.find((x) => Number(x.id) === rid);
           next[rid] = {
-            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade) : '',
+            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade, rubric?.criteriaType) : '',
             comment: g.comment ?? '',
           };
         });
@@ -114,8 +116,9 @@ export default function InspectorRubricGradePanel({
         mine.forEach((g) => {
           const rid = g.evaluationRubricId != null ? Number(g.evaluationRubricId) : NaN;
           if (!Number.isFinite(rid)) return;
+          const rubric = rubricsNorm.find((x) => Number(x.id) === rid);
           next[rid] = {
-            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade) : '',
+            grade: g.grade != null ? pointsToNearestLetterGrade(g.grade, rubric?.criteriaType) : '',
             comment: g.comment ?? '',
           };
         });
@@ -161,12 +164,12 @@ export default function InspectorRubricGradePanel({
         const st = rows[Number(rid)] || {};
         const letter = st.grade?.trim();
         if (letter === '' || letter == null) continue;
-        if (!isValidLetterGrade(letter)) {
+        if (!isValidLetterGrade(letter, r.criteriaType)) {
           setMsg({ type: 'error', text: `Geçersiz harf notu: "${letter}". Lütfen listeden seçin.` });
           setLoading(false);
           return;
         }
-        const num = letterGradeToPoints(letter);
+        const num = letterGradeToPoints(letter, r.criteriaType);
         if (num == null) continue;
         toSave.push({ rid, num, comment: st.comment });
       }
@@ -265,7 +268,7 @@ export default function InspectorRubricGradePanel({
                     aria-label={`${r.title || 'Rubric'} harf notu`}
                   >
                     <option value="">Not</option>
-                    {LETTER_GRADE_OPTIONS.map((L) => (
+                    {getLetterGradeOptions(r.criteriaType).map((L) => (
                       <option key={L} value={L}>
                         {L}
                       </option>
