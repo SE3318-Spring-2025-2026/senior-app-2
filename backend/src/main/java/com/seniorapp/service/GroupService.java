@@ -33,6 +33,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -72,6 +73,9 @@ public class GroupService {
 
     // --- ISSUE #71 & #72 FIX: GERÇEK GRUP KURMA ---
     public void createGroup(GroupCreateDto dto, Long currentUserId) {
+        // Hard schedule validation: block creation after group formation deadline
+        assertGroupFormationDeadlineNotPassed();
+
         if (dto.getGroupName() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group name is required.");
         }
@@ -124,6 +128,9 @@ public class GroupService {
     }
 
     public void inviteMember(Long groupId, Long studentUserId, Long currentUserId) {
+        // Hard schedule validation: block invites after group formation deadline
+        assertGroupFormationDeadlineNotPassed();
+
         UserGroup group = userGroupRepository.findById(groupId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
 
@@ -186,8 +193,11 @@ public class GroupService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite already processed.");
         }
         if ("ACCEPT".equalsIgnoreCase(action)) {
+            // Block accepting an invite after the deadline (students and professors alike)
+            assertGroupFormationDeadlineNotPassed();
             invite.setStatus(GroupInviteStatus.ACCEPTED);
         } else if ("DECLINE".equalsIgnoreCase(action)) {
+            // Declining is always allowed – leaving/declining must remain unrestricted
             invite.setStatus(GroupInviteStatus.DECLINED);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid action. Use ACCEPT or DECLINE.");
@@ -414,5 +424,51 @@ public class GroupService {
 
         // Delete the group
         userGroupRepository.delete(group);
+    }
+
+    /**
+     * System-initiated group deletion used by the automated cleanup scheduler.
+     * Unlike deleteGroup(), this method does not require a team leader identity check
+     * because it is called by a background job, not a user request.
+     */
+    @Transactional
+    public void systemDeleteGroup(Long groupId) {
+        UserGroup group = userGroupRepository.findById(groupId).orElse(null);
+        if (group == null) return;
+
+        projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId).ifPresent(assignment -> {
+            assignment.setActive(false);
+            projectGroupAssignmentRepository.save(assignment);
+
+            Project project = assignment.getProject();
+            if (project != null && groupId.equals(project.getGroupId())) {
+                project.setGroupId(null);
+                projectRepository.save(project);
+            }
+        });
+
+        userGroupMemberRepository.deleteByGroupId(groupId);
+        userGroupRepository.delete(group);
+    }
+
+    /**
+     * Validates that the group formation deadline has not passed.
+     * Checks all active ProjectTemplates; if any has a non-null deadline that
+     * is strictly before today, a 403 Forbidden is thrown.
+     *
+     * If no active template exists, or no template has a deadline configured,
+     * the operation is permitted (deadline feature is opt-in).
+     */
+    void assertGroupFormationDeadlineNotPassed() {
+        List<ProjectTemplate> activeTemplates = projectTemplateRepository.findByActiveTrue();
+        for (ProjectTemplate template : activeTemplates) {
+            LocalDate deadline = template.getGroupFormationDeadline();
+            if (deadline != null && LocalDate.now().isAfter(deadline)) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Grup kurma / danışman atama süresi dolmuştur. Süre: " + deadline
+                );
+            }
+        }
     }
 }
