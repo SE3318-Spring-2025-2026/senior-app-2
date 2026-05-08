@@ -305,6 +305,35 @@
   box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
 }
 
+.popup-member-limit {
+  margin: 0 0 12px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.popup-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.popup-select {
+  flex: 1;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #0f172a;
+  background: #fff;
+}
+
+.popup-select:focus {
+  outline: none;
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+}
+
 .popup-list {
   display: flex;
   flex-direction: column;
@@ -343,11 +372,12 @@
   background: #eef2ff;
   color: #3730a3;
   border-radius: 8px;
-  width: 32px;
-  height: 32px;
+  min-width: 110px;
+  height: 40px;
   cursor: pointer;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 12px;
   display: flex;
   align-items: center;
   justify-content: center;

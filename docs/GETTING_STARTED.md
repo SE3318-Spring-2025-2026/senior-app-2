@@ -42,6 +42,12 @@ mvn clean install
 mvn spring-boot:run
 ```
 
+If you want sample coordinator/professor committee data for template committee assignment flow, run with the local profile so `data-local.sql` is loaded:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
 The API server starts at **http://localhost:8080**.
 
 To verify it's running:
