@@ -35,6 +35,8 @@ import java.util.Set;
 
 @Service
 public class ProjectTemplateService {
+    private static final int MAX_TEMPLATE_COMMITTEE_MEMBERS = 5;
+
 
     private static final Map<String, Integer> FIXED_GRADE_POINTS = Map.of(
             "S", 100,
@@ -174,6 +176,9 @@ public class ProjectTemplateService {
         boolean exists = committee.getProfessors().stream()
                 .anyMatch(member -> Objects.equals(member.getProfessor().getId(), professorUserId));
         if (!exists) {
+            if (committee.getProfessors().size() >= MAX_TEMPLATE_COMMITTEE_MEMBERS) {
+                throw new IllegalArgumentException("A committee can have at most 5 members.");
+            }
             TemplateCommitteeProfessor member = new TemplateCommitteeProfessor();
             member.setCommittee(committee);
             member.setProfessor(professor);

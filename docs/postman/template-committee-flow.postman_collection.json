@@ -1,0 +1,186 @@
+{
+  "info": {
+    "name": "Template Committee Flow",
+    "_postman_id": "8ac4db86-b2f4-4be4-b6b4-8f12f3570f9a",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List assignable committee members (professor + coordinator)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/project-templates/professors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "project-templates",
+            "professors"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('returns coordinator and professor candidates', function () {",
+              "  const data = pm.response.json().data || [];",
+              "  const emails = data.map((item) => (item.email || '').toLowerCase());",
+              "  pm.expect(data.length).to.be.greaterThan(0);",
+              "  pm.expect(emails).to.include('coord.committee.local@seniorapp.com');",
+              "  pm.expect(emails).to.include('prof.committee.local@seniorapp.com');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assign selected coordinator/professor to template committee",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"professorUserId\": {{candidateUserId}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/project-templates/{{templateId}}/committees/{{committeeId}}/professors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "project-templates",
+            "{{templateId}}",
+            "committees",
+            "{{committeeId}}",
+            "professors"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('assigned user appears in committee members', function () {",
+              "  const body = pm.response.json();",
+              "  const members = body?.data?.professors || [];",
+              "  pm.expect(members.some((m) => String(m.userId) === String(pm.variables.get('candidateUserId')))).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject 6th member assignment (max 5)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"professorUserId\": {{overflowUserId}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/project-templates/{{templateId}}/committees/{{committeeId}}/professors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "project-templates",
+            "{{templateId}}",
+            "committees",
+            "{{committeeId}}",
+            "professors"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 400 when committee already has 5 members', function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test('returns max member limit error', function () {",
+              "  const error = pm.response.json().error || '';",
+              "  pm.expect(error).to.include('at most 5 members');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "templateId",
+      "value": ""
+    },
+    {
+      "key": "committeeId",
+      "value": ""
+    },
+    {
+      "key": "candidateUserId",
+      "value": ""
+    },
+    {
+      "key": "overflowUserId",
+      "value": ""
+    }
+  ]
+}

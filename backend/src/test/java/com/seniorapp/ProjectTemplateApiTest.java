@@ -262,6 +262,48 @@ class ProjectTemplateApiTest {
                 .andExpect(jsonPath("$.error").value("Selected user must be a professor or coordinator."));
     }
 
+    @Test
+    @WithMockUser(username = "1", roles = "COORDINATOR")
+    void addProfessorToCommittee_rejectsMoreThanFiveMembers() throws Exception {
+        String suffix = String.valueOf(System.nanoTime());
+        Long templateId = createTemplateForCommitteeTests();
+
+        String committeeResponse = mockMvc.perform(post("/api/project-templates/{templateId}/committees", templateId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long committeeId = objectMapper.readTree(committeeResponse).path("data").path("committeeId").asLong();
+
+        for (int i = 1; i <= 5; i++) {
+            Long userId = insertUser("assign-member-" + suffix + "-" + i + "@test.com", "Assignable Member " + i, "PROFESSOR");
+            String request = """
+                    {
+                      "professorUserId": %d
+                    }
+                    """.formatted(userId);
+            mockMvc.perform(post("/api/project-templates/{templateId}/committees/{committeeId}/professors", templateId, committeeId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(request))
+                    .andExpect(status().isOk());
+        }
+
+        Long overflowUserId = insertUser("assign-member-" + suffix + "-overflow@test.com", "Overflow Member", "COORDINATOR");
+        String overflowRequest = """
+                {
+                  "professorUserId": %d
+                }
+                """.formatted(overflowUserId);
+
+        mockMvc.perform(post("/api/project-templates/{templateId}/committees/{committeeId}/professors", templateId, committeeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(overflowRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("A committee can have at most 5 members."));
+    }
+
     private Long insertUser(String email, String fullName, String role) {
         jdbcTemplate.update("""
                 INSERT INTO users (email, password, full_name, role, enabled, status, created_at)

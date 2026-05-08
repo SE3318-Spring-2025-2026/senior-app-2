@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -20,7 +20,7 @@ function ManageComitees() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [popupCommitteeId, setPopupCommitteeId] = useState(null);
-  const [query, setQuery] = useState('');
+  const [selectedProfessorUserId, setSelectedProfessorUserId] = useState('');
 
   async function loadData() {
     setLoading(true);
@@ -49,14 +49,6 @@ function ManageComitees() {
 
   const popupCommittee = committees.find((c) => c.committeeId === popupCommitteeId) || null;
 
-  const filteredProfessors = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return professors.filter((prof) => {
-      if (!normalized) return true;
-      return `${prof.fullName || ''} ${prof.email || ''}`.toLowerCase().includes(normalized);
-    });
-  }, [professors, query]);
-
   const handleCreateCommittee = async () => {
     try {
       const res = await createTemplateCommittee(templateId);
@@ -67,6 +59,11 @@ function ManageComitees() {
   };
 
   const handleAddProfessor = async (committeeId, professorUserId) => {
+    const targetCommittee = committees.find((committee) => committee.committeeId === committeeId);
+    if ((targetCommittee?.professors || []).length >= 5) {
+      setError('A committee can have at most 5 members.');
+      return;
+    }
     try {
       const res = await addProfessorToTemplateCommittee(templateId, committeeId, professorUserId);
       setCommittees((prev) =>
@@ -74,6 +71,7 @@ function ManageComitees() {
           committee.committeeId === committeeId ? res.data : committee
         )
       );
+      setSelectedProfessorUserId('');
     } catch (err) {
       setError(err.message || 'Failed to add committee member.');
     }
@@ -134,10 +132,10 @@ function ManageComitees() {
                     <button
                       type="button"
                       className="settings-btn"
-                      onClick={() => {
-                        setPopupCommitteeId(committee.committeeId);
-                        setQuery('');
-                      }}
+                        onClick={() => {
+                          setPopupCommitteeId(committee.committeeId);
+                          setSelectedProfessorUserId('');
+                        }}
                       title="Settings"
                     >
                       ⚙
@@ -195,32 +193,38 @@ function ManageComitees() {
               <h3>{popupCommittee.name} - Committee Members</h3>
               <button type="button" className="close-btn" onClick={() => setPopupCommitteeId(null)}>✕</button>
             </div>
-            <input
-              className="popup-search"
-              placeholder="Search professor/coordinator..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <div className="popup-list">
-              {filteredProfessors.map((prof) => {
-                const alreadyAdded = (popupCommittee.professors || []).some((item) => item.userId === prof.userId);
-                return (
-                  <div key={prof.userId} className="popup-row">
-                    <div>
-                      <div>{prof.fullName || '-'}</div>
-                      <small>{prof.email}</small>
-                    </div>
-                    <button
-                      type="button"
-                      className="add-prof-btn"
-                      onClick={() => handleAddProfessor(popupCommittee.committeeId, prof.userId)}
-                      disabled={alreadyAdded}
-                    >
-                      {alreadyAdded ? 'Added' : '+'}
-                    </button>
-                  </div>
-                );
-              })}
+            <p className="popup-member-limit">
+              {(popupCommittee.professors || []).length}/5 members assigned
+            </p>
+            <div className="popup-controls">
+              <select
+                className="popup-select"
+                value={selectedProfessorUserId}
+                onChange={(e) => setSelectedProfessorUserId(e.target.value)}
+                disabled={(popupCommittee.professors || []).length >= 5}
+              >
+                <option value="">Select professor/coordinator</option>
+                {professors.map((prof) => {
+                  const alreadyAdded = (popupCommittee.professors || []).some((item) => item.userId === prof.userId);
+                  return (
+                    <option key={prof.userId} value={String(prof.userId)} disabled={alreadyAdded}>
+                      {prof.fullName || '-'} ({prof.email})
+                    </option>
+                  );
+                })}
+              </select>
+              <button
+                type="button"
+                className="add-prof-btn"
+                onClick={() => handleAddProfessor(popupCommittee.committeeId, Number(selectedProfessorUserId))}
+                disabled={
+                  !selectedProfessorUserId ||
+                  (popupCommittee.professors || []).length >= 5 ||
+                  (popupCommittee.professors || []).some((item) => String(item.userId) === selectedProfessorUserId)
+                }
+              >
+                Add member
+              </button>
             </div>
           </div>
         </div>
