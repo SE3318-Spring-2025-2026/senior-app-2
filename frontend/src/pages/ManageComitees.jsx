@@ -16,11 +16,12 @@ function ManageComitees() {
   const { user } = useAuth();
   const isCoordinator = user?.role === 'COORDINATOR' || user?.role === 'ADMIN';
   const [committees, setCommittees] = useState([]);
-  const [professors, setProfessors] = useState([]);
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [popupCommitteeId, setPopupCommitteeId] = useState(null);
-  const [query, setQuery] = useState('');
+  
+  // Track selected member for each committee
+  const [selectedMembers, setSelectedMembers] = useState({});
 
   async function loadData() {
     setLoading(true);
@@ -29,12 +30,12 @@ function ManageComitees() {
       const committeeRes = await getTemplateCommittees(templateId);
       setCommittees(committeeRes?.data || []);
 
-      // Professors list is only needed for coordinator/admin add flow.
+      // Members list is only needed for coordinator/admin add flow.
       if (isCoordinator) {
-        const professorRes = await getTemplateProfessors();
-        setProfessors(professorRes?.data || []);
+        const memberRes = await getTemplateProfessors();
+        setMembers(memberRes?.data || []);
       } else {
-        setProfessors([]);
+        setMembers([]);
       }
     } catch (err) {
       setError(err.message || 'Failed to load committees.');
@@ -47,16 +48,6 @@ function ManageComitees() {
     loadData();
   }, [templateId, isCoordinator]);
 
-  const popupCommittee = committees.find((c) => c.committeeId === popupCommitteeId) || null;
-
-  const filteredProfessors = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return professors.filter((prof) => {
-      if (!normalized) return true;
-      return `${prof.fullName || ''} ${prof.email || ''}`.toLowerCase().includes(normalized);
-    });
-  }, [professors, query]);
-
   const handleCreateCommittee = async () => {
     try {
       const res = await createTemplateCommittee(templateId);
@@ -66,16 +57,21 @@ function ManageComitees() {
     }
   };
 
-  const handleAddProfessor = async (committeeId, professorUserId) => {
+  const handleAddMember = async (committeeId) => {
+    const memberUserId = selectedMembers[committeeId];
+    if (!memberUserId) return;
+    
     try {
-      const res = await addProfessorToTemplateCommittee(templateId, committeeId, professorUserId);
+      const res = await addProfessorToTemplateCommittee(templateId, committeeId, memberUserId);
       setCommittees((prev) =>
         prev.map((committee) =>
           committee.committeeId === committeeId ? res.data : committee
         )
       );
+      // Reset selected member for this committee
+      setSelectedMembers((prev) => ({ ...prev, [committeeId]: '' }));
     } catch (err) {
-      setError(err.message || 'Failed to add professor.');
+      setError(err.message || 'Failed to add member. ' + (err.response?.data?.message || ''));
     }
   };
 
@@ -83,22 +79,21 @@ function ManageComitees() {
     try {
       await deleteTemplateCommittee(templateId, committeeId);
       setCommittees((prev) => prev.filter((committee) => committee.committeeId !== committeeId));
-      if (popupCommitteeId === committeeId) setPopupCommitteeId(null);
     } catch (err) {
       setError(err.message || 'Failed to delete committee.');
     }
   };
 
-  const handleRemoveProfessor = async (committeeId, professorUserId) => {
+  const handleRemoveMember = async (committeeId, memberUserId) => {
     try {
-      const res = await removeProfessorFromTemplateCommittee(templateId, committeeId, professorUserId);
+      const res = await removeProfessorFromTemplateCommittee(templateId, committeeId, memberUserId);
       setCommittees((prev) =>
         prev.map((committee) =>
           committee.committeeId === committeeId ? res.data : committee
         )
       );
     } catch (err) {
-      setError(err.message || 'Failed to remove professor.');
+      setError(err.message || 'Failed to remove member.');
     }
   };
 
@@ -113,116 +108,97 @@ function ManageComitees() {
         )}
       </div>
 
-      {loading && (
-        <div className="state-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-          </svg>
-          Loading committees…
-        </div>
-      )}
+      {loading && <div className="state-box">Loading...</div>}
       {error && !loading && <div className="state-box error">{error}</div>}
 
       {!loading && !error && (
         <div className="committee-grid">
-          {committees.map((committee) => (
-            <article key={committee.committeeId} className="committee-card">
-              <div className="committee-card-header">
-                <h3>{committee.name}</h3>
-                <div className="committee-card-actions">
-                  {isCoordinator && (
-                    <button
-                      type="button"
-                      className="settings-btn"
-                      onClick={() => {
-                        setPopupCommitteeId(committee.committeeId);
-                        setQuery('');
-                      }}
-                      title="Settings"
-                    >
-                      ⚙
-                    </button>
-                  )}
-                  {isCoordinator && (
-                    <button
-                      type="button"
-                      className="delete-committee-btn"
-                      onClick={() => handleDeleteCommittee(committee.committeeId)}
-                      title="Delete committee"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="committee-member-list">
-                {(committee.professors || []).map((prof) => (
-                  <div key={prof.userId} className="committee-member-item">
-                    <div>
-                      <span>{prof.fullName || prof.email}</span>
-                      <small>{prof.email}</small>
-                    </div>
+          {committees.map((committee) => {
+            const currentMembers = committee.professors || [];
+            const atCapacity = currentMembers.length >= 5;
+            
+            return (
+              <article key={committee.committeeId} className="committee-card">
+                <div className="committee-card-header">
+                  <h3>{committee.name}</h3>
+                  <div className="committee-card-actions">
                     {isCoordinator && (
                       <button
                         type="button"
-                        className="remove-prof-inline-btn"
-                        onClick={() => handleRemoveProfessor(committee.committeeId, prof.userId)}
-                        title="Remove professor"
+                        className="delete-committee-btn"
+                        onClick={() => handleDeleteCommittee(committee.committeeId)}
+                        title="Delete committee"
                       >
                         ✕
                       </button>
                     )}
                   </div>
-                ))}
-                {(committee.professors || []).length === 0 && (
-                  <div className="committee-empty">No professor assigned.</div>
-                )}
-              </div>
-            </article>
-          ))}
-          {committees.length === 0 && (
-            <div className="state-box">
-              No committees yet.{isCoordinator ? ' Click “Add Committee” to create one.' : ' Contact your coordinator.'}
-            </div>
-          )}
-        </div>
-      )}
-
-      {isCoordinator && popupCommittee && (
-        <div className="popup-backdrop" onClick={() => setPopupCommitteeId(null)}>
-          <div className="popup-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="popup-head">
-              <h3>{popupCommittee.name} - Professors</h3>
-              <button type="button" className="close-btn" onClick={() => setPopupCommitteeId(null)}>✕</button>
-            </div>
-            <input
-              className="popup-search"
-              placeholder="Search professor..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <div className="popup-list">
-              {filteredProfessors.map((prof) => {
-                const alreadyAdded = (popupCommittee.professors || []).some((item) => item.userId === prof.userId);
-                return (
-                  <div key={prof.userId} className="popup-row">
-                    <div>
-                      <div>{prof.fullName || '-'}</div>
-                      <small>{prof.email}</small>
+                </div>
+                <div className="committee-member-list">
+                  {currentMembers.map((member) => (
+                    <div key={member.userId} className="committee-member-item">
+                      <div>
+                        <span>{member.fullName || member.email}</span>
+                        <small>{member.email}</small>
+                      </div>
+                      {isCoordinator && (
+                        <button
+                          type="button"
+                          className="remove-prof-inline-btn"
+                          onClick={() => handleRemoveMember(committee.committeeId, member.userId)}
+                          title="Remove member"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      className="add-prof-btn"
-                      onClick={() => handleAddProfessor(popupCommittee.committeeId, prof.userId)}
-                      disabled={alreadyAdded}
-                    >
-                      {alreadyAdded ? 'Added' : '+'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                  ))}
+                  {currentMembers.length === 0 && (
+                    <div className="committee-empty">No member assigned.</div>
+                  )}
+                  
+                  {isCoordinator && (
+                    <div className="committee-add-member-section" style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+                      {atCapacity ? (
+                        <div className="capacity-reached" style={{ fontSize: '0.85rem', color: '#666' }}>Committee has reached max capacity (5 members).</div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <select 
+                            className="member-select"
+                            value={selectedMembers[committee.committeeId] || ''}
+                            onChange={(e) => setSelectedMembers({...selectedMembers, [committee.committeeId]: e.target.value})}
+                            style={{ flex: 1, padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                          >
+                            <option value="">Select a member to add...</option>
+                            {members.map(member => {
+                              const alreadyAdded = currentMembers.some(m => m.userId === member.userId);
+                              return (
+                                <option key={member.userId} value={member.userId} disabled={alreadyAdded}>
+                                  {member.fullName || member.email} {alreadyAdded ? '(Added)' : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <button 
+                            type="button"
+                            className="add-member-btn"
+                            onClick={() => handleAddMember(committee.committeeId)}
+                            disabled={!selectedMembers[committee.committeeId]}
+                            style={{ padding: '4px 12px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: selectedMembers[committee.committeeId] ? 'pointer' : 'not-allowed', opacity: selectedMembers[committee.committeeId] ? 1 : 0.6 }}
+                          >
+                            Add
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+          {committees.length === 0 && (
+            <div className="state-box">No committee yet. Click Add Committee.</div>
+          )}
         </div>
       )}
     </div>
@@ -230,3 +206,4 @@ function ManageComitees() {
 }
 
 export default ManageComitees;
+

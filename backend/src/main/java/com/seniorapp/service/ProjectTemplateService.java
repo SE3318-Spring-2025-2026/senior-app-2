@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -71,6 +72,7 @@ public class ProjectTemplateService {
             throw new IllegalArgumentException("Authenticated user id is required.");
         }
         LocalDate projectStartDate = parseProjectStartDate(request.getProjectStartDate());
+        LocalDate groupFormationDeadline = parseOptionalDate(request.getGroupFormationDeadline());
 
         Map<String, Object> payload = new LinkedHashMap<>();
         JsonNode normalizedSprints = removeEvaluationTypeField(request.getSprints());
@@ -78,6 +80,9 @@ public class ProjectTemplateService {
         payload.put("description", request.getDescription());
         payload.put("term", request.getTerm());
         payload.put("projectStartDate", request.getProjectStartDate());
+        if (request.getGroupFormationDeadline() != null) {
+            payload.put("groupFormationDeadline", request.getGroupFormationDeadline());
+        }
         payload.put("sprints", normalizedSprints);
         payload.put("fixedGradePoints", FIXED_GRADE_POINTS);
 
@@ -88,6 +93,7 @@ public class ProjectTemplateService {
         template.setCreatedBy(String.valueOf(createdByUserId));
         template.setCreatedByUserId(createdByUserId);
         template.setProjectStartDate(projectStartDate);
+        template.setGroupFormationDeadline(groupFormationDeadline);
         template.setVersion(1);
         template.setActive(true);
         template.setTemplateJson(serialize(payload));
@@ -154,7 +160,7 @@ public class ProjectTemplateService {
 
     @Transactional(readOnly = true)
     public List<ProfessorOptionDto> listProfessors() {
-        return userRepository.findByRole(Role.PROFESSOR).stream()
+        return userRepository.findByRoleIn(EnumSet.of(Role.PROFESSOR, Role.COORDINATOR)).stream()
                 .map(this::toProfessorOptionDto)
                 .toList();
     }
@@ -167,8 +173,8 @@ public class ProjectTemplateService {
         TemplateCommittee committee = getCommitteeBelongsToTemplate(templateId, committeeId);
         User professor = userRepository.findById(professorUserId)
                 .orElseThrow(() -> new NoSuchElementException("Professor not found: " + professorUserId));
-        if (professor.getRole() != Role.PROFESSOR) {
-            throw new IllegalArgumentException("Selected user is not a professor.");
+        if (!isCommitteeAssignableRole(professor.getRole())) {
+            throw new IllegalArgumentException("Selected user must be a professor or coordinator.");
         }
         boolean exists = committee.getProfessors().stream()
                 .anyMatch(member -> Objects.equals(member.getProfessor().getId(), professorUserId));
@@ -195,6 +201,10 @@ public class ProjectTemplateService {
                 Objects.equals(member.getProfessor().getId(), professorUserId)
         );
         return toTemplateCommitteeDto(templateCommitteeRepository.save(committee));
+    }
+
+    private boolean isCommitteeAssignableRole(Role role) {
+        return role == Role.PROFESSOR || role == Role.COORDINATOR;
     }
 
     private void ensureProfessorTemplateAccess(Long templateId, Long requesterUserId) {
@@ -311,6 +321,15 @@ public class ProjectTemplateService {
             return LocalDate.parse(value);
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("projectStartDate must be in ISO format: YYYY-MM-DD");
+        }
+    }
+
+    private LocalDate parseOptionalDate(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("groupFormationDeadline must be in ISO format: YYYY-MM-DD");
         }
     }
 

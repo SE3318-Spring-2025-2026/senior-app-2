@@ -22,6 +22,8 @@ public class CreateProjectTemplateRequest {
     @NotBlank
     private String projectStartDate;
 
+    private String groupFormationDeadline;
+
     @NotNull
     private JsonNode sprints;
 
@@ -63,5 +65,13 @@ public class CreateProjectTemplateRequest {
 
     public void setProjectStartDate(String projectStartDate) {
         this.projectStartDate = projectStartDate;
+    }
+
+    public String getGroupFormationDeadline() {
+        return groupFormationDeadline;
+    }
+
+    public void setGroupFormationDeadline(String groupFormationDeadline) {
+        this.groupFormationDeadline = groupFormationDeadline;
     }
 }
