@@ -29,8 +29,26 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const refreshUser = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUser(null);
+      return Promise.resolve(null);
+    }
+    return getMe()
+      .then((data) => {
+        setUser(data.user);
+        return data.user;
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        setUser(null);
+        return null;
+      });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, loginUser, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginUser, logout, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );

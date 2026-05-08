@@ -3,20 +3,27 @@ package com.seniorapp.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seniorapp.dto.project.ProjectDtos.*;
+import com.seniorapp.dto.project.ProjectGradingSummaryDto;
 import com.seniorapp.entity.*;
 import com.seniorapp.repository.ProjectCommitteeProfessorRepository;
 import com.seniorapp.repository.ProjectCommitteeRepository;
 import com.seniorapp.repository.ProjectDeliverableRubricRepository;
 import com.seniorapp.repository.ProjectEvaluationRubricRepository;
 import com.seniorapp.repository.ProjectGroupAssignmentRepository;
+import com.seniorapp.repository.ProjectIssueSyncSnapshotRepository;
 import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectTemplateRepository;
 import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserRepository;
 import com.seniorapp.service.grading.PdfGradingEngineService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,6 +39,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class ProjectService {
+    private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
 
     private final ProjectRepository projectRepository;
     private final ProjectTemplateRepository projectTemplateRepository;
@@ -42,6 +50,11 @@ public class ProjectService {
     private final ProjectEvaluationRubricRepository projectEvaluationRubricRepository;
     private final UserRepository userRepository;
     private final UserGroupMemberRepository userGroupMemberRepository;
+    private final SecureOutboundApiService secureOutboundApiService;
+    private final JiraProvisioningService jiraProvisioningService;
+    private final ProjectGithubIssueSyncService projectGithubIssueSyncService;
+    private final JiraGithubDailySyncService jiraGithubDailySyncService;
+    private final ProjectIssueSyncSnapshotRepository projectIssueSyncSnapshotRepository;
     private final ObjectMapper objectMapper;
     private final PdfGradingEngineService pdfGradingEngineService;
 
@@ -55,6 +68,11 @@ public class ProjectService {
             ProjectEvaluationRubricRepository projectEvaluationRubricRepository,
             UserRepository userRepository,
             UserGroupMemberRepository userGroupMemberRepository,
+            SecureOutboundApiService secureOutboundApiService,
+            JiraProvisioningService jiraProvisioningService,
+            ProjectGithubIssueSyncService projectGithubIssueSyncService,
+            JiraGithubDailySyncService jiraGithubDailySyncService,
+            ProjectIssueSyncSnapshotRepository projectIssueSyncSnapshotRepository,
             ObjectMapper objectMapper,
             PdfGradingEngineService pdfGradingEngineService
     ) {
@@ -67,6 +85,11 @@ public class ProjectService {
         this.projectEvaluationRubricRepository = projectEvaluationRubricRepository;
         this.userRepository = userRepository;
         this.userGroupMemberRepository = userGroupMemberRepository;
+        this.secureOutboundApiService = secureOutboundApiService;
+        this.jiraProvisioningService = jiraProvisioningService;
+        this.projectGithubIssueSyncService = projectGithubIssueSyncService;
+        this.jiraGithubDailySyncService = jiraGithubDailySyncService;
+        this.projectIssueSyncSnapshotRepository = projectIssueSyncSnapshotRepository;
         this.objectMapper = objectMapper;
         this.pdfGradingEngineService = pdfGradingEngineService;
     }
@@ -149,6 +172,8 @@ public class ProjectService {
         assignment.setAssignedAt(LocalDateTime.now());
         assignment.setActive(true);
         ProjectGroupAssignment saved = assignmentRepository.save(assignment);
+        createGithubRepoOnAssignmentRequired(project, groupId, assignedByUserId);
+        createJiraWorkspaceOnAssignmentRequired(project, groupId);
 
         return new AssignmentResponse("success", safeProjectId, saved.getGroupId(), saved.getAssignedAt());
     }
@@ -190,9 +215,10 @@ public class ProjectService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ProjectDetail getProjectDetail(Long projectId, Long requesterUserId, Role requesterRole) {
         Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        jiraGithubDailySyncService.syncProjectNow(safeProjectId);
         Project project = projectRepository.findById(safeProjectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found: " + projectId));
         warmProjectSprintCollections(project);
@@ -294,8 +320,8 @@ public class ProjectService {
 
         User professor = userRepository.findById(professorUserId)
                 .orElseThrow(() -> new NoSuchElementException("Professor not found: " + professorUserId));
-        if (professor.getRole() != Role.PROFESSOR) {
-            throw new IllegalArgumentException("Selected user is not a professor.");
+        if (professor.getRole() != Role.PROFESSOR && professor.getRole() != Role.COORDINATOR) {
+            throw new IllegalArgumentException("Selected user must be a professor or coordinator.");
         }
 
         boolean alreadyExists = committee.getProfessors().stream()
@@ -347,9 +373,14 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public List<ProfessorOptionDto> listProfessors() {
-        return userRepository.findByRole(Role.PROFESSOR).stream()
+        List<ProfessorOptionDto> result = new ArrayList<>();
+        result.addAll(userRepository.findByRole(Role.PROFESSOR).stream()
                 .map(this::toProfessorOptionDto)
-                .toList();
+                .toList());
+        result.addAll(userRepository.findByRole(Role.COORDINATOR).stream()
+                .map(this::toProfessorOptionDto)
+                .toList());
+        return result;
     }
 
     private List<ProjectSprint> buildProjectSprints(Project project, JsonNode sprintsNode) {
@@ -451,6 +482,10 @@ public class ProjectService {
         summary.setStatus(project.getStatus().name());
         summary.setCreatedAt(project.getCreatedAt());
         summary.setActiveGroupId(project.getGroupId());
+        summary.setRepoFullName(project.getRepoFullName());
+        summary.setRepoHtmlUrl(project.getRepoHtmlUrl());
+        summary.setRepoDefaultBranch(project.getRepoDefaultBranch());
+        summary.setRepoProviderId(project.getRepoProviderId());
         return summary;
     }
 
@@ -469,11 +504,118 @@ public class ProjectService {
         detail.setCreatedAt(project.getCreatedAt());
         detail.setUpdatedAt(project.getUpdatedAt());
         detail.setActiveGroupId(project.getGroupId());
+        detail.setRepoFullName(project.getRepoFullName());
+        detail.setRepoHtmlUrl(project.getRepoHtmlUrl());
+        detail.setRepoDefaultBranch(project.getRepoDefaultBranch());
+        detail.setRepoProviderId(project.getRepoProviderId());
+        detail.setJiraProjectKey(project.getJiraProjectKey());
+        detail.setJiraProjectUrl(resolveJiraProjectBrowseUrl(project));
+        List<JiraGithubMatchDto> syncRows = loadJiraGithubMatches(project.getId());
+        detail.setJiraGithubMatches(syncRows);
+        detail.setGithubBranches(loadGithubBranches(project, syncRows));
         detail.setSprints(project.getSprints().stream()
                 .sorted(Comparator.comparing(ProjectSprint::getSprintNo))
                 .map(s -> toSprintDto(s, deliverableRubricsFromDb, evaluationRubricsFromDb))
                 .toList());
+        ProjectGithubIssueSyncService.StoryPointValidationResult validation =
+                projectGithubIssueSyncService.validateStoryPoints(project.getId());
+        StoryPointValidationDto validationDto = new StoryPointValidationDto();
+        validationDto.setMatched(validation.matched());
+        validationDto.setExpected(validation.expected());
+        validationDto.setActual(validation.actual());
+        detail.setStoryPointValidation(validationDto);
+        detail.setGithubIssues(validation.issues().stream().map(this::toGithubIssueDto).toList());
         return detail;
+    }
+
+    private List<JiraGithubMatchDto> loadJiraGithubMatches(Long projectId) {
+        if (projectId == null) return List.of();
+        return projectIssueSyncSnapshotRepository.findByProject_IdOrderByIssueKeyAsc(projectId).stream()
+                .map(snapshot -> {
+                    JiraGithubMatchDto dto = new JiraGithubMatchDto();
+                    dto.setBranchName(snapshot.getBranchName());
+                    dto.setIssueKey(snapshot.getIssueKey());
+                    dto.setIssueTitle(snapshot.getIssueTitle());
+                    dto.setIssueDescription(snapshot.getIssueDescription());
+                    dto.setStoryPoints(snapshot.getStoryPoints());
+                    dto.setSprintNo(snapshot.getSprintNo());
+                    dto.setJiraAssignee(snapshot.getAssignee());
+                    dto.setPrMerged(snapshot.getPrMerged());
+                    return dto;
+                })
+                .toList();
+    }
+
+    private List<String> loadGithubBranches(Project project, List<JiraGithubMatchDto> syncRows) {
+        Set<String> branches = new java.util.LinkedHashSet<>();
+        String repoDefaultBranch = project != null ? project.getRepoDefaultBranch() : null;
+        if (repoDefaultBranch != null && !repoDefaultBranch.isBlank()) {
+            branches.add(repoDefaultBranch.trim());
+        }
+        for (JiraGithubMatchDto row : syncRows) {
+            if (row.getBranchName() != null && !row.getBranchName().isBlank()) {
+                branches.add(row.getBranchName().trim());
+            }
+        }
+        if (project != null && project.getRepoFullName() != null && !project.getRepoFullName().isBlank()) {
+            branches.addAll(fetchAllGithubBranches(project));
+        }
+        return List.copyOf(branches);
+    }
+
+    private List<String> fetchAllGithubBranches(Project project) {
+        try {
+            String encryptedPat = resolveTemplateCreatorPat(project);
+            if (encryptedPat == null || encryptedPat.isBlank()) {
+                return List.of();
+            }
+            List<String> result = new ArrayList<>();
+            int page = 1;
+            while (true) {
+                String endpoint = "https://api.github.com/repos/" + project.getRepoFullName()
+                        + "/branches?per_page=100&page=" + page;
+                String body = secureOutboundApiService.executeGitHubApiCall(
+                        encryptedPat, endpoint, null, HttpMethod.GET).getBody();
+                JsonNode node = objectMapper.readTree(body);
+                if (!node.isArray() || node.isEmpty()) {
+                    break;
+                }
+                for (JsonNode branchNode : node) {
+                    String branchName = branchNode.path("name").asText(null);
+                    if (branchName != null && !branchName.isBlank()) {
+                        result.add(branchName.trim());
+                    }
+                }
+                if (node.size() < 100) {
+                    break;
+                }
+                page++;
+            }
+            return result;
+        } catch (Exception ex) {
+            log.warn("Could not fetch full GitHub branch list for project {}: {}", project.getId(), ex.getMessage());
+            return List.of();
+        }
+    }
+
+    private String resolveJiraProjectBrowseUrl(Project project) {
+        try {
+            if (project == null || project.getJiraProjectKey() == null || project.getJiraProjectKey().isBlank()) {
+                return null;
+            }
+            String raw = project.getTemplate() != null ? project.getTemplate().getTemplateJson() : null;
+            if (raw == null || raw.isBlank()) return null;
+            String site = objectMapper.readTree(raw).path("jiraSiteUrl").asText(null);
+            if (site == null || site.isBlank()) return null;
+            String normalized = site.trim();
+            if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
+                normalized = "https://" + normalized;
+            }
+            if (normalized.endsWith("/")) normalized = normalized.substring(0, normalized.length() - 1);
+            return normalized + "/browse/" + project.getJiraProjectKey();
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private SprintDto toSprintDto(
@@ -558,6 +700,8 @@ public class ProjectService {
         dto.setName(committee.getName());
         dto.setProfessors(committee.getProfessors().stream()
                 .map(ProjectCommitteeProfessor::getProfessor)
+                .filter(Objects::nonNull)
+                .filter(user -> user.getRole() == Role.PROFESSOR || user.getRole() == Role.COORDINATOR)
                 .map(this::toProfessorOptionDto)
                 .toList());
         return dto;
@@ -569,5 +713,203 @@ public class ProjectService {
         dto.setFullName(professor.getFullName());
         dto.setEmail(professor.getEmail());
         return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdvisorLiveGradeRow> getAdvisorLiveGrades(Long advisorUserId) {
+        if (advisorUserId == null) return List.of();
+        return projectRepository.findAll().stream()
+                .filter(p -> p.getGroupId() != null)
+                .map(p -> {
+                    AdvisorLiveGradeRow row = new AdvisorLiveGradeRow();
+                    row.setProjectId(p.getId());
+                    row.setProjectTitle(p.getTitle());
+                    row.setGroupId(p.getGroupId());
+                    ProjectGradingSummaryDto summary = pdfGradingEngineService.buildSummary(p, p.getGroupId());
+                    row.setCumulativeTeamGrade(summary != null ? summary.getCumulativeTeamGrade() : null);
+                    row.setAdjustedIndividualGrade(summary != null ? summary.getAdjustedIndividualGrade() : null);
+                    row.setOverallSuccessGrade(summary != null ? summary.getOverallSuccessGrade() : null);
+                    return row;
+                })
+                .toList();
+    }
+
+    private GithubIssueDto toGithubIssueDto(ProjectGithubIssue issue) {
+        GithubIssueDto dto = new GithubIssueDto();
+        dto.setIssueNumber(issue.getIssueNumber());
+        dto.setTitle(issue.getTitle());
+        dto.setState(issue.getState());
+        dto.setAssignee(issue.getAssignee());
+        dto.setSprintNo(issue.getSprint() != null ? issue.getSprint().getSprintNo() : null);
+        dto.setStoryPoints(issue.getStoryPoints());
+        return dto;
+    }
+
+    private void createGithubRepoOnAssignmentRequired(Project project, Long groupId, Long assignedByUserId) {
+        boolean createFlag = shouldCreateGithubRepo(project);
+        if (!createFlag) {
+            throw new IllegalArgumentException(
+                    "Template is not configured for GitHub repo creation (createGithubRepo=false).");
+        }
+        if (project.getRepoFullName() != null) {
+            log.info("GitHub repo create skipped: repo already exists on project (projectId={}, repoFullName={})",
+                    project.getId(), project.getRepoFullName());
+            return;
+        }
+        Long safeGroupId = Objects.requireNonNull(groupId, "groupId required");
+        String encryptedPat = resolveTemplateCreatorPat(project);
+        if (encryptedPat == null || encryptedPat.isBlank()) {
+            throw new IllegalArgumentException("Template creator coordinator GitHub PAT is missing. Save PAT in My Profile.");
+        }
+        try {
+            String ownerLogin = resolveGithubOwnerLogin(encryptedPat);
+            if (ownerLogin == null || ownerLogin.isBlank()) {
+                throw new IllegalStateException("Could not resolve GitHub owner login from PAT.");
+            }
+            String repoName = buildRepoName(project, safeGroupId);
+            String body = objectMapper.createObjectNode()
+                    .put("name", repoName)
+                    .put("private", true)
+                    .put("description", "SeniorApp project " + project.getId())
+                    .toString();
+            JsonNode repoNode = objectMapper.readTree(
+                    secureOutboundApiService.executeGitHubApiCall(
+                            encryptedPat, "https://api.github.com/user/repos", body, HttpMethod.POST).getBody());
+            project.setRepoFullName(repoNode.path("full_name").asText(ownerLogin + "/" + repoName));
+            project.setRepoHtmlUrl(repoNode.path("html_url").asText(null));
+            project.setRepoDefaultBranch(repoNode.path("default_branch").asText("main"));
+            project.setRepoProviderId(repoNode.path("id").asText(null));
+            projectRepository.save(project);
+            inviteGroupStudentsToGithubRepo(project, safeGroupId, encryptedPat);
+            log.info("GitHub repo created and persisted (projectId={}, repoFullName={})",
+                    project.getId(), project.getRepoFullName());
+        } catch (Exception e) {
+            throw new IllegalStateException("GitHub repo creation failed: " + e.getMessage(), e);
+        }
+    }
+
+    private boolean shouldCreateGithubRepo(Project project) {
+        try {
+            String raw = project.getTemplate() != null ? project.getTemplate().getTemplateJson() : null;
+            if (raw == null || raw.isBlank()) return false;
+            return objectMapper.readTree(raw).path("createGithubRepo").asBoolean(false);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean shouldCreateJiraWorkspace(Project project) {
+        try {
+            String raw = project.getTemplate() != null ? project.getTemplate().getTemplateJson() : null;
+            if (raw == null || raw.isBlank()) return false;
+            return objectMapper.readTree(raw).path("createJiraWorkspace").asBoolean(false);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String resolveGithubOwnerLogin(String encryptedPat) throws Exception {
+        String body = secureOutboundApiService.executeGitHubApiCall(
+                encryptedPat, "https://api.github.com/user", null, HttpMethod.GET).getBody();
+        return objectMapper.readTree(body).path("login").asText(null);
+    }
+
+    private String resolveTemplateCreatorPat(Project project) {
+        ProjectTemplate template = project.getTemplate();
+        if (template == null || template.getCreatedByUserId() == null) return null;
+        Long creatorUserId = Objects.requireNonNull(template.getCreatedByUserId(), "template createdByUserId required");
+        User creator = userRepository.findById(creatorUserId).orElse(null);
+        if (creator == null) return null;
+        String pat = creator.getGithubPatEncrypted();
+        if (pat != null && !pat.isBlank()) {
+            return pat;
+        }
+        return null;
+    }
+
+    private String resolveTemplateCreatorJiraToken(Project project) {
+        ProjectTemplate template = project.getTemplate();
+        Long creatorUserId = template != null ? template.getCreatedByUserId() : null;
+        if (creatorUserId == null) return null;
+        User creator = userRepository.findById(creatorUserId).orElse(null);
+        return creator != null ? creator.getJiraApiTokenEncrypted() : null;
+    }
+
+    private String resolveTemplateJiraSiteUrl(Project project) {
+        try {
+            String raw = project.getTemplate() != null ? project.getTemplate().getTemplateJson() : null;
+            if (raw == null || raw.isBlank()) return null;
+            return objectMapper.readTree(raw).path("jiraSiteUrl").asText(null);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private void createJiraWorkspaceOnAssignmentRequired(Project project, Long groupId) {
+        if (!shouldCreateJiraWorkspace(project)) {
+            return;
+        }
+        if (project.getJiraProjectKey() != null && !project.getJiraProjectKey().isBlank()) {
+            return;
+        }
+        String templateJiraSiteUrl = resolveTemplateJiraSiteUrl(project);
+        String encryptedApiToken = resolveTemplateCreatorJiraToken(project);
+        if (templateJiraSiteUrl == null || templateJiraSiteUrl.isBlank()
+                || encryptedApiToken == null || encryptedApiToken.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Template Jira domain or Jira OAuth connection is missing.");
+        }
+        try {
+            JiraProvisioningService.JiraProvisioningResult result =
+                    jiraProvisioningService.provisionProject(project, groupId, templateJiraSiteUrl, encryptedApiToken);
+            project.setJiraProjectKey(result.getProjectKey());
+            project.setJiraProjectId(result.getProjectId());
+            project.setJiraBoardId(result.getBoardId());
+            projectRepository.save(project);
+            log.info("Jira workspace created and persisted (projectId={}, jiraProjectKey={})",
+                    project.getId(), project.getJiraProjectKey());
+        } catch (Exception e) {
+            throw new IllegalStateException("Jira workspace creation failed: " + e.getMessage(), e);
+        }
+    }
+
+    private String buildRepoName(Project project, Long groupId) {
+        String base = (project.getTitle() == null ? "project" : project.getTitle())
+                .trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9-]+", "-").replaceAll("(^-|-$)", "");
+        if (base.isBlank()) base = "project";
+        return base + "-g" + groupId + "-p" + project.getId();
+    }
+
+    private void inviteGroupStudentsToGithubRepo(Project project, Long groupId, String encryptedPat) {
+        if (project == null || project.getRepoFullName() == null || project.getRepoFullName().isBlank()) {
+            return;
+        }
+        List<UserGroupMember> acceptedMembers =
+                userGroupMemberRepository.findByGroupIdAndStatus(groupId, GroupInviteStatus.ACCEPTED);
+        for (UserGroupMember membership : acceptedMembers) {
+            User member = membership.getUser();
+            if (member == null || member.getRole() != Role.STUDENT) {
+                continue;
+            }
+            String githubUsername = member.getGithubUsername();
+            if (githubUsername == null || githubUsername.isBlank()) {
+                log.info("GitHub collaborator invite skipped: student has no linked github username (userId={})",
+                        member.getId());
+                continue;
+            }
+            try {
+                String endpoint = "https://api.github.com/repos/" + project.getRepoFullName()
+                        + "/collaborators/" + URLEncoder.encode(githubUsername, StandardCharsets.UTF_8);
+                String body = objectMapper.createObjectNode()
+                        .put("permission", "push")
+                        .toString();
+                secureOutboundApiService.executeGitHubApiCall(encryptedPat, endpoint, body, HttpMethod.PUT);
+                log.info("GitHub collaborator invited (repo={}, username={})", project.getRepoFullName(), githubUsername);
+            } catch (Exception ex) {
+                // Best effort: repo creation should still succeed even if one invite fails.
+                log.warn("GitHub collaborator invite failed (repo={}, username={}): {}",
+                        project.getRepoFullName(), githubUsername, ex.getMessage());
+            }
+        }
     }
 }

@@ -31,5 +31,7 @@ public interface UserGroupMemberRepository extends JpaRepository<UserGroupMember
 
     Optional<UserGroupMember> findByUserAndStatus(User user, GroupInviteStatus status);
 
+    List<UserGroupMember> findByUserIdAndGroupIdAndStatus(Long userId, Long groupId, GroupInviteStatus status);
+
     void deleteByGroupId(Long groupId);
 }

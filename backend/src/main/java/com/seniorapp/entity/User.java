@@ -32,6 +32,27 @@ public class User {
 
     private Long githubId;
 
+    @Column(name = "github_pat_encrypted", length = 1024)
+    private String githubPatEncrypted;
+
+    @Column(name = "jira_site_url_encrypted", columnDefinition = "TEXT")
+    private String jiraSiteUrlEncrypted;
+
+    @Column(name = "jira_api_token_encrypted", columnDefinition = "TEXT")
+    private String jiraApiTokenEncrypted;
+
+    @Column(name = "jira_refresh_token_encrypted", columnDefinition = "TEXT")
+    private String jiraRefreshTokenEncrypted;
+
+    @Column(name = "jira_account_id", length = 255)
+    private String jiraAccountId;
+
+    @Column(name = "jira_email", length = 255)
+    private String jiraEmail;
+
+    @Column(name = "jira_display_name", length = 255)
+    private String jiraDisplayName;
+
     private boolean enabled = true;
 
     /**
@@ -67,6 +88,27 @@ public class User {
 
     public Long getGithubId() { return githubId; }
     public void setGithubId(Long githubId) { this.githubId = githubId; }
+
+    public String getGithubPatEncrypted() { return githubPatEncrypted; }
+    public void setGithubPatEncrypted(String githubPatEncrypted) { this.githubPatEncrypted = githubPatEncrypted; }
+
+    public String getJiraSiteUrlEncrypted() { return jiraSiteUrlEncrypted; }
+    public void setJiraSiteUrlEncrypted(String jiraSiteUrlEncrypted) { this.jiraSiteUrlEncrypted = jiraSiteUrlEncrypted; }
+
+    public String getJiraApiTokenEncrypted() { return jiraApiTokenEncrypted; }
+    public void setJiraApiTokenEncrypted(String jiraApiTokenEncrypted) { this.jiraApiTokenEncrypted = jiraApiTokenEncrypted; }
+
+    public String getJiraRefreshTokenEncrypted() { return jiraRefreshTokenEncrypted; }
+    public void setJiraRefreshTokenEncrypted(String jiraRefreshTokenEncrypted) { this.jiraRefreshTokenEncrypted = jiraRefreshTokenEncrypted; }
+
+    public String getJiraAccountId() { return jiraAccountId; }
+    public void setJiraAccountId(String jiraAccountId) { this.jiraAccountId = jiraAccountId; }
+
+    public String getJiraEmail() { return jiraEmail; }
+    public void setJiraEmail(String jiraEmail) { this.jiraEmail = jiraEmail; }
+
+    public String getJiraDisplayName() { return jiraDisplayName; }
+    public void setJiraDisplayName(String jiraDisplayName) { this.jiraDisplayName = jiraDisplayName; }
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }

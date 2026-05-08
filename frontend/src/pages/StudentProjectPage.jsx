@@ -30,6 +30,9 @@ function StudentProjectPage() {
   const [deliverableState, setDeliverableState] = useState({});
   const [groupId, setGroupId] = useState(null);
   const [isTeamLead, setIsTeamLead] = useState(false);
+  const [integrationView, setIntegrationView] = useState('github');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [selectedIssue, setSelectedIssue] = useState(null);
 
   useEffect(() => {
     if (!projectId) return;
@@ -199,6 +202,69 @@ function StudentProjectPage() {
   (gs?.deliverableLines || []).forEach((row) => {
     if (row?.deliverableId != null) delGradingById[row.deliverableId] = row;
   });
+  const jiraGithubMatches = Array.isArray(project.jiraGithubMatches) ? project.jiraGithubMatches : [];
+  const selectedSprintNo = currentSprint?.sprintNo ?? null;
+  const sprintScopedMatches = selectedSprintNo == null
+    ? jiraGithubMatches
+    : jiraGithubMatches.filter((m) => {
+      const sprintNo = m?.sprintNo;
+      if (sprintNo == null) return false;
+      return Number(sprintNo) === Number(selectedSprintNo);
+    });
+  const assigneeOptions = [...new Set(sprintScopedMatches.map((m) => (m.jiraAssignee || '').trim()).filter(Boolean))];
+  const getPrefix = (value) => (value || '').split('/')[0].trim().toLowerCase();
+  const candidateBranches = [...new Set([...(project.githubBranches || []), ...sprintScopedMatches.map((m) => m.branchName)].filter(Boolean))];
+  const selectedSprintPrefixes = new Set(
+    sprintScopedMatches
+      .map((m) => getPrefix(m.issueTitle || m.issueKey))
+      .filter(Boolean)
+  );
+  const allBranches = selectedSprintNo == null
+    ? candidateBranches
+    : candidateBranches.filter((branch) => {
+      const prefix = getPrefix(branch);
+      if (selectedSprintPrefixes.has(prefix)) return true;
+      return sprintScopedMatches.some((m) => (m.branchName || '').trim() === (branch || '').trim());
+    });
+  const rows = [];
+  const usedBranches = new Set();
+  sprintScopedMatches.forEach((issue) => {
+    const issuePrefix = getPrefix(issue.issueTitle || issue.issueKey);
+    const matchedBranches = allBranches.filter((b) => getPrefix(b) === issuePrefix);
+    if (matchedBranches.length === 0) {
+      rows.push({
+        branchName: null,
+        issueKey: issue.issueKey,
+        issueTitle: issue.issueTitle,
+        issueDescription: issue.issueDescription,
+        storyPoints: issue.storyPoints,
+        jiraAssignee: issue.jiraAssignee,
+        prMerged: issue.prMerged
+      });
+      return;
+    }
+    matchedBranches.forEach((branch) => {
+      usedBranches.add(branch);
+      rows.push({
+        branchName: branch,
+        issueKey: issue.issueKey,
+        issueTitle: issue.issueTitle,
+        issueDescription: issue.issueDescription,
+        storyPoints: issue.storyPoints,
+        jiraAssignee: issue.jiraAssignee,
+        prMerged: issue.prMerged
+      });
+    });
+  });
+  allBranches.forEach((branch) => {
+    if (!usedBranches.has(branch)) {
+      rows.push({ branchName: branch, issueKey: null, issueTitle: null, jiraAssignee: null, prMerged: null });
+    }
+  });
+  const filteredMatches = rows.filter((row) => {
+    if (!assigneeFilter) return true;
+    return (row.jiraAssignee || '').trim() === assigneeFilter;
+  });
 
   return (
     <div className="student-project-page">
@@ -223,6 +289,30 @@ function StudentProjectPage() {
           {successSub && <div className="spp-cumulative-sub">{successSub}</div>}
         </div>
       </div>
+
+      {project.repoFullName && (
+        <div className="spp-card" style={{ marginBottom: 16 }}>
+          <h3>See GitHub</h3>
+          <p>
+            Repository: <a href={project.repoHtmlUrl} target="_blank" rel="noreferrer">{project.repoFullName}</a>
+          </p>
+          <p>Default branch: {project.repoDefaultBranch || '-'}</p>
+          {project.jiraProjectUrl && (
+            <p>
+              Jira: <a href={project.jiraProjectUrl} target="_blank" rel="noreferrer">{project.jiraProjectKey || 'Open Jira project'}</a>
+            </p>
+          )}
+          <button
+            type="button"
+            className="spp-btn-load"
+            onClick={() => setIntegrationView((prev) => (prev === 'github' ? 'jira' : 'github'))}
+          >
+            {integrationView === 'github'
+              ? 'Switch to Github/Jira view'
+              : 'Switch to Deliverable/Grade view'}
+          </button>
+        </div>
+      )}
 
       {sprints.length > 0 && (
         <div className="spp-timeline-section">
@@ -271,7 +361,103 @@ function StudentProjectPage() {
         </div>
       )}
 
-      {currentSprint && (
+      {integrationView === 'jira' ? (
+        <div className="spp-card" style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 12 }}>
+            <label htmlFor="jira-assignee-filter" style={{ marginRight: 8 }}>Assignee</label>
+            <select
+              id="jira-assignee-filter"
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+            >
+              <option value="">All</option>
+              {assigneeOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="spp-match-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: 8 }}>GitHub branch</th>
+                  <th style={{ textAlign: 'left', padding: 8 }}>Jira issue</th>
+                  <th style={{ textAlign: 'left', padding: 8 }}>Assignee</th>
+                  <th style={{ textAlign: 'left', padding: 8 }}>PR merged</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMatches.length === 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: 8 }}>No rows yet.</td>
+                  </tr>
+                )}
+                {filteredMatches.map((row, idx) => (
+                  <tr key={`${row.branchName}-${row.issueKey}-${row.issueTitle}-${idx}`}>
+                    <td style={{ padding: 8 }}>
+                      {row.branchName ? (
+                        <a
+                          href={`${project.repoHtmlUrl}/tree/${row.branchName.split('/').map(encodeURIComponent).join('/')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {row.branchName}
+                        </a>
+                      ) : '—'}
+                    </td>
+                    <td style={{ padding: 8 }}>
+                      {row.issueTitle || row.issueKey ? (
+                        <button
+                          type="button"
+                          className="spp-btn-load"
+                          onClick={() => setSelectedIssue({
+                            title: row.issueTitle || row.issueKey,
+                            description: row.issueDescription,
+                            assignee: row.jiraAssignee,
+                            storyPoints: row.storyPoints
+                          })}
+                        >
+                          {row.issueTitle || row.issueKey}
+                        </button>
+                      ) : '—'}
+                    </td>
+                    <td style={{ padding: 8 }}>{row.jiraAssignee || '—'}</td>
+                    <td style={{ padding: 8 }}>{row.prMerged == null ? '—' : row.prMerged ? 'Yes' : 'No'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {selectedIssue && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0,0,0,0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000
+              }}
+              onClick={() => setSelectedIssue(null)}
+            >
+              <div
+                style={{ background: '#fff', borderRadius: 12, padding: 20, minWidth: 360, maxWidth: 560 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ marginTop: 0 }}>{selectedIssue.title}</h3>
+                <p><strong>Assignee:</strong> {selectedIssue.assignee || '—'}</p>
+                <p><strong>Story points:</strong> {selectedIssue.storyPoints ?? '—'}</p>
+                <p><strong>Description:</strong></p>
+                <div style={{ maxHeight: 220, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+                  {selectedIssue.description || '—'}
+                </div>
+                <div style={{ marginTop: 12, textAlign: 'right' }}>
+                  <button type="button" className="spp-btn-load" onClick={() => setSelectedIssue(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : currentSprint && (
         <div className="spp-sprint-content">
           <div className="spp-main-col">
             <div className="spp-deliverables-header">

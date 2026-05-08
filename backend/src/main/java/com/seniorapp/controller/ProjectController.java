@@ -140,6 +140,13 @@ public class ProjectController {
 
     }
 
+    @GetMapping("/advisor/live-grades")
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADVISOR', 'COORDINATOR', 'ADMIN')")
+    public ResponseEntity<AdvisorLiveGradesResponse> getAdvisorLiveGrades(@AuthenticationPrincipal User principal) {
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+        return ResponseEntity.ok(new AdvisorLiveGradesResponse("success", projectService.getAdvisorLiveGrades(user.getId())));
+    }
+
 
 
     @GetMapping("/professors")

@@ -540,6 +540,26 @@ export default function ProjectInspection() {
           )}
         </main>
       </div>
+
+      {projectDetail?.repoFullName && (
+        <div className="spp-card" style={{ marginBottom: 16 }}>
+          <h3>See GitHub</h3>
+          <p>
+            Repository: <a href={projectDetail.repoHtmlUrl} target="_blank" rel="noreferrer">{projectDetail.repoFullName}</a>
+          </p>
+          <p>Default branch: {projectDetail.repoDefaultBranch || '-'}</p>
+          <div>
+            <strong>Issues</strong>
+            {(projectDetail.githubIssues || []).length === 0 && <p>No synced issues yet.</p>}
+            {(projectDetail.githubIssues || []).slice(0, 20).map((issue) => (
+              <div key={issue.issueNumber} className="dashboard-row-card">
+                <span>#{issue.issueNumber} {issue.title}</span>
+                <span>{issue.state} • SP: {issue.storyPoints ?? '-'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

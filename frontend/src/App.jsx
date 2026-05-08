@@ -21,6 +21,7 @@ import PerformanceAnalytics from './pages/PerformanceAnalytics';
 import CodeReviewComparison from './pages/CodeReviewComparison';
 import GitHubProfile from './pages/GitHubProfile';
 import StudentList from './pages/StudentList';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -63,6 +64,7 @@ function App() {
         {/* GitHub Profile */}
         <Route path="github-profile" element={<GitHubProfile />} />
         <Route path="github-profile/:userId" element={<GitHubProfile />} />
+        <Route path="profile" element={<Profile />} />
         
         {/* Student List for professors */}
         <Route path="students" element={<StudentList />} />

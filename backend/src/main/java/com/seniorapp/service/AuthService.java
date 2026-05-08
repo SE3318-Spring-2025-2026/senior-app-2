@@ -168,6 +168,28 @@ public class AuthService {
         return new AuthResponse(token, toUserInfo(user));
     }
 
+    @Transactional
+    public UserInfo updateProfile(Long userId, String fullName, String email) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        String normalizedName = fullName == null ? "" : fullName.trim();
+        if (normalizedName.isBlank()) {
+            throw new RuntimeException("Full name is required.");
+        }
+        if (normalizedEmail.isBlank()) {
+            throw new RuntimeException("Email is required.");
+        }
+        if (!normalizedEmail.equalsIgnoreCase(user.getEmail())
+                && userRepository.existsByEmail(normalizedEmail)) {
+            throw new RuntimeException("Email already registered.");
+        }
+        user.setFullName(normalizedName);
+        user.setEmail(normalizedEmail);
+        userRepository.save(user);
+        return toUserInfo(user);
+    }
+
     public List<UserInfo> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(this::toUserInfo)
@@ -214,6 +236,13 @@ public class AuthService {
 
         if (savedState.getContextStudentId() == null || savedState.getOauthFlow() == null) {
             User user = validateAndGetUserByEmail(primaryEmail);
+            if (user.getGithubId() == null || !user.getGithubId().equals(gh.githubId())) {
+                user.setGithubId(gh.githubId());
+            }
+            if (user.getGithubUsername() == null || !user.getGithubUsername().equals(gh.login())) {
+                user.setGithubUsername(gh.login());
+            }
+            userRepository.save(user);
             String jwtToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
             return new AuthResponse(jwtToken, toUserInfo(user));
         }

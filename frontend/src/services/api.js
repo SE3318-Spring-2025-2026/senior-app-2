@@ -56,6 +56,51 @@ export function getMe() {
   return request('/auth/me');
 }
 
+export function updateMyProfile(payload) {
+  return request('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getProfileGithubPatStatus() {
+  return request('/auth/profile/github-pat');
+}
+
+export function saveProfileGithubPat(githubPat) {
+  return request('/auth/profile/github-pat', {
+    method: 'PUT',
+    body: JSON.stringify({ githubPat }),
+  });
+}
+
+export function getProfileJiraConnectionStatus() {
+  return request('/auth/profile/jira-connection');
+}
+
+export async function getJiraOAuthLoginUrl() {
+  const data = await request('/auth/jira/oauth/login');
+  return data.authUrl;
+}
+
+export function saveProfileJiraConnection(jiraSiteUrl, jiraApiToken) {
+  return request('/auth/profile/jira-connection', {
+    method: 'PUT',
+    body: JSON.stringify({ jiraSiteUrl, jiraApiToken }),
+  });
+}
+
+export function getProfileJiraAccount() {
+  return request('/auth/profile/jira-account');
+}
+
+export function saveProfileJiraAccount(jiraAccountId, jiraEmail, jiraDisplayName) {
+  return request('/auth/profile/jira-account', {
+    method: 'PUT',
+    body: JSON.stringify({ jiraAccountId, jiraEmail, jiraDisplayName }),
+  });
+}
+
 export function resetPassword(token, newPassword) {
   return request('/auth/reset-password', {
     method: 'POST',
@@ -73,6 +118,11 @@ export async function getGithubLoginUrl(studentId, flow) {
   if (flow) qs.set('flow', flow);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   const data = await request(`/auth/github/login${suffix}`);
+  return data.authUrl;
+}
+
+export async function getStaffGithubLinkUrl() {
+  const data = await request('/auth/github/login');
   return data.authUrl;
 }
 
@@ -154,6 +204,14 @@ export function getProjectDetail(projectId) {
   return request(`/projects/${projectId}`);
 }
 
+export function getProjectGithubOverview(projectId) {
+  return request(`/projects/${projectId}`);
+}
+
+export function getAdvisorLiveGrades() {
+  return request('/projects/advisor/live-grades');
+}
+
 export function getProjectCommittees(projectId) {
   return request(`/projects/${projectId}/committees`);
 }
@@ -230,10 +288,12 @@ export function getMyGroupInvites() {
   return request('/groups/invites/me');
 }
 
-export function respondGroupInvite(inviteId, action) {
+export function respondGroupInvite(inviteId, action, committeeId = null) {
+  const body = { action };
+  if (committeeId != null) body.committeeId = committeeId;
   return request(`/groups/invites/${inviteId}`, {
     method: 'PATCH',
-    body: JSON.stringify({ action }),
+    body: JSON.stringify(body),
   });
 }
 
