@@ -5,9 +5,6 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 public class GradeSubmitRequest {
 
-    @NotNull(message = "Grader ID cannot be null")
-    private Long graderId;
-
     @NotNull(message = "Rubric ID cannot be null")
     private Long rubricId;
 
@@ -15,13 +12,8 @@ public class GradeSubmitRequest {
     @PositiveOrZero(message = "Grade must be positive or zero")
     private Double grade;
 
-    public Long getGraderId() {
-        return graderId;
-    }
-
-    public void setGraderId(Long graderId) {
-        this.graderId = graderId;
-    }
+    /** Optional grader feedback; persisted on submission_grades.comment */
+    private String comment;
 
     public Long getRubricId() {
         return rubricId;
@@ -37,5 +29,13 @@ public class GradeSubmitRequest {
 
     public void setGrade(Double grade) {
         this.grade = grade;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 }

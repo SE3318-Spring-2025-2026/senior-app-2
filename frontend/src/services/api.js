@@ -2,10 +2,12 @@ const API_URL = 'http://localhost:8080/api';
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('token');
+  const redirectOn403 = options.redirectOn403 !== false;
+  const { redirectOn403: _omit403, ...fetchOptions } = options;
 
   const headers = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...fetchOptions.headers,
   };
 
   if (token) {
@@ -13,7 +15,7 @@ async function request(endpoint, options = {}) {
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     headers,
   });
 
@@ -32,8 +34,10 @@ async function request(endpoint, options = {}) {
       throw new Error('Session expired');
     }
     if (response.status === 403) {
-      window.location.href = '/access-denied';
-      throw new Error('Access denied');
+      if (redirectOn403) {
+        window.location.href = '/access-denied';
+      }
+      throw new Error(data.message || data.error || 'Access denied');
     }
     throw new Error(data.message || data.error || 'Something went wrong');
   }
@@ -222,6 +226,10 @@ export function getStudentDashboard() {
   return request('/students/dashboard/me');
 }
 
+export function getMyGroupInvites() {
+  return request('/groups/invites/me');
+}
+
 export function respondGroupInvite(inviteId, action) {
   return request(`/groups/invites/${inviteId}`, {
     method: 'PATCH',
@@ -231,6 +239,10 @@ export function respondGroupInvite(inviteId, action) {
 
 export function getMyTeams() {
   return request('/groups/my-teams');
+}
+
+export function getAllTeams() {
+  return request('/groups');
 }
 
 export function createTeam(groupName) {
@@ -262,14 +274,65 @@ export function createProjectFromTemplateForTeam(groupId, templateId) {
   });
 }
 
+export function deleteGroup(groupId) {
+  return request(`/groups/${groupId}`, {
+    method: 'DELETE',
+  });
+}
+
 export function getMyStudentProjects() {
   return request('/students/dashboard/projects');
 }
 
-export function submitGrade(submissionId, graderId, rubricId, grade) {
+/** Grader is taken from JWT on the server. */
+export function submitGrade(submissionId, rubricId, grade, comment) {
+  const body = { rubricId, grade };
+  if (comment != null && String(comment).trim() !== '') {
+    body.comment = String(comment).trim();
+  }
   return request(`/deliverable-submissions/${submissionId}/grades`, {
     method: 'POST',
-    body: JSON.stringify({ graderId, rubricId, grade }),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getSubmissionGrades(submissionId) {
+  const data = await request(`/deliverable-submissions/${submissionId}/grades`);
+  return Array.isArray(data) ? data : [];
+}
+
+/** Teslim olmasa bile aynı grup + deliverable için rubric notları (boş teslim oluşturulabilir). */
+export async function getDeliverableContextGrades(groupId, deliverableId) {
+  const data = await request(
+    `/deliverable-submissions/context/group/${groupId}/deliverable/${deliverableId}/grades`,
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export function submitDeliverableContextGrade(groupId, deliverableId, rubricId, grade, comment) {
+  const body = { rubricId, grade };
+  if (comment != null && String(comment).trim() !== '') {
+    body.comment = String(comment).trim();
+  }
+  return request(`/deliverable-submissions/context/group/${groupId}/deliverable/${deliverableId}/grades`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getEvaluationGrades(groupId, evaluationId) {
+  const data = await request(`/evaluation-grades/group/${groupId}/evaluations/${evaluationId}`);
+  return Array.isArray(data) ? data : [];
+}
+
+export function submitEvaluationRubricGrade(groupId, evaluationRubricId, grade, comment) {
+  const body = { grade };
+  if (comment != null && String(comment).trim() !== '') {
+    body.comment = String(comment).trim();
+  }
+  return request(`/evaluation-grades/group/${groupId}/rubrics/${evaluationRubricId}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }
 
@@ -332,10 +395,39 @@ export function getProjectSubmissions(projectId, groupId) {
   return request(`/submissions/project/${projectId}/group/${groupId}`);
 }
 
+/** Komite veya grup koordinatörü: takım öğrencileri ve manuel story point alanları (403 yönlendirmez). */
+export function getProjectGroupStoryPoints(projectId, groupId) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points`, { redirectOn403: false });
+}
+
+export function putProjectGroupStoryPoints(projectId, groupId, entries) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points`, {
+    method: 'PUT',
+    body: JSON.stringify({ entries }),
+    redirectOn403: false,
+  });
+}
+
 /**
- * Submission'a ait dosyayı indirir (blob olarak).
+ * Çoklu dosya kaydındaki tek dosyayı indirir (blob). fileId = submission.files[].id
  */
-export async function downloadSubmissionFile(submissionId) {
+export async function downloadSubmissionFile(fileId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/submissions/files/${fileId}/download`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Dosya indirilemedi.');
+  }
+  return response.blob();
+}
+
+/**
+ * Legacy / özet: submission için en son (veya tek) dosyayı indirir.
+ */
+export async function downloadSubmissionLatestFile(submissionId) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_URL}/submissions/${submissionId}/download`, {
     headers: {
@@ -346,4 +438,73 @@ export async function downloadSubmissionFile(submissionId) {
     throw new Error('Dosya indirilemedi.');
   }
   return response.blob();
+}
+
+/**
+ * Tek bir yüklenmiş dosya satırını siler. Sadece Team Leader.
+ */
+export function deleteSubmissionFile(fileId) {
+  return request(`/submissions/files/${fileId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Tüm submission kaydını siler (tüm dosyalar + metin). Sadece Team Leader.
+ */
+export function deleteDeliverableSubmission(submissionId) {
+  return request(`/submissions/${submissionId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Kullanıcının belirli bir gruptaki rolünü getirir (LEADER / MEMBER).
+ */
+export function getMyGroupRole(groupId) {
+  return request(`/groups/${groupId}/my-role`);
+}
+
+/**
+ * Analytics için kullanılabilir grupları getirir.
+ */
+export function getAvailableGroupsForAnalytics() {
+  return request('/analytics/groups');
+}
+
+/**
+ * Analytics için kullanılabilir öğrencileri getirir.
+ */
+export function getAvailableStudentsForAnalytics() {
+  return request('/analytics/students');
+}
+
+/**
+ * Grup performans verilerini getirir.
+ */
+export function getGroupPerformance(groupId) {
+  return request(`/analytics/groups/${groupId}/performance`);
+}
+
+/**
+ * Performans trend verilerini getirir.
+ */
+export function getPerformanceTrends(groupId) {
+  return request(`/analytics/groups/${groupId}/trends`);
+}
+
+/**
+ * Öğrenci performans verilerini getirir.
+ */
+export function getStudentPerformance(studentId) {
+  return request(`/analytics/students/${studentId}/performance`);
+}
+
+export function getComparisonData(projectId) {
+  return request(`/comparison/${projectId}`);
+}
+
+export async function getAIFeedback(projectId) {
+  const data = await request(`/comparison/${projectId}/ai-feedback`);
+  return Array.isArray(data) ? data : [];
 }

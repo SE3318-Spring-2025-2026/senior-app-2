@@ -70,6 +70,9 @@ public class AuditLog {
     @Column(nullable = false)
     private boolean isCriticalEvent = false;
 
+    @Column(name = "score")
+    private Double score;
+
     // -------------------------------------------------------
     // Constructors
     // -------------------------------------------------------
@@ -150,8 +153,11 @@ public class AuditLog {
     public void setMetadataJson(String metadataJson)    { this.metadataJson = metadataJson; }
 
     public boolean isSecurityEvent()                        { return isSecurityEvent; }
-    public void setSecurityEvent(boolean securityEvent)     { isSecurityEvent = securityEvent; }
+    public void setSecurityEvent(boolean securityEvent)     { this.isSecurityEvent = securityEvent; }
 
     public boolean isCriticalEvent()                        { return isCriticalEvent; }
-    public void setCriticalEvent(boolean criticalEvent)     { isCriticalEvent = criticalEvent; }
+    public void setCriticalEvent(boolean criticalEvent)     { this.isCriticalEvent = criticalEvent; }
+
+    public Double getScore()                                { return score; }
+    public void setScore(Double score)                      { this.score = score; }
 }

@@ -9,6 +9,7 @@ import com.seniorapp.dto.TeamManagementDtos.MemberDto;
 import com.seniorapp.dto.TeamManagementDtos.ProjectLinkDto;
 import com.seniorapp.dto.TeamManagementDtos.StudentOptionDto;
 import com.seniorapp.dto.TeamManagementDtos.TeamDto;
+import com.seniorapp.dto.student.StudentDashboardDtos.InviteItem;
 import com.seniorapp.dto.project.ProjectDtos.CreateProjectRequest;
 import com.seniorapp.entity.GroupInviteStatus;
 import com.seniorapp.entity.GroupMembershipRole;
@@ -27,6 +28,7 @@ import com.seniorapp.repository.UserGroupRepository;
 import com.seniorapp.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
@@ -124,14 +126,40 @@ public class GroupService {
     public void inviteMember(Long groupId, Long studentUserId, Long currentUserId) {
         UserGroup group = userGroupRepository.findById(groupId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
-        if (group.getTeamLeader() == null || !group.getTeamLeader().getId().equals(currentUserId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the Team Leader can invite members.");
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+
+        boolean isProfessorOrCoordinator = currentUser.getRole() == Role.PROFESSOR || currentUser.getRole() == Role.COORDINATOR;
+
+        if (!isProfessorOrCoordinator) {
+            boolean isGroupMember = userGroupMemberRepository
+                    .existsByGroupIdAndUserIdAndStatusIn(groupId, currentUserId,
+                        List.of(GroupInviteStatus.ACCEPTED));
+            if (!isGroupMember) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must be a group member to invite others.");
+            }
         }
+
         User targetUser = userRepository.findById(studentUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target student not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target user not found."));
+
+        // Only team leader can invite students, but any group member can invite professors
+        boolean isLeader = group.getTeamLeader() != null && group.getTeamLeader().getId().equals(currentUserId);
+        boolean isTargetStudent = targetUser.getRole() == Role.STUDENT;
+        boolean isCurrentUserStudent = currentUser.getRole() == Role.STUDENT;
+
+        if (isTargetStudent && !isLeader && !isProfessorOrCoordinator) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only Team Leader can invite students.");
+        }
+        
+        // Students can invite professors, professors can invite students
+        if (isCurrentUserStudent && !isTargetStudent && !isLeader) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only Team Leader can invite professors.");
+        }
 
         if (userGroupMemberRepository.existsByGroupIdAndUserIdAndStatus(groupId, studentUserId, GroupInviteStatus.ACCEPTED)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student is already in this group.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already in this group.");
         }
 
         List<UserGroupMember> existingInvites = userGroupMemberRepository
@@ -139,7 +167,7 @@ public class GroupService {
         boolean alreadyPendingForSameGroup = existingInvites.stream()
                 .anyMatch(invite -> invite.getGroup().getId().equals(groupId));
         if (alreadyPendingForSameGroup) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student already has a pending invite for this group.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has a pending invite for this group.");
         }
 
         UserGroupMember invite = new UserGroupMember();
@@ -180,6 +208,12 @@ public class GroupService {
                 .toList();
     }
 
+    public List<TeamDto> getAllTeams(Long currentUserId) {
+        return userGroupRepository.findAll().stream()
+                .map(group -> toTeamDto(group, currentUserId))
+                .toList();
+    }
+
     public List<StudentOptionDto> listStudents() {
         return userRepository.findByRole(Role.STUDENT).stream().map(student -> {
             StudentOptionDto dto = new StudentOptionDto();
@@ -198,17 +232,34 @@ public class GroupService {
         if (!isMember && (group.getTeamLeader() == null || !group.getTeamLeader().getId().equals(currentUserId))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed for this team.");
         }
-        var assignment = projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team has no linked project."));
-        Project project = assignment.getProject();
-        if (project == null || project.getTemplate() == null || project.getTemplate().getId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project template link is missing.");
+        var assignment = projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId);
+        if (assignment.isPresent()) {
+            Project project = assignment.get().getProject();
+            if (project != null && project.getTemplate() != null && project.getTemplate().getId() != null) {
+                Long templateId = project.getTemplate().getId();
+                Set<Long> advisorUserIds = new java.util.LinkedHashSet<>(
+                        templateCommitteeProfessorRepository.findDistinctProfessorIdsByTemplateId(templateId)
+                );
+                userRepository.findByRole(Role.COORDINATOR).stream().map(User::getId).forEach(advisorUserIds::add);
+                userRepository.findByRole(Role.PROFESSOR).stream().map(User::getId).forEach(advisorUserIds::add);
+                return advisorUserIds.stream()
+                        .map(userRepository::findById)
+                        .filter(java.util.Optional::isPresent)
+                        .map(java.util.Optional::get)
+                        .map(user -> {
+                            StudentOptionDto dto = new StudentOptionDto();
+                            dto.setUserId(user.getId());
+                            dto.setFullName(user.getFullName());
+                            dto.setEmail(user.getEmail());
+                            return dto;
+                        }).toList();
+            }
         }
-        Long templateId = project.getTemplate().getId();
-        Set<Long> advisorUserIds = new java.util.LinkedHashSet<>(
-                templateCommitteeProfessorRepository.findDistinctProfessorIdsByTemplateId(templateId)
-        );
+        
+        // Fallback: If no project assignment, show all COORDINATOR and PROFESSOR users
+        Set<Long> advisorUserIds = new java.util.LinkedHashSet<>();
         userRepository.findByRole(Role.COORDINATOR).stream().map(User::getId).forEach(advisorUserIds::add);
+        userRepository.findByRole(Role.PROFESSOR).stream().map(User::getId).forEach(advisorUserIds::add);
         return advisorUserIds.stream()
                 .map(userRepository::findById)
                 .filter(java.util.Optional::isPresent)
@@ -220,6 +271,21 @@ public class GroupService {
                     dto.setEmail(user.getEmail());
                     return dto;
                 }).toList();
+    }
+
+    public List<InviteItem> getMyInvites(Long currentUserId) {
+        return userGroupMemberRepository.findByUserIdAndStatusOrderByCreatedAtDesc(currentUserId, GroupInviteStatus.PENDING)
+                .stream()
+                .map(invite -> {
+                    InviteItem item = new InviteItem();
+                    item.setInviteId(invite.getId());
+                    item.setGroupId(invite.getGroup().getId());
+                    item.setGroupName(invite.getGroup().getGroupName());
+                    item.setInvitedByUserId(invite.getInvitedByUserId());
+                    item.setInvitedAt(invite.getCreatedAt());
+                    return item;
+                })
+                .toList();
     }
 
     public Long createProjectForGroup(Long groupId, CreateProjectFromTemplateRequest request, Long currentUserId) {
@@ -279,14 +345,23 @@ public class GroupService {
         dto.setInviteStatus(membership.getStatus().name());
         return dto;
     }
+
+    public String getMyRoleInGroup(Long groupId, Long userId) {
+        UserGroupMember membership = userGroupMemberRepository
+                .findByGroupIdAndUserIdAndStatus(groupId, userId, GroupInviteStatus.ACCEPTED)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bu grubun üyesi değilsiniz."));
+        return membership.getRole().name();
+    }
+
     public void saveIntegrations(Long groupId, GroupIntegrationsRequest request) {
         validateJiraUrl(request.getJiraSpaceUrl());
 
         UserGroup group = userGroupRepository.findById(groupId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
 
-        group.setGithubPatEncrypted(cryptoService.encrypt(request.getGithubPat().trim()));
-        group.setJiraSpaceUrlEncrypted(cryptoService.encrypt(request.getJiraSpaceUrl().trim()));
+        // Persist plaintext values here; JPA lifecycle listener encrypts before INSERT/UPDATE.
+        group.setGithubPatEncrypted(request.getGithubPat().trim());
+        group.setJiraSpaceUrlEncrypted(request.getJiraSpaceUrl().trim());
         userGroupRepository.save(group);
     }
 
@@ -311,5 +386,33 @@ public class GroupService {
         } catch (URISyntaxException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid JIRA workspace URL format.");
         }
+    }
+
+    @Transactional
+    public void deleteGroup(Long groupId, Long currentUserId) {
+        UserGroup group = userGroupRepository.findById(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
+
+        // Only the team leader can delete the group
+        if (group.getTeamLeader() == null || !group.getTeamLeader().getId().equals(currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the Team Leader can delete the group.");
+        }
+
+        projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId).ifPresent(assignment -> {
+            assignment.setActive(false);
+            projectGroupAssignmentRepository.save(assignment);
+
+            Project project = assignment.getProject();
+            if (project != null && groupId.equals(project.getGroupId())) {
+                project.setGroupId(null);
+                projectRepository.save(project);
+            }
+        });
+
+        // Delete all group memberships
+        userGroupMemberRepository.deleteByGroupId(groupId);
+
+        // Delete the group
+        userGroupRepository.delete(group);
     }
 }

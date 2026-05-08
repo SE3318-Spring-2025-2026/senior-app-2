@@ -4,12 +4,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seniorapp.dto.project.ProjectDtos.*;
 import com.seniorapp.entity.*;
+import com.seniorapp.repository.ProjectCommitteeProfessorRepository;
+import com.seniorapp.repository.ProjectCommitteeRepository;
+import com.seniorapp.repository.ProjectDeliverableRubricRepository;
+import com.seniorapp.repository.ProjectEvaluationRubricRepository;
 import com.seniorapp.repository.ProjectGroupAssignmentRepository;
 import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectTemplateRepository;
-import com.seniorapp.repository.ProjectCommitteeRepository;
-import com.seniorapp.repository.ProjectCommitteeProfessorRepository;
+import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserRepository;
+import com.seniorapp.service.grading.PdfGradingEngineService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,10 +21,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,8 +38,12 @@ public class ProjectService {
     private final ProjectGroupAssignmentRepository assignmentRepository;
     private final ProjectCommitteeRepository projectCommitteeRepository;
     private final ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository;
+    private final ProjectDeliverableRubricRepository projectDeliverableRubricRepository;
+    private final ProjectEvaluationRubricRepository projectEvaluationRubricRepository;
     private final UserRepository userRepository;
+    private final UserGroupMemberRepository userGroupMemberRepository;
     private final ObjectMapper objectMapper;
+    private final PdfGradingEngineService pdfGradingEngineService;
 
     public ProjectService(
             ProjectRepository projectRepository,
@@ -40,16 +51,24 @@ public class ProjectService {
             ProjectGroupAssignmentRepository assignmentRepository,
             ProjectCommitteeRepository projectCommitteeRepository,
             ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository,
+            ProjectDeliverableRubricRepository projectDeliverableRubricRepository,
+            ProjectEvaluationRubricRepository projectEvaluationRubricRepository,
             UserRepository userRepository,
-            ObjectMapper objectMapper
+            UserGroupMemberRepository userGroupMemberRepository,
+            ObjectMapper objectMapper,
+            PdfGradingEngineService pdfGradingEngineService
     ) {
         this.projectRepository = projectRepository;
         this.projectTemplateRepository = projectTemplateRepository;
         this.assignmentRepository = assignmentRepository;
         this.projectCommitteeRepository = projectCommitteeRepository;
         this.projectCommitteeProfessorRepository = projectCommitteeProfessorRepository;
+        this.projectDeliverableRubricRepository = projectDeliverableRubricRepository;
+        this.projectEvaluationRubricRepository = projectEvaluationRubricRepository;
         this.userRepository = userRepository;
+        this.userGroupMemberRepository = userGroupMemberRepository;
         this.objectMapper = objectMapper;
+        this.pdfGradingEngineService = pdfGradingEngineService;
     }
 
     @Transactional
@@ -135,7 +154,22 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectSummary> listProjects(String term, Long templateId, Long groupId) {
+    public List<ProjectSummary> listProjects(String term, Long templateId, Long groupId, Long requesterUserId, Role requesterRole) {
+        Set<Long> allowedStudentGroupIds = null;
+        if (requesterRole == Role.STUDENT) {
+            if (requesterUserId == null) {
+                throw new IllegalArgumentException("Authenticated user id is required.");
+            }
+            allowedStudentGroupIds = new HashSet<>();
+            for (UserGroupMember m : userGroupMemberRepository.findByUserIdAndStatusOrderByCreatedAtDesc(
+                    requesterUserId, GroupInviteStatus.ACCEPTED)) {
+                if (m.getGroup() != null && m.getGroup().getId() != null) {
+                    allowedStudentGroupIds.add(m.getGroup().getId());
+                }
+            }
+        }
+
+        final Set<Long> studentGroups = allowedStudentGroupIds;
         return projectRepository.findAll().stream()
                 .filter(project -> term == null || term.isBlank() || project.getTerm().equalsIgnoreCase(term.trim()))
                 .filter(project -> {
@@ -147,16 +181,74 @@ public class ProjectService {
                     if (groupId == null) return true;
                     return Objects.equals(project.getGroupId(), groupId);
                 })
+                .filter(project -> {
+                    if (studentGroups == null) return true;
+                    Long projectGroupId = project.getGroupId();
+                    return projectGroupId != null && studentGroups.contains(projectGroupId);
+                })
                 .map(this::toSummary)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ProjectDetail getProjectDetail(Long projectId) {
+    public ProjectDetail getProjectDetail(Long projectId, Long requesterUserId, Role requesterRole) {
         Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
         Project project = projectRepository.findById(safeProjectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found: " + projectId));
-        return toDetail(project);
+        warmProjectSprintCollections(project);
+
+        List<Long> deliverableIds = new ArrayList<>();
+        List<Long> evaluationIds = new ArrayList<>();
+        for (ProjectSprint sprint : project.getSprints()) {
+            for (ProjectDeliverable d : sprint.getDeliverables()) {
+                if (d.getId() != null) {
+                    deliverableIds.add(d.getId());
+                }
+            }
+            for (ProjectEvaluation ev : sprint.getEvaluations()) {
+                if (ev.getId() != null) {
+                    evaluationIds.add(ev.getId());
+                }
+            }
+        }
+
+        Map<Long, List<ProjectDeliverableRubric>> deliverableRubricsFromDb = null;
+        if (!deliverableIds.isEmpty()) {
+            deliverableRubricsFromDb =
+                    projectDeliverableRubricRepository.findByDeliverable_IdIn(deliverableIds).stream()
+                            .collect(Collectors.groupingBy(r -> r.getDeliverable().getId()));
+        }
+
+        Map<Long, List<ProjectEvaluationRubric>> evaluationRubricsFromDb = null;
+        if (!evaluationIds.isEmpty()) {
+            evaluationRubricsFromDb =
+                    projectEvaluationRubricRepository.findByEvaluation_IdIn(evaluationIds).stream()
+                            .collect(Collectors.groupingBy(r -> r.getEvaluation().getId()));
+        }
+
+        ProjectDetail detail = toDetail(project, deliverableRubricsFromDb, evaluationRubricsFromDb);
+        Long gid = project.getGroupId();
+        if (gid != null && gid > 0) {
+            detail.setGradingSummary(pdfGradingEngineService.buildSummary(project, gid));
+        }
+        return detail;
+    }
+
+    /** Force-load sprint deliverables, evaluations and rubrics (avoids empty collections with lazy loading). */
+    private void warmProjectSprintCollections(Project project) {
+        if (project.getTemplate() != null) {
+            project.getTemplate().getId();
+        }
+        for (ProjectSprint sprint : project.getSprints()) {
+            sprint.getDeliverables().size();
+            sprint.getEvaluations().size();
+            for (ProjectDeliverable d : sprint.getDeliverables()) {
+                d.getRubrics().size();
+            }
+            for (ProjectEvaluation ev : sprint.getEvaluations()) {
+                ev.getRubrics().size();
+            }
+        }
     }
 
     @Transactional
@@ -362,7 +454,10 @@ public class ProjectService {
         return summary;
     }
 
-    private ProjectDetail toDetail(Project project) {
+    private ProjectDetail toDetail(
+            Project project,
+            Map<Long, List<ProjectDeliverableRubric>> deliverableRubricsFromDb,
+            Map<Long, List<ProjectEvaluationRubric>> evaluationRubricsFromDb) {
         ProjectDetail detail = new ProjectDetail();
         detail.setProjectId(project.getId());
         ProjectTemplate template = project.getTemplate();
@@ -376,43 +471,64 @@ public class ProjectService {
         detail.setActiveGroupId(project.getGroupId());
         detail.setSprints(project.getSprints().stream()
                 .sorted(Comparator.comparing(ProjectSprint::getSprintNo))
-                .map(this::toSprintDto)
+                .map(s -> toSprintDto(s, deliverableRubricsFromDb, evaluationRubricsFromDb))
                 .toList());
         return detail;
     }
 
-    private SprintDto toSprintDto(ProjectSprint sprint) {
+    private SprintDto toSprintDto(
+            ProjectSprint sprint,
+            Map<Long, List<ProjectDeliverableRubric>> deliverableRubricsFromDb,
+            Map<Long, List<ProjectEvaluationRubric>> evaluationRubricsFromDb) {
         SprintDto dto = new SprintDto();
         dto.setSprintNo(sprint.getSprintNo());
         dto.setTitle(sprint.getTitle());
         dto.setStartDate(sprint.getStartDate());
         dto.setEndDate(sprint.getEndDate());
-        dto.setDeliverables(sprint.getDeliverables().stream().map(this::toDeliverableDto).toList());
-        dto.setEvaluations(sprint.getEvaluations().stream().map(this::toEvaluationDto).toList());
+        dto.setDeliverables(
+                sprint.getDeliverables().stream().map(d -> toDeliverableDto(d, deliverableRubricsFromDb)).toList());
+        dto.setEvaluations(
+                sprint.getEvaluations().stream().map(e -> toEvaluationDto(e, evaluationRubricsFromDb)).toList());
         return dto;
     }
 
-    private DeliverableDto toDeliverableDto(ProjectDeliverable deliverable) {
+    private DeliverableDto toDeliverableDto(
+            ProjectDeliverable deliverable, Map<Long, List<ProjectDeliverableRubric>> rubricsFromDb) {
         DeliverableDto dto = new DeliverableDto();
+        dto.setId(deliverable.getId());
         dto.setType(deliverable.getType());
         dto.setTitle(deliverable.getTitle());
         dto.setDescription(deliverable.getDescription());
         dto.setWeight(deliverable.getWeight());
         dto.setFileUploadDeliverable(deliverable.isFileUploadDeliverable());
         dto.setAutoAddToAllSprints(deliverable.isAutoAddToAllSprints());
-        dto.setRubrics(deliverable.getRubrics().stream()
+        List<ProjectDeliverableRubric> rubricEntities;
+        if (rubricsFromDb != null && deliverable.getId() != null) {
+            rubricEntities = rubricsFromDb.getOrDefault(deliverable.getId(), List.of());
+        } else {
+            rubricEntities = deliverable.getRubrics();
+        }
+        dto.setRubrics(rubricEntities.stream()
                 .sorted(Comparator.comparing(ProjectDeliverableRubric::getDisplayOrder))
                 .map(this::toRubricDto)
                 .toList());
         return dto;
     }
 
-    private EvaluationDto toEvaluationDto(ProjectEvaluation evaluation) {
+    private EvaluationDto toEvaluationDto(
+            ProjectEvaluation evaluation, Map<Long, List<ProjectEvaluationRubric>> rubricsFromDb) {
         EvaluationDto dto = new EvaluationDto();
+        dto.setId(evaluation.getId());
         dto.setTitle(evaluation.getTitle());
         dto.setWeight(evaluation.getWeight());
         dto.setAutoAddToAllSprints(evaluation.isAutoAddToAllSprints());
-        dto.setRubrics(evaluation.getRubrics().stream()
+        List<ProjectEvaluationRubric> rubricEntities;
+        if (rubricsFromDb != null && evaluation.getId() != null) {
+            rubricEntities = rubricsFromDb.getOrDefault(evaluation.getId(), List.of());
+        } else {
+            rubricEntities = evaluation.getRubrics();
+        }
+        dto.setRubrics(rubricEntities.stream()
                 .sorted(Comparator.comparing(ProjectEvaluationRubric::getDisplayOrder))
                 .map(this::toRubricDto)
                 .toList());
@@ -421,6 +537,7 @@ public class ProjectService {
 
     private RubricDto toRubricDto(ProjectDeliverableRubric rubric) {
         RubricDto dto = new RubricDto();
+        dto.setId(rubric.getId());
         dto.setTitle(rubric.getTitle());
         dto.setCriteriaType(rubric.getCriteriaType());
         return dto;
@@ -428,6 +545,7 @@ public class ProjectService {
 
     private RubricDto toRubricDto(ProjectEvaluationRubric rubric) {
         RubricDto dto = new RubricDto();
+        dto.setId(rubric.getId());
         dto.setTitle(rubric.getTitle());
         dto.setCriteriaType(rubric.getCriteriaType());
         return dto;

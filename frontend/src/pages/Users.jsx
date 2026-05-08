@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getUsers, changeUserRole, registerStaff } from '../services/api';
 import './Users.css';
 
 const ROLES = ['ADMIN', 'COORDINATOR', 'PROFESSOR', 'STUDENT'];
 
 function Users() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -122,6 +124,7 @@ function Users() {
               <th>Email</th>
               <th>Role</th>
               <th>Actions</th>
+              <th style={{ width: 80 }} />
             </tr>
           </thead>
           <tbody>
@@ -156,6 +159,24 @@ function Users() {
                       }}
                     >
                       Send Reset Link
+                    </button>
+                  )}
+                </td>
+                <td>
+                  {u.role === 'STUDENT' && u.githubUsername && (
+                    <button
+                      onClick={() => navigate(`/panel/github-profile/${u.id}`)}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        backgroundColor: '#667eea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      GitHub
                     </button>
                   )}
                 </td>

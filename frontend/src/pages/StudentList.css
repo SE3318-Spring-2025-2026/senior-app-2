@@ -1,0 +1,269 @@
+.sl-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.sl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.sl-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #1a1a2e;
+}
+
+.sl-subtitle {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sl-search-box {
+  position: relative;
+  width: 340px;
+  max-width: 100%;
+}
+
+.sl-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.sl-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fff;
+}
+
+.sl-search-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+/* Loading */
+.sl-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #6b7280;
+}
+
+.sl-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: sl-spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes sl-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error */
+.sl-error {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+}
+
+/* Empty */
+.sl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.sl-empty svg {
+  margin-bottom: 12px;
+}
+
+.sl-empty h3 {
+  margin: 0;
+  color: #6b7280;
+  font-size: 18px;
+}
+
+.sl-empty p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+/* Card Grid */
+.sl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* Card */
+.sl-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 20px;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.sl-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: #c7d2fe;
+}
+
+.sl-card-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+/* Avatar */
+.sl-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f3f4f6;
+}
+
+.sl-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sl-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* Card Info */
+.sl-card-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.sl-card-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sl-card-email {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sl-card-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #667eea;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.sl-card-github:hover {
+  color: #5a67d8;
+  text-decoration: underline;
+}
+
+/* Card Actions */
+.sl-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.sl-btn:active {
+  transform: scale(0.97);
+}
+
+.sl-btn-github {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+}
+
+.sl-btn-github:hover {
+  background: linear-gradient(135deg, #5a67d8, #6a3f9e);
+}
+
+.sl-btn-disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: default;
+  font-weight: 400;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sl-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .sl-search-box {
+    width: 100%;
+  }
+  .sl-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,14 +1,17 @@
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyTeams, getProjectTemplates, getStudentDashboard, respondGroupInvite } from '../services/api';
+import { getMyGroupInvites, getMyTeams, getProjectTemplates, getStudentDashboard, respondGroupInvite } from '../services/api';
+import InviteCard from '../components/InviteCard';
 import './Dashboard.css';
 
 function Dashboard() {
   const { user } = useAuth();
   const [data, setData] = useState({ activeProjects: [], pendingDeliverables: [], invitations: [] });
   const [staffData, setStaffData] = useState({ templates: [], teams: [] });
+  const [staffInvites, setStaffInvites] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [inviteProcessing, setInviteProcessing] = useState({});
   const navigate = useNavigate();
   const isStudent = user?.role === 'STUDENT';
   const isCoordinator = user?.role === 'COORDINATOR';
@@ -27,22 +30,53 @@ function Dashboard() {
   useEffect(() => {
     if (!isCoordinator && !isProfessor) return;
     setLoading(true);
-    Promise.all([getProjectTemplates(), getMyTeams()])
-      .then(([templatesRes, teamsRes]) => {
+    Promise.all([getProjectTemplates(), getMyTeams(), getMyGroupInvites()])
+      .then(([templatesRes, teamsRes, invitesRes]) => {
         setStaffData({
           templates: templatesRes?.data || [],
           teams: teamsRes?.data || [],
         });
+        setStaffInvites(invitesRes?.data || []);
       })
       .finally(() => setLoading(false));
   }, [isCoordinator, isProfessor]);
 
-  const onInviteAction = async (inviteId, action) => {
-    await respondGroupInvite(inviteId, action);
-    setData((prev) => ({
-      ...prev,
-      invitations: prev.invitations.filter((invite) => invite.inviteId !== inviteId),
-    }));
+  const onInviteAction = async (inviteId, action, scope) => {
+    setInviteProcessing((prev) => ({ ...prev, [inviteId]: action }));
+    try {
+      await respondGroupInvite(inviteId, action);
+      const removeInvite = () => {
+        if (scope === 'staff') {
+          setStaffInvites((prev) => prev.filter((invite) => invite.inviteId !== inviteId));
+        } else {
+          setData((prev) => ({
+            ...prev,
+            invitations: prev.invitations.filter((invite) => invite.inviteId !== inviteId),
+          }));
+        }
+      };
+
+      if (action === 'ACCEPT') {
+        setTimeout(async () => {
+          removeInvite();
+          if (scope === 'staff') {
+            const teamsRes = await getMyTeams();
+            setStaffData((prev) => ({ ...prev, teams: teamsRes?.data || [] }));
+          }
+        }, 1500);
+      } else {
+        removeInvite();
+      }
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    } finally {
+      setInviteProcessing((prev) => {
+        const updated = { ...prev };
+        delete updated[inviteId];
+        return updated;
+      });
+    }
   };
   return (
     <div className="dashboard">
@@ -93,20 +127,37 @@ function Dashboard() {
             ))}
           </section>
 
-          <section className="dashboard-panel">
-            <h3>Invitations</h3>
-            {loading && <p>Loading...</p>}
-            {!loading && data.invitations.length === 0 && <p>No invitations.</p>}
-            {data.invitations.map((invite) => (
-              <div className="dashboard-row-card" key={invite.inviteId}>
-                <strong>{invite.groupName}</strong>
-                <span>Group #{invite.groupId}</span>
-                <div className="invite-actions">
-                  <button onClick={() => onInviteAction(invite.inviteId, 'ACCEPT')}>Accept</button>
-                  <button className="danger" onClick={() => onInviteAction(invite.inviteId, 'DECLINE')}>Decline</button>
-                </div>
+          <section className="dashboard-panel invitations-panel">
+            <div className="panel-header">
+              <h3>Invitations</h3>
+              {data.invitations.length > 0 && (
+                <span className="badge-count">{data.invitations.length}</span>
+              )}
+            </div>
+            {loading && (
+              <div className="invitations-loading">
+                <div className="loading-spinner" />
+                <p>Loading invitations...</p>
               </div>
-            ))}
+            )}
+            {!loading && data.invitations.length === 0 && (
+              <div className="invitations-empty">
+                <div className="empty-icon">&#128236;</div>
+                <p>No pending invitations</p>
+                <span>When someone invites you to a team, it will appear here</span>
+              </div>
+            )}
+            {!loading && data.invitations.length > 0 && (
+              <div className="invitations-list">
+                {data.invitations.map((invite) => (
+                  <InviteCard
+                    key={invite.inviteId}
+                    invite={invite}
+                    onRespond={(id, action) => onInviteAction(id, action, 'student')}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -144,20 +195,37 @@ function Dashboard() {
             ))}
           </section>
 
-          <section className="dashboard-panel">
-            <h3>Quick Stats</h3>
-            <div className="dashboard-row-card">
-              <strong>Total Projects</strong>
-              <span>{staffData.templates.length}</span>
+          <section className="dashboard-panel invitations-panel">
+            <div className="panel-header">
+              <h3>Invitations</h3>
+              {staffInvites.length > 0 && (
+                <span className="badge-count">{staffInvites.length}</span>
+              )}
             </div>
-            <div className="dashboard-row-card">
-              <strong>Total Teams</strong>
-              <span>{staffData.teams.length}</span>
-            </div>
-            <div className="dashboard-row-card">
-              <strong>Linked Projects</strong>
-              <span>{staffData.teams.filter((t) => t.project).length}</span>
-            </div>
+            {loading && (
+              <div className="invitations-loading">
+                <div className="loading-spinner" />
+                <p>Loading invitations...</p>
+              </div>
+            )}
+            {!loading && staffInvites.length === 0 && (
+              <div className="invitations-empty">
+                <div className="empty-icon">&#128236;</div>
+                <p>No pending invitations</p>
+                <span>When someone invites you to a team, it will appear here</span>
+              </div>
+            )}
+            {!loading && staffInvites.length > 0 && (
+              <div className="invitations-list">
+                {staffInvites.map((invite) => (
+                  <InviteCard
+                    key={invite.inviteId}
+                    invite={invite}
+                    onRespond={(id, action) => onInviteAction(id, action, 'staff')}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         </div>
       )}

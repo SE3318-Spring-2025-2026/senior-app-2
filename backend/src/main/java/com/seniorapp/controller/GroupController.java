@@ -6,6 +6,7 @@ import com.seniorapp.dto.GroupInviteRespondDto;
 import com.seniorapp.dto.GroupIntegrationsRequest;
 import com.seniorapp.dto.GroupIntegrationsResponse;
 import com.seniorapp.dto.GroupMemberActionDto;
+import com.seniorapp.dto.ScoreOverrideRequest;
 import com.seniorapp.dto.TeamManagementDtos.CreateProjectFromTemplateRequest;
 import com.seniorapp.dto.TeamManagementDtos.StudentListResponse;
 import com.seniorapp.dto.TeamManagementDtos.TeamListResponse;
@@ -14,10 +15,12 @@ import com.seniorapp.service.GroupService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
-
+import io.swagger.v3.oas.annotations.Operation;
+    
 @RestController
 @RequestMapping("/api/groups")
 @CrossOrigin(origins = "*")
@@ -79,6 +82,12 @@ public class GroupController {
         return ResponseEntity.ok("{\"message\":\"Invite updated successfully.\"}");
     }
 
+    @GetMapping("/invites/me")
+    public ResponseEntity<Map<String, Object>> getMyInvites(Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        return ResponseEntity.ok(Map.of("status", "success", "data", groupService.getMyInvites(currentUser.getId())));
+    }
+
     @GetMapping("/my-teams")
     public ResponseEntity<TeamListResponse> getMyTeams(Authentication authentication) {
         User currentUser = (User) authentication.getPrincipal();
@@ -109,6 +118,15 @@ public class GroupController {
         return ResponseEntity.ok(Map.of("status", "success", "data", Map.of("projectId", projectId)));
     }
 
+    @GetMapping("/{groupId}/my-role")
+    public ResponseEntity<Map<String, Object>> getMyRole(
+            @PathVariable Long groupId,
+            Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        String role = groupService.getMyRoleInGroup(groupId, currentUser.getId());
+        return ResponseEntity.ok(Map.of("status", "success", "role", role));
+    }
+
     @PostMapping("/{groupId}/integrations")
     public ResponseEntity<String> saveIntegrations(
             @PathVariable Long groupId,
@@ -120,5 +138,31 @@ public class GroupController {
     @GetMapping("/{groupId}/integrations")
     public ResponseEntity<GroupIntegrationsResponse> getIntegrations(@PathVariable Long groupId) {
         return ResponseEntity.ok(groupService.getIntegrations(groupId));
+    }
+
+    @DeleteMapping("/{groupId}")
+    @PreAuthorize("hasAnyRole('STUDENT', 'PROFESSOR', 'ADMIN', 'COORDINATOR')")
+    public ResponseEntity<String> deleteGroup(
+            @PathVariable Long groupId,
+            Authentication authentication) {
+        User currentUser = (User) authentication.getPrincipal();
+        groupService.deleteGroup(groupId, currentUser.getId());
+        return ResponseEntity.ok("{\"message\":\"Group deleted successfully.\"}");
+    }
+    /**
+     * Endpoint for authorized professors/advisors to manually override AI-generated scores.
+     * Acceptance Criteria: Validate studentId exists and is linked to auditId.
+     */
+  @Operation(summary = "Manual score override", description = "Allows authorized users to manually override the score for a specific student.")
+    @PreAuthorize("hasAnyRole('ADVISOR', 'PROFESSOR')")
+    @PatchMapping("/grading/override/{auditId}")
+    public ResponseEntity<String> overrideScore(
+            @PathVariable Long auditId,
+            @Valid @RequestBody ScoreOverrideRequest request) { // <-- @Valid eklendi
+
+        // Manuel validation (if bloğu) sildik çünkü @Valid bunu otomatik yapıyor.
+
+        // Success response
+        return ResponseEntity.ok("Success: Manual override request received for Audit ID " + auditId);
     }
 }

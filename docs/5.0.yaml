@@ -1,0 +1,205 @@
+openapi: 3.0.3
+info:
+  title: AI-Driven Developer Performance Audit API
+  version: 1.3.0
+  description: >
+    Comprehensive API for automated developer auditing. Includes full error handling 
+    for sync processes, AI-driven analysis, and performance reporting based on DFD processes.
+  contact:
+    name: Dev Audit Team
+
+servers:
+  - url: https://api.devaudit-system.io/v1
+    description: Production Server
+
+tags:
+  - name: "Ingestion & Sync (5.1 - 5.2)"
+    description: "External API data fetching and cleaning"
+  - name: "AI Analytics (5.3)"
+    description: "Discrepancy detection and validation"
+  - name: "Reporting & Grading (5.4 - 4.0)"
+    description: "Final audit results and performance assessment"
+
+paths:
+  /ingestion/sync:
+    post:
+      tags: ["Ingestion & Sync (5.1 - 5.2)"]
+      summary: "Initiate Data Sync"
+      description: "Triggers Process 5.1 and 5.2 to fetch and structure data from GitHub/Jira."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '202':
+          description: "Sync job accepted and started"
+        '400':
+          description: "Bad Request - Unsupported source or invalid payload"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: "Unauthorized - Invalid or missing tokens"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ingestion/status/{jobId}:
+    get:
+      tags: ["Ingestion & Sync (5.1 - 5.2)"]
+      summary: "Check Sync Job Status"
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Returns the current job status"
+        '404':
+          description: "Not Found - Invalid Job ID provided"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analysis/validate:
+    post:
+      tags: ["AI Analytics (5.3)"]
+      summary: "Run AI Validation Engine"
+      description: "Processes structured activity through AI (Process 5.3)."
+      responses:
+        '200':
+          description: "Analysis completed successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResults'
+        '500':
+          description: "Internal Server Error - AI Model processing failure"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '504':
+          description: "Gateway Timeout - AI validator process exceeded time limit"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /audit/results:
+    get:
+      tags: ["Reporting & Grading (5.4 - 4.0)"]
+      summary: "Retrieve Audit Results"
+      description: "Fetches historical audit logs from D6."
+      responses:
+        '200':
+          description: "List of audit logs"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditResult'
+
+  /grading/summary:
+    get:
+      tags: ["Reporting & Grading (5.4 - 4.0)"]
+      summary: "Get Final Assessment Summary"
+      responses:
+        '200':
+          description: "Aggregated grading assessment"
+
+  /grading/override/{auditId}:
+    patch:
+      tags: ["Reporting & Grading (5.4 - 4.0)"]
+      summary: "Manual Score Adjustment"
+      description: "Allows Professors and Advisors to manually override an AI-generated score for a specific audit log."
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: auditId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: "The UUID of the audit record"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, score]
+              properties:
+                studentId:
+                  type: integer
+                  description: "Must match the student linked to the audit record"
+                score:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+      responses:
+        '200':
+          description: "Score updated successfully"
+        '400':
+          description: "Bad Request - Validation failed (e.g., studentId mismatch)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: "Forbidden - User lacks PROFESSOR or ADVISOR role"
+        '404':
+          description: "Not Found - Audit record does not exist"
+
+components:
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: "ERR_404_JOB_NOT_FOUND" }
+        message: { type: string, example: "The provided Job ID does not exist in our records." }
+        timestamp: { type: string, format: date-time }
+
+    SyncRequest:
+      type: object
+      required: [source, groupId]
+      properties:
+        source: { type: string, enum: [github, jira, both] }
+        groupId: { type: string }
+        integrationTokens:
+          type: object
+          properties:
+            pat: { type: string }
+            oauth: { type: string }
+
+    AnalysisResults:
+      type: object
+      properties:
+        status: { type: string }
+        discrepanciesDetected: { type: integer }
+        accuracyScore: { type: number }
+
+    AuditResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        devIdentity: { type: string }
+        score: { type: number }
+        auditTimestamp: { type: string, format: date-time }
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY

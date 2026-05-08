@@ -365,6 +365,8 @@ public final class ProjectDtos {
         private List<SprintDto> sprints;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+        /** Server-computed PDF-style grades for {@link #activeGroupId}; null when no group on project. */
+        private ProjectGradingSummaryDto gradingSummary;
 
         public Long getProjectId() {
             return projectId;
@@ -445,6 +447,14 @@ public final class ProjectDtos {
         public void setUpdatedAt(LocalDateTime updatedAt) {
             this.updatedAt = updatedAt;
         }
+
+        public ProjectGradingSummaryDto getGradingSummary() {
+            return gradingSummary;
+        }
+
+        public void setGradingSummary(ProjectGradingSummaryDto gradingSummary) {
+            this.gradingSummary = gradingSummary;
+        }
     }
 
     public static class SprintDto {
@@ -505,6 +515,7 @@ public final class ProjectDtos {
     }
 
     public static class DeliverableDto {
+        private Long id;
         private String type;
         private String title;
         private String description;
@@ -512,6 +523,14 @@ public final class ProjectDtos {
         private boolean fileUploadDeliverable;
         private boolean autoAddToAllSprints;
         private List<RubricDto> rubrics;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
 
         public String getType() {
             return type;
@@ -571,10 +590,19 @@ public final class ProjectDtos {
     }
 
     public static class EvaluationDto {
+        private Long id;
         private String title;
         private Integer weight;
         private boolean autoAddToAllSprints;
         private List<RubricDto> rubrics;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
 
         public String getTitle() {
             return title;
@@ -610,8 +638,18 @@ public final class ProjectDtos {
     }
 
     public static class RubricDto {
+        /** project_deliverable_rubrics / project_evaluation_rubrics birincil anahtarı. */
+        private Long id;
         private String title;
         private String criteriaType;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
 
         public String getTitle() {
             return title;
