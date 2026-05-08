@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,8 @@ import java.util.Set;
 
 @Service
 public class ProjectTemplateService {
+    private static final int MAX_TEMPLATE_COMMITTEE_MEMBERS = 5;
+
 
     private static final Map<String, Integer> FIXED_GRADE_POINTS = Map.of(
             "S", 100,
@@ -154,7 +157,7 @@ public class ProjectTemplateService {
 
     @Transactional(readOnly = true)
     public List<ProfessorOptionDto> listProfessors() {
-        return userRepository.findByRole(Role.PROFESSOR).stream()
+        return userRepository.findByRoleIn(EnumSet.of(Role.PROFESSOR, Role.COORDINATOR)).stream()
                 .map(this::toProfessorOptionDto)
                 .toList();
     }
@@ -167,12 +170,15 @@ public class ProjectTemplateService {
         TemplateCommittee committee = getCommitteeBelongsToTemplate(templateId, committeeId);
         User professor = userRepository.findById(professorUserId)
                 .orElseThrow(() -> new NoSuchElementException("Professor not found: " + professorUserId));
-        if (professor.getRole() != Role.PROFESSOR) {
-            throw new IllegalArgumentException("Selected user is not a professor.");
+        if (!isCommitteeAssignableRole(professor.getRole())) {
+            throw new IllegalArgumentException("Selected user must be a professor or coordinator.");
         }
         boolean exists = committee.getProfessors().stream()
                 .anyMatch(member -> Objects.equals(member.getProfessor().getId(), professorUserId));
         if (!exists) {
+            if (committee.getProfessors().size() >= MAX_TEMPLATE_COMMITTEE_MEMBERS) {
+                throw new IllegalArgumentException("A committee can have at most 5 members.");
+            }
             TemplateCommitteeProfessor member = new TemplateCommitteeProfessor();
             member.setCommittee(committee);
             member.setProfessor(professor);
@@ -195,6 +201,10 @@ public class ProjectTemplateService {
                 Objects.equals(member.getProfessor().getId(), professorUserId)
         );
         return toTemplateCommitteeDto(templateCommitteeRepository.save(committee));
+    }
+
+    private boolean isCommitteeAssignableRole(Role role) {
+        return role == Role.PROFESSOR || role == Role.COORDINATOR;
     }
 
     private void ensureProfessorTemplateAccess(Long templateId, Long requesterUserId) {
