@@ -12,6 +12,8 @@ import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectStudentStoryPointRepository;
 import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserGroupRepository;
+import com.seniorapp.service.GitHubPrMatcherService;
+import com.seniorapp.service.IntegrationCredentialCryptoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -51,19 +53,25 @@ public class DailySyncScheduler {
     private final ProjectGroupAssignmentRepository projectGroupAssignmentRepository;
     private final ProjectRepository projectRepository;
     private final ProjectStudentStoryPointRepository storyPointRepository;
+    private final GitHubPrMatcherService githubPrMatcherService;
+    private final IntegrationCredentialCryptoService cryptoService;
 
     public DailySyncScheduler(JiraIntegrationService jiraIntegrationService,
                                UserGroupRepository userGroupRepository,
                                UserGroupMemberRepository userGroupMemberRepository,
                                ProjectGroupAssignmentRepository projectGroupAssignmentRepository,
                                ProjectRepository projectRepository,
-                               ProjectStudentStoryPointRepository storyPointRepository) {
+                               ProjectStudentStoryPointRepository storyPointRepository,
+                               GitHubPrMatcherService githubPrMatcherService,
+                               IntegrationCredentialCryptoService cryptoService) {
         this.jiraIntegrationService = jiraIntegrationService;
         this.userGroupRepository = userGroupRepository;
         this.userGroupMemberRepository = userGroupMemberRepository;
         this.projectGroupAssignmentRepository = projectGroupAssignmentRepository;
         this.projectRepository = projectRepository;
         this.storyPointRepository = storyPointRepository;
+        this.githubPrMatcherService = githubPrMatcherService;
+        this.cryptoService = cryptoService;
     }
 
     /**
@@ -141,26 +149,63 @@ public class DailySyncScheduler {
                 .filter(m -> m.getRole() == GroupMembershipRole.MEMBER || m.getRole() == GroupMembershipRole.LEADER)
                 .toList();
 
-        upsertStoryPoints(project, studentMembers, issues);
+        upsertStoryPoints(project, group, studentMembers, issues);
         return true;
     }
 
     /**
      * For each student member, sums the story points of all Jira issues assigned to them
-     * (matched by email address) and upserts the {@link ProjectStudentStoryPoint} record.
+     * that meet the "Done" criteria AND have a merged GitHub PR.
      */
-    void upsertStoryPoints(Project project, List<UserGroupMember> members, List<JiraDtos.Issue> issues) {
+    void upsertStoryPoints(Project project, UserGroup group, List<UserGroupMember> members, List<JiraDtos.Issue> issues) {
+        String decryptedPat = null;
+        if (group.getGithubPatEncrypted() != null) {
+            decryptedPat = cryptoService.decrypt(group.getGithubPatEncrypted());
+        }
+
         for (UserGroupMember member : members) {
             String memberEmail = member.getUser().getEmail();
             if (memberEmail == null) continue;
+
+            final String finalPat = decryptedPat;
 
             double totalPoints = issues.stream()
                     .filter(issue -> {
                         JiraDtos.IssueFields fields = issue.getFields();
                         if (fields == null) return false;
+                        
+                        // 1. Assignee matching
                         JiraDtos.Assignee assignee = fields.getAssignee();
-                        if (assignee == null) return false;
-                        return memberEmail.equalsIgnoreCase(assignee.getEmailAddress());
+                        if (assignee == null || !memberEmail.equalsIgnoreCase(assignee.getEmailAddress())) {
+                            return false;
+                        }
+
+                        // 2. Status check (Optional but recommended: only count "Done" tasks)
+                        // Note: Some Jira boards use different status names, so we check "Done" case-insensitive
+                        if (fields.getStatus() != null && fields.getStatus().getName() != null) {
+                            String status = fields.getStatus().getName().toLowerCase();
+                            if (!status.equals("done") && !status.equals("resolved") && !status.equals("completed")) {
+                                return false;
+                            }
+                        }
+
+                        // 3. GitHub PR Merge Verification (CRITICAL GAP FILL)
+                        if (finalPat != null && group.getGithubRepoOwner() != null && group.getGithubRepoName() != null) {
+                            boolean hasMergedPr = githubPrMatcherService.findFirstMerged(
+                                    group.getGithubRepoOwner(),
+                                    group.getGithubRepoName(),
+                                    issue.getKey(),
+                                    finalPat
+                            ).isPresent();
+                            
+                            if (!hasMergedPr) {
+                                log.debug("[DailySyncScheduler] Issue {} is Done in Jira but has no merged PR in {}/{} - skipping points.",
+                                        issue.getKey(), group.getGithubRepoOwner(), group.getGithubRepoName());
+                                return false;
+                            }
+                        }
+
+                        return true;
                     })
                     .mapToDouble(issue -> {
                         Double sp = issue.getFields().getStoryPoints();

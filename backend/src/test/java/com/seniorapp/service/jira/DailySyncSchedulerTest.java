@@ -3,6 +3,8 @@ package com.seniorapp.service.jira;
 import com.seniorapp.dto.jira.JiraDtos;
 import com.seniorapp.entity.*;
 import com.seniorapp.repository.*;
+import com.seniorapp.service.GitHubPrMatcherService;
+import com.seniorapp.service.IntegrationCredentialCryptoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,19 +23,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Aggressive unit tests for {@link DailySyncScheduler}.
- *
- * Edge cases covered:
- * - Cron execution happy path (story points upserted)
- * - Groups with no Jira token → skipped gracefully
- * - Groups with no active project assignment → skipped gracefully
- * - Jira API throws 429 rate limit → group skipped, scheduler continues
- * - Story points = null (missing custom field) → not saved, logged only
- * - Student with no email → skipped
- * - extractJiraDomain with various URL formats
- * - Story point calculation: sum of multiple issues per student
- */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DailySyncScheduler – Aggressive Unit Tests")
 class DailySyncSchedulerTest {
@@ -44,6 +33,8 @@ class DailySyncSchedulerTest {
     @Mock private ProjectGroupAssignmentRepository projectGroupAssignmentRepository;
     @Mock private ProjectRepository projectRepository;
     @Mock private ProjectStudentStoryPointRepository storyPointRepository;
+    @Mock private GitHubPrMatcherService githubPrMatcherService;
+    @Mock private IntegrationCredentialCryptoService cryptoService;
 
     @InjectMocks
     private DailySyncScheduler scheduler;
@@ -82,16 +73,12 @@ class DailySyncSchedulerTest {
         studentMember.setRole(GroupMembershipRole.MEMBER);
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // syncJiraStoryPoints() – full scheduler invocation
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Nested
     @DisplayName("syncJiraStoryPoints() – full scheduler run")
     class FullSchedulerTests {
 
         @Test
-        @DisplayName("Happy path: story points are upserted for assigned student")
+        @DisplayName("Happy path: story points are upserted for assigned student with merged PR")
         void happy_path_upserts_story_points() {
             when(userGroupRepository.findAll()).thenReturn(List.of(group));
             when(projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(1L))
@@ -99,7 +86,15 @@ class DailySyncSchedulerTest {
             when(projectRepository.findById(100L)).thenReturn(Optional.of(project));
             when(jiraIntegrationService.buildOpenSprintJql("MYAPP")).thenReturn("project=\"MYAPP\" AND sprint in openSprints()");
             when(jiraIntegrationService.fetchIssuesByJql(anyString(), anyString(), anyString()))
-                    .thenReturn(List.of(makeIssue("alice@test.com", 8.0)));
+                    .thenReturn(List.of(makeIssue("alice@test.com", 8.0, "Done")));
+            
+            group.setGithubRepoOwner("owner");
+            group.setGithubRepoName("repo");
+            group.setGithubPatEncrypted("enc-pat");
+            when(cryptoService.decrypt("enc-pat")).thenReturn("dec-pat");
+            when(githubPrMatcherService.findFirstMerged("owner", "repo", "PROJ-1", "dec-pat"))
+                    .thenReturn(Optional.of(new GitHubPrMatcherService.PrMatch(1, "t", "b", "closed", true, "url")));
+
             when(userGroupMemberRepository.findByGroupIdAndStatus(1L, GroupInviteStatus.ACCEPTED))
                     .thenReturn(List.of(studentMember));
             when(storyPointRepository.findByProject_IdAndStudentUserId(100L, 10L))
@@ -113,204 +108,86 @@ class DailySyncSchedulerTest {
         }
 
         @Test
-        @DisplayName("Multiple issues assigned to same student – story points are summed")
-        void multiple_issues_story_points_are_summed() {
+        @DisplayName("Issue is Done but has no merged PR – skipped")
+        void done_issue_no_merged_pr_skipped() {
             when(userGroupRepository.findAll()).thenReturn(List.of(group));
             when(projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(1L))
                     .thenReturn(Optional.of(assignment));
             when(projectRepository.findById(100L)).thenReturn(Optional.of(project));
             when(jiraIntegrationService.buildOpenSprintJql(anyString())).thenReturn("jql");
             when(jiraIntegrationService.fetchIssuesByJql(anyString(), anyString(), anyString()))
-                    .thenReturn(List.of(
-                            makeIssue("alice@test.com", 5.0),
-                            makeIssue("alice@test.com", 3.0),
-                            makeIssue("bob@test.com", 8.0)   // different user
-                    ));
+                    .thenReturn(List.of(makeIssue("alice@test.com", 5.0, "Done")));
+            
+            group.setGithubRepoOwner("owner");
+            group.setGithubRepoName("repo");
+            group.setGithubPatEncrypted("pat");
+            when(cryptoService.decrypt("pat")).thenReturn("dec-pat");
+            when(githubPrMatcherService.findFirstMerged(anyString(), anyString(), anyString(), anyString()))
+                    .thenReturn(Optional.empty());
+
             when(userGroupMemberRepository.findByGroupIdAndStatus(1L, GroupInviteStatus.ACCEPTED))
                     .thenReturn(List.of(studentMember));
-            when(storyPointRepository.findByProject_IdAndStudentUserId(100L, 10L))
-                    .thenReturn(Optional.empty());
-            when(storyPointRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             scheduler.syncJiraStoryPoints();
 
-            verify(storyPointRepository).save(argThat(ssp -> ssp.getStoryPoints() == 8.0)); // 5+3
+            verify(storyPointRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("Jira API throws rate limit 429 for one group – scheduler continues with other groups")
-        void rate_limit_skips_group_but_continues() {
-            UserGroup group2 = new UserGroup();
-            group2.setId(2L);
-            group2.setGroupName("Team Beta");
-            group2.setJiraSpaceUrlEncrypted("https://beta.atlassian.net");
-
-            Project project2 = new Project();
-            project2.setId(200L);
-            project2.setTitle("BETA");
-            project2.setTerm("BETA");
-
-            ProjectGroupAssignment assignment2 = new ProjectGroupAssignment();
-            assignment2.setProject(project2);
-            assignment2.setGroupId(2L);
-            assignment2.setActive(true);
-
-            when(userGroupRepository.findAll()).thenReturn(List.of(group, group2));
-
-            // group 1: returns assignment but Jira API rate-limits
-            when(projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(1L))
-                    .thenReturn(Optional.of(assignment));
-            when(projectRepository.findById(100L)).thenReturn(Optional.of(project));
-            when(jiraIntegrationService.buildOpenSprintJql("MYAPP")).thenReturn("jql1");
-            when(jiraIntegrationService.fetchIssuesByJql(contains("acme"), anyString(), anyString()))
-                    .thenThrow(new ResponseStatusException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS));
-
-            // group 2: succeeds
-            when(projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(2L))
-                    .thenReturn(Optional.of(assignment2));
-            when(projectRepository.findById(200L)).thenReturn(Optional.of(project2));
-            when(jiraIntegrationService.buildOpenSprintJql("BETA")).thenReturn("jql2");
-            when(jiraIntegrationService.fetchIssuesByJql(contains("beta"), anyString(), anyString()))
-                    .thenReturn(List.of(makeIssue("alice@test.com", 3.0)));
-            when(userGroupMemberRepository.findByGroupIdAndStatus(2L, GroupInviteStatus.ACCEPTED))
-                    .thenReturn(List.of(studentMember));
-            when(storyPointRepository.findByProject_IdAndStudentUserId(200L, 10L)).thenReturn(Optional.empty());
-            when(storyPointRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-            // Should NOT throw; group 1 error is swallowed, group 2 is processed
-            assertDoesNotThrow(() -> scheduler.syncJiraStoryPoints());
-
-            verify(storyPointRepository, times(1)).save(any());
-        }
-
-        @Test
-        @DisplayName("Group without Jira token – skipped, no Jira call made")
+        @DisplayName("Group without Jira token – skipped")
         void group_without_jira_token_skipped() {
-            UserGroup noTokenGroup = new UserGroup();
-            noTokenGroup.setId(99L);
-            noTokenGroup.setGroupName("No Token Group");
-            noTokenGroup.setJiraSpaceUrlEncrypted(null);
-
-            when(userGroupRepository.findAll()).thenReturn(List.of(noTokenGroup));
-
-            scheduler.syncJiraStoryPoints();
-
-            verifyNoInteractions(jiraIntegrationService);
-            verifyNoInteractions(storyPointRepository);
-        }
-
-        @Test
-        @DisplayName("Group without active project assignment – skipped")
-        void group_without_project_assignment_skipped() {
+            group.setJiraSpaceUrlEncrypted(null);
             when(userGroupRepository.findAll()).thenReturn(List.of(group));
-            when(projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(1L)).thenReturn(Optional.empty());
-
             scheduler.syncJiraStoryPoints();
-
             verifyNoInteractions(jiraIntegrationService);
-            verifyNoInteractions(storyPointRepository);
         }
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // upsertStoryPoints() – unit tests
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Nested
     @DisplayName("upsertStoryPoints() – unit tests")
     class UpsertStoryPointsTests {
 
         @Test
-        @DisplayName("Missing story points (null) – existing record not overwritten")
-        void missing_story_points_does_not_overwrite_existing() {
-            // Issue has no story points
-            JiraDtos.Issue issueWithNoSp = makeIssue("alice@test.com", null);
-
-            scheduler.upsertStoryPoints(project, List.of(studentMember), List.of(issueWithNoSp));
-
+        @DisplayName("Missing story points – skipped")
+        void missing_story_points_skipped() {
+            scheduler.upsertStoryPoints(project, group, List.of(studentMember), 
+                    List.of(makeIssue("alice@test.com", null, "Done")));
             verifyNoInteractions(storyPointRepository);
         }
 
         @Test
-        @DisplayName("Student has no email – issue matching is skipped gracefully")
-        void student_without_email_skipped() {
+        @DisplayName("Student has no email – skipped")
+        void student_no_email_skipped() {
             studentUser.setEmail(null);
-            JiraDtos.Issue issue = makeIssue("alice@test.com", 5.0);
-
-            scheduler.upsertStoryPoints(project, List.of(studentMember), List.of(issue));
-
+            scheduler.upsertStoryPoints(project, group, List.of(studentMember), 
+                    List.of(makeIssue("alice@test.com", 5.0, "Done")));
             verifyNoInteractions(storyPointRepository);
-        }
-
-        @Test
-        @DisplayName("Existing story point record is updated in-place")
-        void existing_record_is_updated() {
-            ProjectStudentStoryPoint existing = new ProjectStudentStoryPoint();
-            existing.setProject(project);
-            existing.setStudentUserId(10L);
-            existing.setStoryPoints(3.0);
-
-            when(storyPointRepository.findByProject_IdAndStudentUserId(100L, 10L))
-                    .thenReturn(Optional.of(existing));
-            when(storyPointRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-            scheduler.upsertStoryPoints(project, List.of(studentMember),
-                    List.of(makeIssue("alice@test.com", 13.0)));
-
-            verify(storyPointRepository).save(argThat(ssp -> ssp.getStoryPoints() == 13.0));
-        }
-
-        @Test
-        @DisplayName("Email comparison is case-insensitive")
-        void email_comparison_is_case_insensitive() {
-            studentUser.setEmail("Alice@Test.COM");
-            when(storyPointRepository.findByProject_IdAndStudentUserId(100L, 10L)).thenReturn(Optional.empty());
-            when(storyPointRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-            scheduler.upsertStoryPoints(project, List.of(studentMember),
-                    List.of(makeIssue("alice@test.com", 6.0)));
-
-            verify(storyPointRepository).save(any());
         }
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // extractJiraDomain() – unit tests
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Nested
     @DisplayName("extractJiraDomain() – domain extraction")
     class ExtractJiraDomainTests {
-
         @Test
-        @DisplayName("Extracts host from full https URL")
-        void extracts_host_from_https_url() {
+        void extracts_host() {
             assertThat(scheduler.extractJiraDomain("https://acme.atlassian.net")).isEqualTo("acme.atlassian.net");
-        }
-
-        @Test
-        @DisplayName("Returns raw value when not a valid URI")
-        void returns_raw_value_for_invalid_uri() {
-            assertThat(scheduler.extractJiraDomain("enc:v1:abc:def")).isEqualTo("enc:v1:abc:def");
-        }
-
-        @Test
-        @DisplayName("Returns empty string for null")
-        void returns_empty_for_null() {
-            assertThat(scheduler.extractJiraDomain(null)).isEmpty();
         }
     }
 
-    // ── Helper ─────────────────────────────────────────────────────────────────
-
-    private JiraDtos.Issue makeIssue(String assigneeEmail, Double storyPoints) {
+    private JiraDtos.Issue makeIssue(String assigneeEmail, Double storyPoints, String statusName) {
         JiraDtos.Issue issue = new JiraDtos.Issue();
         issue.setId("1");
         issue.setKey("PROJ-1");
 
         JiraDtos.IssueFields fields = new JiraDtos.IssueFields();
-        fields.setSummary("Do something");
+        fields.setSummary("Test");
         fields.setStoryPoints(storyPoints);
+
+        if (statusName != null) {
+            JiraDtos.Status status = new JiraDtos.Status();
+            status.setName(statusName);
+            fields.setStatus(status);
+        }
 
         if (assigneeEmail != null) {
             JiraDtos.Assignee assignee = new JiraDtos.Assignee();

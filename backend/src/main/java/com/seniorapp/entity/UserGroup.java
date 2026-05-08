@@ -51,6 +51,12 @@ public class UserGroup {
     @Column(name = "jira_space_url_encrypted", length = 1024)
     private String jiraSpaceUrlEncrypted;
 
+    @Column(name = "github_repo_owner")
+    private String githubRepoOwner;
+
+    @Column(name = "github_repo_name")
+    private String githubRepoName;
+
     public Long getId() {
         return id;
     }
@@ -105,5 +111,21 @@ public class UserGroup {
 
     public void setJiraSpaceUrlEncrypted(String jiraSpaceUrlEncrypted) {
         this.jiraSpaceUrlEncrypted = jiraSpaceUrlEncrypted;
+    }
+
+    public String getGithubRepoOwner() {
+        return githubRepoOwner;
+    }
+
+    public void setGithubRepoOwner(String githubRepoOwner) {
+        this.githubRepoOwner = githubRepoOwner;
+    }
+
+    public String getGithubRepoName() {
+        return githubRepoName;
+    }
+
+    public void setGithubRepoName(String githubRepoName) {
+        this.githubRepoName = githubRepoName;
     }
 }
