@@ -34,6 +34,12 @@ public class ProjectTemplate {
     @Column
     private LocalDate groupFormationDeadline;
 
+    /** Deadline by which a group must have an accepted advisor. After this date
+     *  new advisee requests are rejected (HTTP 403).
+     */
+    @Column
+    private LocalDate advisorSelectionDeadline;
+
     @Column(nullable = false)
     private Integer version = 1;
 
@@ -132,6 +138,14 @@ public class ProjectTemplate {
 
     public void setGroupFormationDeadline(LocalDate groupFormationDeadline) {
         this.groupFormationDeadline = groupFormationDeadline;
+    }
+
+    public LocalDate getAdvisorSelectionDeadline() {
+        return advisorSelectionDeadline;
+    }
+
+    public void setAdvisorSelectionDeadline(LocalDate advisorSelectionDeadline) {
+        this.advisorSelectionDeadline = advisorSelectionDeadline;
     }
 
     public boolean isActive() {
