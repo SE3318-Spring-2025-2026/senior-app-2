@@ -50,6 +50,7 @@ public class GroupService {
     private final TemplateCommitteeProfessorRepository templateCommitteeProfessorRepository;
     private final ProjectService projectService;
     private final IntegrationCredentialCryptoService cryptoService;
+    private final NotificationService notificationService;
 
     public GroupService(UserGroupRepository userGroupRepository,
                         UserGroupMemberRepository userGroupMemberRepository,
@@ -59,7 +60,8 @@ public class GroupService {
                         ProjectTemplateRepository projectTemplateRepository,
                         TemplateCommitteeProfessorRepository templateCommitteeProfessorRepository,
                         ProjectService projectService,
-                        IntegrationCredentialCryptoService cryptoService) {
+                        IntegrationCredentialCryptoService cryptoService,
+                        NotificationService notificationService) {
         this.userGroupRepository = userGroupRepository;
         this.userGroupMemberRepository = userGroupMemberRepository;
         this.userRepository = userRepository;
@@ -69,6 +71,7 @@ public class GroupService {
         this.templateCommitteeProfessorRepository = templateCommitteeProfessorRepository;
         this.projectService = projectService;
         this.cryptoService = cryptoService;
+        this.notificationService = notificationService;
     }
 
     // --- ISSUE #71 & #72 FIX: GERÇEK GRUP KURMA ---
@@ -184,6 +187,13 @@ public class GroupService {
         invite.setStatus(GroupInviteStatus.PENDING);
         invite.setInvitedByUserId(currentUserId);
         userGroupMemberRepository.save(invite);
+
+        notificationService.sendNotification(
+                studentUserId,
+                "New Group Invite",
+                currentUser.getFullName() + " invited you to join " + group.getGroupName(),
+                "/groups/invites"
+        );
     }
 
     public void respondInvite(Long inviteId, String action, Long currentUserId) {
@@ -196,6 +206,14 @@ public class GroupService {
             // Block accepting an invite after the deadline (students and professors alike)
             assertGroupFormationDeadlineNotPassed();
             invite.setStatus(GroupInviteStatus.ACCEPTED);
+            
+            // Notify the person who invited
+            notificationService.sendNotification(
+                    invite.getInvitedByUserId(),
+                    "Invite Accepted",
+                    invite.getUser().getFullName() + " accepted your invite to " + invite.getGroup().getGroupName(),
+                    "/groups/" + invite.getGroup().getId()
+            );
         } else if ("DECLINE".equalsIgnoreCase(action)) {
             // Declining is always allowed – leaving/declining must remain unrestricted
             invite.setStatus(GroupInviteStatus.DECLINED);
