@@ -33,6 +33,8 @@ class ProjectTemplateApiTest {
 
     @BeforeEach
     void resetTemplates() {
+        jdbcTemplate.execute("DELETE FROM template_committee_professors");
+        jdbcTemplate.execute("DELETE FROM template_committees");
         jdbcTemplate.execute("DELETE FROM project_committee_professors");
         jdbcTemplate.execute("DELETE FROM project_committees");
         jdbcTemplate.execute("DELETE FROM project_deliverable_rubrics");
@@ -173,5 +175,140 @@ class ProjectTemplateApiTest {
                 .andExpect(jsonPath("$.status").value("success"))
                 .andExpect(jsonPath("$.data.payload.name").value("Template Detail Check"))
                 .andExpect(jsonPath("$.data.payload.sprints[0].sprintNo").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "COORDINATOR")
+    void listProfessors_includesCoordinatorsAndProfessorsOnly() throws Exception {
+        String suffix = String.valueOf(System.nanoTime());
+        String professorEmail = "committee-prof-" + suffix + "@test.com";
+        String coordinatorEmail = "committee-coord-" + suffix + "@test.com";
+        String studentEmail = "committee-student-" + suffix + "@test.com";
+
+        insertUser(professorEmail, "Committee Professor", "PROFESSOR");
+        insertUser(coordinatorEmail, "Committee Coordinator", "COORDINATOR");
+        insertUser(studentEmail, "Committee Student", "STUDENT");
+
+        mockMvc.perform(get("/api/project-templates/professors").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.data[?(@.email=='" + professorEmail + "')]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.email=='" + coordinatorEmail + "')]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.email=='" + studentEmail + "')]").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "COORDINATOR")
+    void addProfessorToCommittee_acceptsCoordinatorAndPreventsDuplicateAssignment() throws Exception {
+        String suffix = String.valueOf(System.nanoTime());
+        Long coordinatorId = insertUser("assign-coord-" + suffix + "@test.com", "Assignable Coordinator", "COORDINATOR");
+        Long templateId = createTemplateForCommitteeTests();
+
+        String committeeResponse = mockMvc.perform(post("/api/project-templates/{templateId}/committees", templateId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long committeeId = objectMapper.readTree(committeeResponse).path("data").path("committeeId").asLong();
+
+        String request = """
+                {
+                  "professorUserId": %d
+                }
+                """.formatted(coordinatorId);
+
+        mockMvc.perform(post("/api/project-templates/{templateId}/committees/{committeeId}/professors", templateId, committeeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.professors[0].userId").value(coordinatorId))
+                .andExpect(jsonPath("$.data.professors[0].email").value("assign-coord-" + suffix + "@test.com"));
+
+        mockMvc.perform(post("/api/project-templates/{templateId}/committees/{committeeId}/professors", templateId, committeeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.professors.length()").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "COORDINATOR")
+    void addProfessorToCommittee_rejectsInvalidRole() throws Exception {
+        String suffix = String.valueOf(System.nanoTime());
+        Long studentId = insertUser("assign-student-" + suffix + "@test.com", "Not Assignable Student", "STUDENT");
+        Long templateId = createTemplateForCommitteeTests();
+
+        String committeeResponse = mockMvc.perform(post("/api/project-templates/{templateId}/committees", templateId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long committeeId = objectMapper.readTree(committeeResponse).path("data").path("committeeId").asLong();
+
+        String request = """
+                {
+                  "professorUserId": %d
+                }
+                """.formatted(studentId);
+
+        mockMvc.perform(post("/api/project-templates/{templateId}/committees/{committeeId}/professors", templateId, committeeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Selected user must be a professor or coordinator."));
+    }
+
+    private Long insertUser(String email, String fullName, String role) {
+        jdbcTemplate.update("""
+                INSERT INTO users (email, password, full_name, role, enabled, status, created_at)
+                VALUES (?, 'pwd', ?, ?, true, 'ACTIVE', NOW())
+                """, email, fullName, role);
+        return jdbcTemplate.queryForObject("SELECT id FROM users WHERE email = ?", Long.class, email);
+    }
+
+    private Long createTemplateForCommitteeTests() throws Exception {
+        String payload = """
+                {
+                  "name": "Committee Template",
+                  "description": "template for committee assignment tests",
+                  "term": "Spring 2026",
+                  "projectStartDate": "2026-02-10",
+                  "sprints": [
+                    {
+                      "sprintNo": 1,
+                      "evaluations": [
+                        {
+                          "title": "Sprint Evaluation",
+                          "weight": 100,
+                          "rubrics": [
+                            {"title": "Evaluation Rubric", "criteriaType": "SOFT", "maxScore": 100}
+                          ]
+                        }
+                      ],
+                      "deliverables": [
+                        {
+                          "title": "Deliverable",
+                          "weight": 100,
+                          "rubrics": [
+                            {"title": "Deliverable Rubric", "criteriaType": "SOFT", "maxScore": 100}
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """;
+        String response = mockMvc.perform(post("/api/project-templates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(response).path("data").path("templateId").asLong();
     }
 }

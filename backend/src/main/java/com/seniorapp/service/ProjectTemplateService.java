@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -154,7 +155,7 @@ public class ProjectTemplateService {
 
     @Transactional(readOnly = true)
     public List<ProfessorOptionDto> listProfessors() {
-        return userRepository.findByRole(Role.PROFESSOR).stream()
+        return userRepository.findByRoleIn(EnumSet.of(Role.PROFESSOR, Role.COORDINATOR)).stream()
                 .map(this::toProfessorOptionDto)
                 .toList();
     }
@@ -167,8 +168,8 @@ public class ProjectTemplateService {
         TemplateCommittee committee = getCommitteeBelongsToTemplate(templateId, committeeId);
         User professor = userRepository.findById(professorUserId)
                 .orElseThrow(() -> new NoSuchElementException("Professor not found: " + professorUserId));
-        if (professor.getRole() != Role.PROFESSOR) {
-            throw new IllegalArgumentException("Selected user is not a professor.");
+        if (!isCommitteeAssignableRole(professor.getRole())) {
+            throw new IllegalArgumentException("Selected user must be a professor or coordinator.");
         }
         boolean exists = committee.getProfessors().stream()
                 .anyMatch(member -> Objects.equals(member.getProfessor().getId(), professorUserId));
@@ -195,6 +196,10 @@ public class ProjectTemplateService {
                 Objects.equals(member.getProfessor().getId(), professorUserId)
         );
         return toTemplateCommitteeDto(templateCommitteeRepository.save(committee));
+    }
+
+    private boolean isCommitteeAssignableRole(Role role) {
+        return role == Role.PROFESSOR || role == Role.COORDINATOR;
     }
 
     private void ensureProfessorTemplateAccess(Long templateId, Long requesterUserId) {

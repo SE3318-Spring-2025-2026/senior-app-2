@@ -29,7 +29,7 @@ function ManageComitees() {
       const committeeRes = await getTemplateCommittees(templateId);
       setCommittees(committeeRes?.data || []);
 
-      // Professors list is only needed for coordinator/admin add flow.
+      // Candidate list (professors + coordinators) is only needed for coordinator/admin add flow.
       if (isCoordinator) {
         const professorRes = await getTemplateProfessors();
         setProfessors(professorRes?.data || []);
@@ -75,7 +75,7 @@ function ManageComitees() {
         )
       );
     } catch (err) {
-      setError(err.message || 'Failed to add professor.');
+      setError(err.message || 'Failed to add committee member.');
     }
   };
 
@@ -98,7 +98,7 @@ function ManageComitees() {
         )
       );
     } catch (err) {
-      setError(err.message || 'Failed to remove professor.');
+      setError(err.message || 'Failed to remove committee member.');
     }
   };
 
@@ -175,7 +175,7 @@ function ManageComitees() {
                   </div>
                 ))}
                 {(committee.professors || []).length === 0 && (
-                  <div className="committee-empty">No professor assigned.</div>
+                  <div className="committee-empty">No committee member assigned.</div>
                 )}
               </div>
             </article>
@@ -192,12 +192,12 @@ function ManageComitees() {
         <div className="popup-backdrop" onClick={() => setPopupCommitteeId(null)}>
           <div className="popup-panel" onClick={(e) => e.stopPropagation()}>
             <div className="popup-head">
-              <h3>{popupCommittee.name} - Professors</h3>
+              <h3>{popupCommittee.name} - Committee Members</h3>
               <button type="button" className="close-btn" onClick={() => setPopupCommitteeId(null)}>✕</button>
             </div>
             <input
               className="popup-search"
-              placeholder="Search professor..."
+              placeholder="Search professor/coordinator..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
