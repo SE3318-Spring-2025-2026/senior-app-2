@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getProfileGithubPatStatus, saveProfileGithubPat } from '../services/api';
 import './GitHubProfile.css';
 
 const GitHubProfile = () => {
@@ -11,6 +12,9 @@ const GitHubProfile = () => {
   const [profileData, setProfileData] = useState(null);
   const [repositories, setRepositories] = useState(null);
   const [activity, setActivity] = useState(null);
+  const [pat, setPat] = useState('');
+  const [patConfigured, setPatConfigured] = useState(false);
+  const [patSaving, setPatSaving] = useState(false);
 
   const fetchGitHubProfile = async () => {
     try {
@@ -106,6 +110,12 @@ const GitHubProfile = () => {
   };
 
   useEffect(() => {
+    getProfileGithubPatStatus()
+      .then((res) => setPatConfigured(!!res?.configured))
+      .catch(() => setPatConfigured(false));
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'profile') {
       fetchGitHubProfile();
     } else if (activeTab === 'repositories') {
@@ -190,6 +200,34 @@ const GitHubProfile = () => {
                 View on GitHub →
               </a>
             </div>
+          </div>
+          <div className="dashboard-panel" style={{ marginTop: 16 }}>
+            <h3>Instructor GitHub PAT</h3>
+            <p>{patConfigured ? 'PAT configured on profile.' : 'No PAT configured yet.'}</p>
+            <input
+              type="password"
+              value={pat}
+              onChange={(e) => setPat(e.target.value)}
+              placeholder="ghp_... or github_pat_..."
+              style={{ width: '100%', marginBottom: 8 }}
+            />
+            <button
+              onClick={async () => {
+                setPatSaving(true);
+                try {
+                  await saveProfileGithubPat(pat);
+                  setPat('');
+                  setPatConfigured(true);
+                } catch (e) {
+                  setError(e.message || 'PAT save failed');
+                } finally {
+                  setPatSaving(false);
+                }
+              }}
+              disabled={patSaving || !pat.trim()}
+            >
+              {patSaving ? 'Saving...' : 'Save PAT'}
+            </button>
           </div>
         </div>
       );

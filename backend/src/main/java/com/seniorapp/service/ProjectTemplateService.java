@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -80,6 +81,9 @@ public class ProjectTemplateService {
         payload.put("projectStartDate", request.getProjectStartDate());
         payload.put("sprints", normalizedSprints);
         payload.put("fixedGradePoints", FIXED_GRADE_POINTS);
+        payload.put("createGithubRepo", Boolean.TRUE.equals(request.getCreateGithubRepo()));
+        payload.put("createJiraWorkspace", Boolean.TRUE.equals(request.getCreateJiraWorkspace()));
+        payload.put("jiraSiteUrl", request.getJiraSiteUrl() == null ? null : request.getJiraSiteUrl().trim());
 
         ProjectTemplate template = new ProjectTemplate();
         template.setName(request.getName().trim());
@@ -154,9 +158,14 @@ public class ProjectTemplateService {
 
     @Transactional(readOnly = true)
     public List<ProfessorOptionDto> listProfessors() {
-        return userRepository.findByRole(Role.PROFESSOR).stream()
+        List<ProfessorOptionDto> result = new ArrayList<>();
+        result.addAll(userRepository.findByRole(Role.PROFESSOR).stream()
                 .map(this::toProfessorOptionDto)
-                .toList();
+                .toList());
+        result.addAll(userRepository.findByRole(Role.COORDINATOR).stream()
+                .map(this::toProfessorOptionDto)
+                .toList());
+        return result;
     }
 
     @Transactional
@@ -167,8 +176,8 @@ public class ProjectTemplateService {
         TemplateCommittee committee = getCommitteeBelongsToTemplate(templateId, committeeId);
         User professor = userRepository.findById(professorUserId)
                 .orElseThrow(() -> new NoSuchElementException("Professor not found: " + professorUserId));
-        if (professor.getRole() != Role.PROFESSOR) {
-            throw new IllegalArgumentException("Selected user is not a professor.");
+        if (professor.getRole() != Role.PROFESSOR && professor.getRole() != Role.COORDINATOR) {
+            throw new IllegalArgumentException("Selected user must be a professor or coordinator.");
         }
         boolean exists = committee.getProfessors().stream()
                 .anyMatch(member -> Objects.equals(member.getProfessor().getId(), professorUserId));
@@ -398,6 +407,8 @@ public class ProjectTemplateService {
         dto.setName(committee.getName());
         dto.setProfessors(committee.getProfessors().stream()
                 .map(TemplateCommitteeProfessor::getProfessor)
+                .filter(Objects::nonNull)
+                .filter(user -> user.getRole() == Role.PROFESSOR || user.getRole() == Role.COORDINATOR)
                 .map(this::toProfessorOptionDto)
                 .toList());
         return dto;

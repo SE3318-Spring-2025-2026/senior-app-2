@@ -8,6 +8,8 @@ public class EvaluationGradeResponse {
     private Long evaluationRubricId;
     private Long evaluationId;
     private Long graderId;
+    private String graderName;
+    private String graderEmail;
     private Double grade;
     private String comment;
 
@@ -24,6 +26,8 @@ public class EvaluationGradeResponse {
         }
         if (entity.getGrader() != null) {
             this.graderId = entity.getGrader().getId();
+            this.graderName = entity.getGrader().getFullName();
+            this.graderEmail = entity.getGrader().getEmail();
         }
         this.grade = entity.getGrade();
         this.comment = entity.getComment();
@@ -67,6 +71,22 @@ public class EvaluationGradeResponse {
 
     public void setGraderId(Long graderId) {
         this.graderId = graderId;
+    }
+
+    public String getGraderName() {
+        return graderName;
+    }
+
+    public void setGraderName(String graderName) {
+        this.graderName = graderName;
+    }
+
+    public String getGraderEmail() {
+        return graderEmail;
+    }
+
+    public void setGraderEmail(String graderEmail) {
+        this.graderEmail = graderEmail;
     }
 
     public Double getGrade() {

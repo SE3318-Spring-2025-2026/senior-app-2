@@ -22,6 +22,9 @@ public final class TeamManagementDtos {
         private Long groupId;
         private String groupName;
         private Long leaderUserId;
+        private Long advisorUserId;
+        private String advisorName;
+        private String advisorEmail;
         private boolean currentUserLeader;
         private ProjectLinkDto project;
         private List<MemberDto> members;
@@ -32,6 +35,12 @@ public final class TeamManagementDtos {
         public void setGroupName(String groupName) { this.groupName = groupName; }
         public Long getLeaderUserId() { return leaderUserId; }
         public void setLeaderUserId(Long leaderUserId) { this.leaderUserId = leaderUserId; }
+        public Long getAdvisorUserId() { return advisorUserId; }
+        public void setAdvisorUserId(Long advisorUserId) { this.advisorUserId = advisorUserId; }
+        public String getAdvisorName() { return advisorName; }
+        public void setAdvisorName(String advisorName) { this.advisorName = advisorName; }
+        public String getAdvisorEmail() { return advisorEmail; }
+        public void setAdvisorEmail(String advisorEmail) { this.advisorEmail = advisorEmail; }
         public boolean isCurrentUserLeader() { return currentUserLeader; }
         public void setCurrentUserLeader(boolean currentUserLeader) { this.currentUserLeader = currentUserLeader; }
         public ProjectLinkDto getProject() { return project; }

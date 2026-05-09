@@ -34,6 +34,27 @@ public class Project {
     @Column(name = "group_id")
     private Long groupId;
 
+    @Column(name = "repo_full_name")
+    private String repoFullName;
+
+    @Column(name = "repo_html_url")
+    private String repoHtmlUrl;
+
+    @Column(name = "repo_default_branch")
+    private String repoDefaultBranch;
+
+    @Column(name = "repo_provider_id")
+    private String repoProviderId;
+
+    @Column(name = "jira_project_key")
+    private String jiraProjectKey;
+
+    @Column(name = "jira_project_id")
+    private String jiraProjectId;
+
+    @Column(name = "jira_board_id")
+    private String jiraBoardId;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectSprint> sprints = new ArrayList<>();
 
@@ -115,6 +136,62 @@ public class Project {
 
     public void setGroupId(Long groupId) {
         this.groupId = groupId;
+    }
+
+    public String getRepoFullName() {
+        return repoFullName;
+    }
+
+    public void setRepoFullName(String repoFullName) {
+        this.repoFullName = repoFullName;
+    }
+
+    public String getRepoHtmlUrl() {
+        return repoHtmlUrl;
+    }
+
+    public void setRepoHtmlUrl(String repoHtmlUrl) {
+        this.repoHtmlUrl = repoHtmlUrl;
+    }
+
+    public String getRepoDefaultBranch() {
+        return repoDefaultBranch;
+    }
+
+    public void setRepoDefaultBranch(String repoDefaultBranch) {
+        this.repoDefaultBranch = repoDefaultBranch;
+    }
+
+    public String getRepoProviderId() {
+        return repoProviderId;
+    }
+
+    public void setRepoProviderId(String repoProviderId) {
+        this.repoProviderId = repoProviderId;
+    }
+
+    public String getJiraProjectKey() {
+        return jiraProjectKey;
+    }
+
+    public void setJiraProjectKey(String jiraProjectKey) {
+        this.jiraProjectKey = jiraProjectKey;
+    }
+
+    public String getJiraProjectId() {
+        return jiraProjectId;
+    }
+
+    public void setJiraProjectId(String jiraProjectId) {
+        this.jiraProjectId = jiraProjectId;
+    }
+
+    public String getJiraBoardId() {
+        return jiraBoardId;
+    }
+
+    public void setJiraBoardId(String jiraBoardId) {
+        this.jiraBoardId = jiraBoardId;
     }
 
     public List<ProjectSprint> getSprints() {

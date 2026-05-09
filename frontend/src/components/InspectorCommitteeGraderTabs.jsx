@@ -8,7 +8,6 @@ export default function InspectorCommitteeGraderTabs({ graders, selectedGraderId
 
   return (
     <div className="insp-grader-tabs-wrap">
-      <div className="insp-grader-tabs-label">Komite değerlendirmesi — notları görüntülemek için hoca seçin</div>
       <div className="insp-grader-tabs" role="tablist" aria-label="Komite üyeleri">
         {graders.map((g) => {
           const active = Number(selectedGraderId) === Number(g.userId);

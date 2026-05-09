@@ -86,6 +86,18 @@ public final class ProjectDtos {
         }
     }
 
+    public static class AssignGroupCommitteeRequest {
+        private Long committeeId;
+
+        public Long getCommitteeId() {
+            return committeeId;
+        }
+
+        public void setCommitteeId(Long committeeId) {
+            this.committeeId = committeeId;
+        }
+    }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class IdResponse {
         private String status;
@@ -201,6 +213,19 @@ public final class ProjectDtos {
         }
     }
 
+    public static class PullRequestListResponse {
+        private String status;
+        private List<ProjectPullRequestDto> data;
+
+        public PullRequestListResponse(String status, List<ProjectPullRequestDto> data) {
+            this.status = status;
+            this.data = data;
+        }
+
+        public String getStatus() { return status; }
+        public List<ProjectPullRequestDto> getData() { return data; }
+    }
+
     public static class ProfessorListResponse {
         private String status;
         private List<ProfessorOptionDto> data;
@@ -226,6 +251,10 @@ public final class ProjectDtos {
         private String term;
         private String status;
         private Long activeGroupId;
+        private String repoFullName;
+        private String repoHtmlUrl;
+        private String repoDefaultBranch;
+        private String repoProviderId;
         private LocalDateTime createdAt;
 
         public Long getProjectId() {
@@ -282,6 +311,38 @@ public final class ProjectDtos {
 
         public void setCreatedAt(LocalDateTime createdAt) {
             this.createdAt = createdAt;
+        }
+
+        public String getRepoFullName() {
+            return repoFullName;
+        }
+
+        public void setRepoFullName(String repoFullName) {
+            this.repoFullName = repoFullName;
+        }
+
+        public String getRepoHtmlUrl() {
+            return repoHtmlUrl;
+        }
+
+        public void setRepoHtmlUrl(String repoHtmlUrl) {
+            this.repoHtmlUrl = repoHtmlUrl;
+        }
+
+        public String getRepoDefaultBranch() {
+            return repoDefaultBranch;
+        }
+
+        public void setRepoDefaultBranch(String repoDefaultBranch) {
+            this.repoDefaultBranch = repoDefaultBranch;
+        }
+
+        public String getRepoProviderId() {
+            return repoProviderId;
+        }
+
+        public void setRepoProviderId(String repoProviderId) {
+            this.repoProviderId = repoProviderId;
         }
     }
 
@@ -362,6 +423,18 @@ public final class ProjectDtos {
         private String status;
         private Long createdByUserId;
         private Long activeGroupId;
+        private Long activeCommitteeId;
+        private String activeCommitteeName;
+        private String repoFullName;
+        private String repoHtmlUrl;
+        private String repoDefaultBranch;
+        private String repoProviderId;
+        private String jiraProjectKey;
+        private String jiraProjectUrl;
+        private List<GithubIssueDto> githubIssues;
+        private List<String> githubBranches;
+        private List<JiraGithubMatchDto> jiraGithubMatches;
+        private StoryPointValidationDto storyPointValidation;
         private List<SprintDto> sprints;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
@@ -422,6 +495,102 @@ public final class ProjectDtos {
 
         public void setActiveGroupId(Long activeGroupId) {
             this.activeGroupId = activeGroupId;
+        }
+
+        public Long getActiveCommitteeId() {
+            return activeCommitteeId;
+        }
+
+        public void setActiveCommitteeId(Long activeCommitteeId) {
+            this.activeCommitteeId = activeCommitteeId;
+        }
+
+        public String getActiveCommitteeName() {
+            return activeCommitteeName;
+        }
+
+        public void setActiveCommitteeName(String activeCommitteeName) {
+            this.activeCommitteeName = activeCommitteeName;
+        }
+
+        public String getRepoFullName() {
+            return repoFullName;
+        }
+
+        public void setRepoFullName(String repoFullName) {
+            this.repoFullName = repoFullName;
+        }
+
+        public String getRepoHtmlUrl() {
+            return repoHtmlUrl;
+        }
+
+        public void setRepoHtmlUrl(String repoHtmlUrl) {
+            this.repoHtmlUrl = repoHtmlUrl;
+        }
+
+        public String getRepoDefaultBranch() {
+            return repoDefaultBranch;
+        }
+
+        public void setRepoDefaultBranch(String repoDefaultBranch) {
+            this.repoDefaultBranch = repoDefaultBranch;
+        }
+
+        public String getRepoProviderId() {
+            return repoProviderId;
+        }
+
+        public void setRepoProviderId(String repoProviderId) {
+            this.repoProviderId = repoProviderId;
+        }
+
+        public String getJiraProjectKey() {
+            return jiraProjectKey;
+        }
+
+        public void setJiraProjectKey(String jiraProjectKey) {
+            this.jiraProjectKey = jiraProjectKey;
+        }
+
+        public String getJiraProjectUrl() {
+            return jiraProjectUrl;
+        }
+
+        public void setJiraProjectUrl(String jiraProjectUrl) {
+            this.jiraProjectUrl = jiraProjectUrl;
+        }
+
+        public List<GithubIssueDto> getGithubIssues() {
+            return githubIssues;
+        }
+
+        public void setGithubIssues(List<GithubIssueDto> githubIssues) {
+            this.githubIssues = githubIssues;
+        }
+
+        public List<String> getGithubBranches() {
+            return githubBranches;
+        }
+
+        public void setGithubBranches(List<String> githubBranches) {
+            this.githubBranches = githubBranches;
+        }
+
+        public List<JiraGithubMatchDto> getJiraGithubMatches() {
+            return jiraGithubMatches;
+        }
+
+        public void setJiraGithubMatches(List<JiraGithubMatchDto> jiraGithubMatches) {
+            this.jiraGithubMatches = jiraGithubMatches;
+        }
+
+        public StoryPointValidationDto getStoryPointValidation() {
+            return storyPointValidation;
+        }
+
+        public void setStoryPointValidation(StoryPointValidationDto storyPointValidation) {
+            this.storyPointValidation = storyPointValidation;
         }
 
         public List<SprintDto> getSprints() {
@@ -666,5 +835,186 @@ public final class ProjectDtos {
         public void setCriteriaType(String criteriaType) {
             this.criteriaType = criteriaType;
         }
+    }
+
+    public static class GithubIssueDto {
+        private Long issueNumber;
+        private String title;
+        private String state;
+        private String assignee;
+        private Integer sprintNo;
+        private Double storyPoints;
+
+        public Long getIssueNumber() { return issueNumber; }
+        public void setIssueNumber(Long issueNumber) { this.issueNumber = issueNumber; }
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        public String getState() { return state; }
+        public void setState(String state) { this.state = state; }
+        public String getAssignee() { return assignee; }
+        public void setAssignee(String assignee) { this.assignee = assignee; }
+        public Integer getSprintNo() { return sprintNo; }
+        public void setSprintNo(Integer sprintNo) { this.sprintNo = sprintNo; }
+        public Double getStoryPoints() { return storyPoints; }
+        public void setStoryPoints(Double storyPoints) { this.storyPoints = storyPoints; }
+    }
+
+    public static class StoryPointValidationDto {
+        private boolean matched;
+        private Double expected;
+        private Double actual;
+
+        public boolean isMatched() { return matched; }
+        public void setMatched(boolean matched) { this.matched = matched; }
+        public Double getExpected() { return expected; }
+        public void setExpected(Double expected) { this.expected = expected; }
+        public Double getActual() { return actual; }
+        public void setActual(Double actual) { this.actual = actual; }
+    }
+
+    public static class JiraGithubMatchDto {
+        private String branchName;
+        private String issueKey;
+        private String issueTitle;
+        private String issueDescription;
+        private Double storyPoints;
+        private Integer sprintNo;
+        private String jiraAssignee;
+        private Integer prNumber;
+        private Boolean prMerged;
+
+        public String getBranchName() {
+            return branchName;
+        }
+
+        public void setBranchName(String branchName) {
+            this.branchName = branchName;
+        }
+
+        public String getIssueKey() {
+            return issueKey;
+        }
+
+        public void setIssueKey(String issueKey) {
+            this.issueKey = issueKey;
+        }
+
+        public String getIssueTitle() {
+            return issueTitle;
+        }
+
+        public void setIssueTitle(String issueTitle) {
+            this.issueTitle = issueTitle;
+        }
+
+        public String getIssueDescription() {
+            return issueDescription;
+        }
+
+        public void setIssueDescription(String issueDescription) {
+            this.issueDescription = issueDescription;
+        }
+
+        public Double getStoryPoints() {
+            return storyPoints;
+        }
+
+        public void setStoryPoints(Double storyPoints) {
+            this.storyPoints = storyPoints;
+        }
+
+        public Integer getSprintNo() {
+            return sprintNo;
+        }
+
+        public void setSprintNo(Integer sprintNo) {
+            this.sprintNo = sprintNo;
+        }
+
+        public String getJiraAssignee() {
+            return jiraAssignee;
+        }
+
+        public void setJiraAssignee(String jiraAssignee) {
+            this.jiraAssignee = jiraAssignee;
+        }
+
+        public Integer getPrNumber() {
+            return prNumber;
+        }
+
+        public void setPrNumber(Integer prNumber) {
+            this.prNumber = prNumber;
+        }
+
+        public Boolean getPrMerged() {
+            return prMerged;
+        }
+
+        public void setPrMerged(Boolean prMerged) {
+            this.prMerged = prMerged;
+        }
+    }
+
+    public static class ProjectPullRequestDto {
+        private Integer number;
+        private String title;
+        private String state;
+        private Boolean merged;
+        private String htmlUrl;
+        private String headRef;
+        private String baseRef;
+        private String author;
+
+        public Integer getNumber() { return number; }
+        public void setNumber(Integer number) { this.number = number; }
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        public String getState() { return state; }
+        public void setState(String state) { this.state = state; }
+        public Boolean getMerged() { return merged; }
+        public void setMerged(Boolean merged) { this.merged = merged; }
+        public String getHtmlUrl() { return htmlUrl; }
+        public void setHtmlUrl(String htmlUrl) { this.htmlUrl = htmlUrl; }
+        public String getHeadRef() { return headRef; }
+        public void setHeadRef(String headRef) { this.headRef = headRef; }
+        public String getBaseRef() { return baseRef; }
+        public void setBaseRef(String baseRef) { this.baseRef = baseRef; }
+        public String getAuthor() { return author; }
+        public void setAuthor(String author) { this.author = author; }
+    }
+
+    public static class AdvisorLiveGradesResponse {
+        private String status;
+        private List<AdvisorLiveGradeRow> data;
+
+        public AdvisorLiveGradesResponse(String status, List<AdvisorLiveGradeRow> data) {
+            this.status = status;
+            this.data = data;
+        }
+        public String getStatus() { return status; }
+        public List<AdvisorLiveGradeRow> getData() { return data; }
+    }
+
+    public static class AdvisorLiveGradeRow {
+        private Long projectId;
+        private String projectTitle;
+        private Long groupId;
+        private Double cumulativeTeamGrade;
+        private Double adjustedIndividualGrade;
+        private Double overallSuccessGrade;
+
+        public Long getProjectId() { return projectId; }
+        public void setProjectId(Long projectId) { this.projectId = projectId; }
+        public String getProjectTitle() { return projectTitle; }
+        public void setProjectTitle(String projectTitle) { this.projectTitle = projectTitle; }
+        public Long getGroupId() { return groupId; }
+        public void setGroupId(Long groupId) { this.groupId = groupId; }
+        public Double getCumulativeTeamGrade() { return cumulativeTeamGrade; }
+        public void setCumulativeTeamGrade(Double cumulativeTeamGrade) { this.cumulativeTeamGrade = cumulativeTeamGrade; }
+        public Double getAdjustedIndividualGrade() { return adjustedIndividualGrade; }
+        public void setAdjustedIndividualGrade(Double adjustedIndividualGrade) { this.adjustedIndividualGrade = adjustedIndividualGrade; }
+        public Double getOverallSuccessGrade() { return overallSuccessGrade; }
+        public void setOverallSuccessGrade(Double overallSuccessGrade) { this.overallSuccessGrade = overallSuccessGrade; }
     }
 }

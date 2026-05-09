@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
         name = "project_student_story_points",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "student_user_id"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "student_user_id", "sprint_no"}))
 public class ProjectStudentStoryPoint {
 
     @Id
@@ -21,9 +21,21 @@ public class ProjectStudentStoryPoint {
     @Column(name = "student_user_id", nullable = false)
     private Long studentUserId;
 
+    @Column(name = "sprint_no")
+    private Integer sprintNo;
+
     /** Advisor / koordinatör tarafından girilen manuel story point; null = henüz yok. */
     @Column(name = "story_points")
     private Double storyPoints;
+
+    @Column(name = "accepted", nullable = false)
+    private boolean accepted = false;
+
+    @Column(name = "accepted_by_user_id")
+    private Long acceptedByUserId;
+
+    @Column(name = "accepted_at")
+    private LocalDateTime acceptedAt;
 
     @Column(name = "updated_by_user_id")
     private Long updatedByUserId;
@@ -67,6 +79,38 @@ public class ProjectStudentStoryPoint {
 
     public void setStoryPoints(Double storyPoints) {
         this.storyPoints = storyPoints;
+    }
+
+    public Integer getSprintNo() {
+        return sprintNo;
+    }
+
+    public void setSprintNo(Integer sprintNo) {
+        this.sprintNo = sprintNo;
+    }
+
+    public boolean isAccepted() {
+        return accepted;
+    }
+
+    public void setAccepted(boolean accepted) {
+        this.accepted = accepted;
+    }
+
+    public Long getAcceptedByUserId() {
+        return acceptedByUserId;
+    }
+
+    public void setAcceptedByUserId(Long acceptedByUserId) {
+        this.acceptedByUserId = acceptedByUserId;
+    }
+
+    public LocalDateTime getAcceptedAt() {
+        return acceptedAt;
+    }
+
+    public void setAcceptedAt(LocalDateTime acceptedAt) {
+        this.acceptedAt = acceptedAt;
     }
 
     public Long getUpdatedByUserId() {

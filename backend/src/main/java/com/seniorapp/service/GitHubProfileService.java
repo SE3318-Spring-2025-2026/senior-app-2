@@ -42,14 +42,19 @@ public class GitHubProfileService {
 
     /**
      * Try to get encrypted PAT token from user's group.
-     * Returns null if user has no group or group has no token.
+     * Returns null if user has no group or none of their groups has a token.
      */
     private String getGroupToken(User user) {
-        Optional<UserGroupMember> membership = userGroupMemberRepository
-                .findByUserAndStatus(user, GroupInviteStatus.ACCEPTED);
-        if (membership.isEmpty()) return null;
-        String token = membership.get().getGroup().getGithubPatEncrypted();
-        return (token == null || token.isBlank()) ? null : token;
+        // Some users can be in multiple accepted groups; do not assume uniqueness.
+        return userGroupMemberRepository
+                .findByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), GroupInviteStatus.ACCEPTED)
+                .stream()
+                .map(UserGroupMember::getGroup)
+                .filter(java.util.Objects::nonNull)
+                .map(UserGroup::getGithubPatEncrypted)
+                .filter(token -> token != null && !token.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     /**

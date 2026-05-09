@@ -43,7 +43,11 @@ function InviteCard({ invite, onRespond, inviterName }) {
     setErrorMessage('');
 
     try {
-      await onRespond(invite.inviteId, action);
+      const result = await onRespond(invite.inviteId, action);
+      if (action === 'ACCEPT' && result?.selectionRequired) {
+        setStatus(STATUS.IDLE);
+        return;
+      }
       setStatus(action === 'ACCEPT' ? STATUS.SUCCESS : STATUS.IDLE);
     } catch (error) {
       const message = error?.message || 'Failed to process invitation';

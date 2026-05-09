@@ -3,6 +3,7 @@ package com.seniorapp.controller;
 import com.seniorapp.dto.GroupCreateDto;
 import com.seniorapp.dto.GroupInviteRequestDto;
 import com.seniorapp.dto.GroupInviteRespondDto;
+import com.seniorapp.dto.GroupInviteRespondResultDto;
 import com.seniorapp.dto.GroupIntegrationsRequest;
 import com.seniorapp.dto.GroupIntegrationsResponse;
 import com.seniorapp.dto.GroupMemberActionDto;
@@ -73,13 +74,14 @@ public class GroupController {
     }
 
     @PatchMapping("/invites/{inviteId}")
-    public ResponseEntity<String> respondInvite(
+    public ResponseEntity<Map<String, Object>> respondInvite(
             @PathVariable Long inviteId,
             @RequestBody GroupInviteRespondDto request,
             Authentication authentication) {
         User currentUser = (User) authentication.getPrincipal();
-        groupService.respondInvite(inviteId, request.getAction(), currentUser.getId());
-        return ResponseEntity.ok("{\"message\":\"Invite updated successfully.\"}");
+        GroupInviteRespondResultDto result =
+                groupService.respondInvite(inviteId, request.getAction(), request.getCommitteeId(), currentUser.getId());
+        return ResponseEntity.ok(Map.of("status", "success", "data", result));
     }
 
     @GetMapping("/invites/me")

@@ -50,7 +50,7 @@ public class GroupDataSeeder implements CommandLineRunner {
             seedGroup.setGroupName("Senior App Default Group");
             // -------------------------------------
 
-            User coordinator = userRepository.findByEmail("professor@seniorapp.com").orElseThrow(() -> new RuntimeException("User not found."));
+            User coordinator = userRepository.findByEmail("coordinator@seniorapp.com").orElseThrow(() -> new RuntimeException("User not found."));
             entityManager.merge(coordinator);
             seedGroup.setCoordinator(coordinator);
 

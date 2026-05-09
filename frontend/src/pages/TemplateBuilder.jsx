@@ -139,6 +139,9 @@ function TemplateBuilder() {
     description: 'Default template for senior project workflow',
     term: 'Spring 2026',
     projectStartDate: '',
+    createGithubRepo: false,
+    createJiraWorkspace: false,
+    jiraSiteUrl: '',
     sprints: [],
   });
   const [selected, setSelected] = useState({ type: 'template' });
@@ -763,6 +766,32 @@ function TemplateBuilder() {
                 value={template.projectStartDate}
                 onChange={(value) => updateTemplateField('projectStartDate', value)}
               />
+              <label className="field-full">
+                <input
+                  type="checkbox"
+                  checked={!!template.createGithubRepo}
+                  onChange={(e) => updateTemplateField('createGithubRepo', e.target.checked)}
+                />
+                {' '}Create GitHub repo on project assignment
+              </label>
+              <label className="field-full">
+                <input
+                  type="checkbox"
+                  checked={!!template.createJiraWorkspace}
+                  onChange={(e) => updateTemplateField('createJiraWorkspace', e.target.checked)}
+                />
+                {' '}Create Jira workspace on project assignment
+              </label>
+              {template.createJiraWorkspace && (
+                <label className="field-full">
+                  Jira Site Domain
+                  <input
+                    value={template.jiraSiteUrl || ''}
+                    onChange={(e) => updateTemplateField('jiraSiteUrl', e.target.value)}
+                    placeholder="https://your-domain.atlassian.net"
+                  />
+                </label>
+              )}
             </div>
           )}
 

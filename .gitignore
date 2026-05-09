@@ -5,6 +5,7 @@ dist/
 
 # Local secrets (Spring Boot); set GITHUB_* here — never commit
 backend/src/main/resources/application-local.properties
+backend/src/main/resources/application.properties
 
 # Maven build output
 backend/target/*

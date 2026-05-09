@@ -24,6 +24,12 @@ function Layout() {
           >
             Dashboard
           </NavLink>
+          <NavLink
+            to="/panel/profile"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            My Profile
+          </NavLink>
 
           {/* 🚀 BUG #5 FIX: Öğrenciler ve Koordinatörler için Takım Yönetimi sekmesi */}
           {(user?.role === 'STUDENT' || user?.role === 'COORDINATOR' || user?.role === 'PROFESSOR') && (

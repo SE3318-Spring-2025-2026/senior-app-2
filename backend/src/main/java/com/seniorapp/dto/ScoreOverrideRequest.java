@@ -1,11 +1,9 @@
 package com.seniorapp.dto;
 
-import lombok.Data;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-@Data
 public class ScoreOverrideRequest {
 
     @NotNull(message = "studentId is required")
@@ -15,4 +13,20 @@ public class ScoreOverrideRequest {
     @Min(value = 0, message = "Score cannot be less than 0")
     @Max(value = 100, message = "Score cannot be greater than 100")
     private Double score;
+
+    public Long getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(Long studentId) {
+        this.studentId = studentId;
+    }
+
+    public Double getScore() {
+        return score;
+    }
+
+    public void setScore(Double score) {
+        this.score = score;
+    }
 }

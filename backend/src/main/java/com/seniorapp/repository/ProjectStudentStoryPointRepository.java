@@ -11,4 +11,9 @@ public interface ProjectStudentStoryPointRepository extends JpaRepository<Projec
     List<ProjectStudentStoryPoint> findByProject_Id(Long projectId);
 
     Optional<ProjectStudentStoryPoint> findByProject_IdAndStudentUserId(Long projectId, Long studentUserId);
+
+    List<ProjectStudentStoryPoint> findByProject_IdAndSprintNo(Long projectId, Integer sprintNo);
+
+    Optional<ProjectStudentStoryPoint> findByProject_IdAndStudentUserIdAndSprintNo(
+            Long projectId, Long studentUserId, Integer sprintNo);
 }

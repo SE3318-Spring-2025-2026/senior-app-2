@@ -126,7 +126,7 @@ class GradePersistenceIntegrationTest {
                 .andExpect(jsonPath("$.rubricId").value(10))
                 .andExpect(jsonPath("$.grade").value(85.5));
 
-        var saved = gradeRepository.findBySubmissionId(submissionId);
+        var saved = gradeRepository.findAllForSubmission(submissionId);
         assertThat(saved).hasSize(1);
         assertThat(saved.get(0).getGrade()).isEqualTo(85.5);
         assertThat(saved.get(0).getRubricId()).isEqualTo(10L);
@@ -191,7 +191,6 @@ class GradePersistenceIntegrationTest {
 
     private GradeSubmitRequest request(long graderId, long rubricId, double grade) {
         GradeSubmitRequest r = new GradeSubmitRequest();
-        r.setGraderId(graderId);
         r.setRubricId(rubricId);
         r.setGrade(grade);
         return r;

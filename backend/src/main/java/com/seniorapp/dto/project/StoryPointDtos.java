@@ -58,6 +58,10 @@ public final class StoryPointDtos {
     public static class StoryPointsPayload {
         private List<StudentStoryPointRowDto> rows = new ArrayList<>();
         private boolean editable;
+        private boolean accepted;
+        private boolean acceptEnabled;
+        private Integer sprintNo;
+        private Long advisorUserId;
 
         public List<StudentStoryPointRowDto> getRows() {
             return rows;
@@ -73,6 +77,38 @@ public final class StoryPointDtos {
 
         public void setEditable(boolean editable) {
             this.editable = editable;
+        }
+
+        public boolean isAccepted() {
+            return accepted;
+        }
+
+        public void setAccepted(boolean accepted) {
+            this.accepted = accepted;
+        }
+
+        public boolean isAcceptEnabled() {
+            return acceptEnabled;
+        }
+
+        public void setAcceptEnabled(boolean acceptEnabled) {
+            this.acceptEnabled = acceptEnabled;
+        }
+
+        public Integer getSprintNo() {
+            return sprintNo;
+        }
+
+        public void setSprintNo(Integer sprintNo) {
+            this.sprintNo = sprintNo;
+        }
+
+        public Long getAdvisorUserId() {
+            return advisorUserId;
+        }
+
+        public void setAdvisorUserId(Long advisorUserId) {
+            this.advisorUserId = advisorUserId;
         }
     }
 

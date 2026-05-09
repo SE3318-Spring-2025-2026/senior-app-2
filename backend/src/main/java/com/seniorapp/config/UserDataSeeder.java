@@ -39,15 +39,15 @@ public class UserDataSeeder implements CommandLineRunner {
             userRepository.save(admin);
             log.info("Default admin user seeded (admin@seniorapp.com). Change password after first login.");
         }
-        if (!userRepository.existsByEmail("professor@seniorapp.com")) {
-            User professor = new User();
-            professor.setEmail("professor@seniorapp.com");
-            professor.setPassword(passwordEncoder.encode("prof123"));
-            professor.setFullName("Example Professor");
-            professor.setRole(Role.COORDINATOR);
-            professor.setEnabled(true);
-            userRepository.save(professor);
-            log.info("Default professor user seeded (professor@seniorapp.com). Change password after first login.");
+        if (!userRepository.existsByEmail("coordinator@seniorapp.com")) {
+            User coordinator = new User();
+            coordinator.setEmail("coordinator@seniorapp.com");
+            coordinator.setPassword(passwordEncoder.encode("coord123"));
+            coordinator.setFullName("Default Coordinator");
+            coordinator.setRole(Role.COORDINATOR);
+            coordinator.setEnabled(true);
+            userRepository.save(coordinator);
+            log.info("Default coordinator user seeded (coordinator@seniorapp.com).");
         }
         if (!userRepository.existsByEmail("student@seniorapp.com")) {
             User student = new User();

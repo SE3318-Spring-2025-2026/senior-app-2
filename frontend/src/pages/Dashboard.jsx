@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyGroupInvites, getMyTeams, getProjectTemplates, getStudentDashboard, respondGroupInvite } from '../services/api';
+import { getAdvisorLiveGrades, getMyGroupInvites, getMyTeams, getProjectTemplates, getStudentDashboard, respondGroupInvite } from '../services/api';
 import InviteCard from '../components/InviteCard';
 import './Dashboard.css';
 
@@ -10,8 +10,16 @@ function Dashboard() {
   const [data, setData] = useState({ activeProjects: [], pendingDeliverables: [], invitations: [] });
   const [staffData, setStaffData] = useState({ templates: [], teams: [] });
   const [staffInvites, setStaffInvites] = useState([]);
+  const [advisorLiveGrades, setAdvisorLiveGrades] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inviteProcessing, setInviteProcessing] = useState({});
+  const [committeeSelection, setCommitteeSelection] = useState({
+    inviteId: null,
+    options: [],
+    selectedCommitteeId: null,
+    loading: false,
+    error: '',
+  });
   const navigate = useNavigate();
   const isStudent = user?.role === 'STUDENT';
   const isCoordinator = user?.role === 'COORDINATOR';
@@ -41,10 +49,29 @@ function Dashboard() {
       .finally(() => setLoading(false));
   }, [isCoordinator, isProfessor]);
 
-  const onInviteAction = async (inviteId, action, scope) => {
+  useEffect(() => {
+    if (!isCoordinator && !isProfessor) return;
+    getAdvisorLiveGrades()
+      .then((res) => setAdvisorLiveGrades(Array.isArray(res?.data) ? res.data : []))
+      .catch(() => setAdvisorLiveGrades([]));
+  }, [isCoordinator, isProfessor]);
+
+  const onInviteAction = async (inviteId, action, scope, committeeId = null) => {
     setInviteProcessing((prev) => ({ ...prev, [inviteId]: action }));
     try {
-      await respondGroupInvite(inviteId, action);
+      const res = await respondGroupInvite(inviteId, action, committeeId);
+      const payload = res?.data?.data || res?.data || {};
+      const hasCommitteeChoices = Array.isArray(payload.committeeOptions) && payload.committeeOptions.length > 1;
+      if (action === 'ACCEPT' && (payload.selectionRequired || (committeeId == null && hasCommitteeChoices))) {
+        setCommitteeSelection({
+          inviteId,
+          options: Array.isArray(payload.committeeOptions) ? payload.committeeOptions : [],
+          selectedCommitteeId: null,
+          loading: false,
+          error: '',
+        });
+        return Promise.resolve(payload);
+      }
       const removeInvite = () => {
         if (scope === 'staff') {
           setStaffInvites((prev) => prev.filter((invite) => invite.inviteId !== inviteId));
@@ -76,6 +103,32 @@ function Dashboard() {
         delete updated[inviteId];
         return updated;
       });
+    }
+  };
+
+  const submitCommitteeSelection = async (scope) => {
+    if (!committeeSelection.inviteId || !committeeSelection.selectedCommitteeId) return;
+    setCommitteeSelection((prev) => ({ ...prev, loading: true, error: '' }));
+    try {
+      await onInviteAction(
+        committeeSelection.inviteId,
+        'ACCEPT',
+        scope,
+        Number(committeeSelection.selectedCommitteeId),
+      );
+      setCommitteeSelection({
+        inviteId: null,
+        options: [],
+        selectedCommitteeId: null,
+        loading: false,
+        error: '',
+      });
+    } catch (err) {
+      setCommitteeSelection((prev) => ({
+        ...prev,
+        loading: false,
+        error: err?.message || 'Failed to assign committee.',
+      }));
     }
   };
   return (
@@ -159,6 +212,17 @@ function Dashboard() {
               </div>
             )}
           </section>
+          <section className="dashboard-panel">
+            <h3>Live Grade Summary</h3>
+            {advisorLiveGrades.length === 0 && <p>No live grade data yet.</p>}
+            {advisorLiveGrades.map((row) => (
+              <div className="dashboard-row-card" key={`${row.projectId}-${row.groupId}`}>
+                <strong>{row.projectTitle}</strong>
+                <span>Group #{row.groupId}</span>
+                <span>Team: {row.cumulativeTeamGrade ?? '-'} | Individual: {row.adjustedIndividualGrade ?? '-'}</span>
+              </div>
+            ))}
+          </section>
         </div>
       )}
 
@@ -191,6 +255,7 @@ function Dashboard() {
                 <strong>{team.groupName}</strong>
                 <span>Group #{team.groupId}</span>
                 <span>{team.project ? `Project: ${team.project.title}` : 'No linked project yet'}</span>
+                <span>{team.advisorName ? `Advisor: ${team.advisorName}` : 'Advisor: -'}</span>
               </div>
             ))}
           </section>
@@ -227,6 +292,90 @@ function Dashboard() {
               </div>
             )}
           </section>
+        </div>
+      )}
+      {committeeSelection.inviteId && (
+        <div className="modal-backdrop">
+          <div className="modal-card" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <div className="modal-title-section">
+                <h3>Select Committee</h3>
+                <p className="modal-sub">You are in multiple committees for this project. Choose one.</p>
+              </div>
+              <button
+                className="close-icon-btn"
+                onClick={() =>
+                  setCommitteeSelection({
+                    inviteId: null,
+                    options: [],
+                    selectedCommitteeId: null,
+                    loading: false,
+                    error: '',
+                  })
+                }
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div className="modal-list">
+              {committeeSelection.options.map((opt) => (
+                <label
+                  key={opt.committeeId}
+                  className="modal-list-item"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+                >
+                  <div>
+                    <strong>{opt.committeeName}</strong>
+                    <div style={{ fontSize: 12, opacity: 0.8 }}>
+                      Assigned groups: {opt.assignedGroupCount}
+                    </div>
+                  </div>
+                  <input
+                    type="radio"
+                    name="committee-selection"
+                    value={opt.committeeId}
+                    checked={String(committeeSelection.selectedCommitteeId) === String(opt.committeeId)}
+                    onChange={() =>
+                      setCommitteeSelection((prev) => ({
+                        ...prev,
+                        selectedCommitteeId: opt.committeeId,
+                      }))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+            {committeeSelection.error && (
+              <div className="invite-status-banner invite-status-error">
+                <span className="status-icon">&#9888;</span>
+                <span>{committeeSelection.error}</span>
+              </div>
+            )}
+            <div className="delete-actions">
+              <button
+                className="cancel-btn"
+                onClick={() =>
+                  setCommitteeSelection({
+                    inviteId: null,
+                    options: [],
+                    selectedCommitteeId: null,
+                    loading: false,
+                    error: '',
+                  })
+                }
+                disabled={committeeSelection.loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="primary-btn"
+                onClick={() => submitCommitteeSelection('staff')}
+                disabled={committeeSelection.loading || !committeeSelection.selectedCommitteeId}
+              >
+                {committeeSelection.loading ? 'Assigning...' : 'Assign & Accept'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

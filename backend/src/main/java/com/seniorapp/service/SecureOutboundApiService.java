@@ -4,6 +4,7 @@ import com.seniorapp.exception.SecureDecryptionException;
 import com.seniorapp.util.SecureLogger;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -50,7 +51,8 @@ public class SecureOutboundApiService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Jira token format");
         }
         
-        return executeApiCall("Jira", encryptedToken, "Basic", apiEndpoint, requestBody, method);
+        // Jira integration now uses Atlassian OAuth (3LO) access tokens, so requests must use Bearer auth.
+        return executeApiCall("Jira", encryptedToken, "Bearer", apiEndpoint, requestBody, method);
     }
     
     /**
@@ -98,6 +100,15 @@ public class SecureOutboundApiService {
             if (ex instanceof ResponseStatusException || ex instanceof SecureDecryptionException) {
                 throw ex; // Re-throw our own exceptions
             }
+
+            if (ex instanceof HttpStatusCodeException httpEx) {
+                secureLogger.logProcessFailure(serviceType, "API Call", httpEx.getClass().getSimpleName(),
+                        apiEndpoint, method.name());
+                String responseBody = httpEx.getResponseBodyAsString();
+                String detail = (responseBody == null || responseBody.isBlank()) ? httpEx.getStatusText() : responseBody;
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        serviceType + " API call failed: " + detail, httpEx);
+            }
             
             secureLogger.logProcessFailure(serviceType, "API Call", ex.getClass().getSimpleName(),
                                          apiEndpoint, method.name());
@@ -134,8 +145,14 @@ public class SecureOutboundApiService {
             secureLogger.logTokenValidation(serviceType, false, "null/empty");
             return false;
         }
-        
-        // Basic validation - should be Base64 encoded
+
+        // New format handled by IntegrationCredentialCryptoService (enc:v1:<iv>:<cipher>).
+        if (encryptedToken.startsWith("enc:v1:")) {
+            secureLogger.logTokenValidation(serviceType, true, "enc:v1");
+            return true;
+        }
+
+        // Legacy fallback: raw Base64 payload.
         try {
             java.util.Base64.getDecoder().decode(encryptedToken);
             secureLogger.logTokenValidation(serviceType, true, "Base64");

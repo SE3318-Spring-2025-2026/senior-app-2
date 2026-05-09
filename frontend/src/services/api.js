@@ -56,6 +56,51 @@ export function getMe() {
   return request('/auth/me');
 }
 
+export function updateMyProfile(payload) {
+  return request('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getProfileGithubPatStatus() {
+  return request('/auth/profile/github-pat');
+}
+
+export function saveProfileGithubPat(githubPat) {
+  return request('/auth/profile/github-pat', {
+    method: 'PUT',
+    body: JSON.stringify({ githubPat }),
+  });
+}
+
+export function getProfileJiraConnectionStatus() {
+  return request('/auth/profile/jira-connection');
+}
+
+export async function getJiraOAuthLoginUrl() {
+  const data = await request('/auth/jira/oauth/login');
+  return data.authUrl;
+}
+
+export function saveProfileJiraConnection(jiraSiteUrl, jiraApiToken) {
+  return request('/auth/profile/jira-connection', {
+    method: 'PUT',
+    body: JSON.stringify({ jiraSiteUrl, jiraApiToken }),
+  });
+}
+
+export function getProfileJiraAccount() {
+  return request('/auth/profile/jira-account');
+}
+
+export function saveProfileJiraAccount(jiraAccountId, jiraEmail, jiraDisplayName) {
+  return request('/auth/profile/jira-account', {
+    method: 'PUT',
+    body: JSON.stringify({ jiraAccountId, jiraEmail, jiraDisplayName }),
+  });
+}
+
 export function resetPassword(token, newPassword) {
   return request('/auth/reset-password', {
     method: 'POST',
@@ -73,6 +118,11 @@ export async function getGithubLoginUrl(studentId, flow) {
   if (flow) qs.set('flow', flow);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   const data = await request(`/auth/github/login${suffix}`);
+  return data.authUrl;
+}
+
+export async function getStaffGithubLinkUrl() {
+  const data = await request('/auth/github/login');
   return data.authUrl;
 }
 
@@ -154,6 +204,26 @@ export function getProjectDetail(projectId) {
   return request(`/projects/${projectId}`);
 }
 
+export function getProjectPullRequestReview(projectId, { issueKey, prNumber } = {}) {
+  const query = new URLSearchParams();
+  if (issueKey) query.set('issueKey', issueKey);
+  if (prNumber != null) query.set('prNumber', String(prNumber));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/projects/${projectId}/pull-requests/review${suffix}`);
+}
+
+export function getProjectPullRequests(projectId) {
+  return request(`/projects/${projectId}/pull-requests`);
+}
+
+export function getProjectGithubOverview(projectId) {
+  return request(`/projects/${projectId}`);
+}
+
+export function getAdvisorLiveGrades() {
+  return request('/projects/advisor/live-grades');
+}
+
 export function getProjectCommittees(projectId) {
   return request(`/projects/${projectId}/committees`);
 }
@@ -185,6 +255,13 @@ export function deleteProjectCommittee(projectId, committeeId) {
 export function removeProfessorFromCommittee(projectId, committeeId, professorUserId) {
   return request(`/projects/${projectId}/committees/${committeeId}/professors/${professorUserId}`, {
     method: 'DELETE',
+  });
+}
+
+export function assignProjectGroupCommittee(projectId, groupId, committeeId) {
+  return request(`/projects/${projectId}/groups/${groupId}/committee`, {
+    method: 'POST',
+    body: JSON.stringify({ committeeId }),
   });
 }
 
@@ -230,10 +307,12 @@ export function getMyGroupInvites() {
   return request('/groups/invites/me');
 }
 
-export function respondGroupInvite(inviteId, action) {
+export function respondGroupInvite(inviteId, action, committeeId = null) {
+  const body = { action };
+  if (committeeId != null) body.committeeId = committeeId;
   return request(`/groups/invites/${inviteId}`, {
     method: 'PATCH',
-    body: JSON.stringify({ action }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -396,14 +475,21 @@ export function getProjectSubmissions(projectId, groupId) {
 }
 
 /** Komite veya grup koordinatörü: takım öğrencileri ve manuel story point alanları (403 yönlendirmez). */
-export function getProjectGroupStoryPoints(projectId, groupId) {
-  return request(`/projects/${projectId}/groups/${groupId}/story-points`, { redirectOn403: false });
+export function getProjectGroupStoryPoints(projectId, groupId, sprintNo) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points?sprintNo=${encodeURIComponent(String(sprintNo))}`, { redirectOn403: false });
 }
 
-export function putProjectGroupStoryPoints(projectId, groupId, entries) {
-  return request(`/projects/${projectId}/groups/${groupId}/story-points`, {
+export function putProjectGroupStoryPoints(projectId, groupId, sprintNo, entries) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points?sprintNo=${encodeURIComponent(String(sprintNo))}`, {
     method: 'PUT',
     body: JSON.stringify({ entries }),
+    redirectOn403: false,
+  });
+}
+
+export function acceptProjectGroupStoryPoints(projectId, groupId, sprintNo) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points/accept?sprintNo=${encodeURIComponent(String(sprintNo))}`, {
+    method: 'POST',
     redirectOn403: false,
   });
 }

@@ -98,7 +98,7 @@ public class ProjectCommitteeGradeAccessService {
         if (grader == null) {
             throw new IllegalArgumentException("Oturum açmanız gerekir.");
         }
-        if (grader.getRole() == Role.ADMIN) {
+        if (grader.getRole() == Role.ADMIN || grader.getRole() == Role.COORDINATOR) {
             return;
         }
         if (projectId == null) {

@@ -4,6 +4,7 @@ import com.seniorapp.dto.GroupCreateDto;
 import com.seniorapp.dto.GroupIntegrationsRequest;
 import com.seniorapp.dto.GroupIntegrationsResponse;
 import com.seniorapp.dto.GroupMemberActionDto;
+import com.seniorapp.dto.GroupInviteRespondResultDto;
 import com.seniorapp.dto.TeamManagementDtos.CreateProjectFromTemplateRequest;
 import com.seniorapp.dto.TeamManagementDtos.MemberDto;
 import com.seniorapp.dto.TeamManagementDtos.ProjectLinkDto;
@@ -14,15 +15,23 @@ import com.seniorapp.dto.project.ProjectDtos.CreateProjectRequest;
 import com.seniorapp.entity.GroupInviteStatus;
 import com.seniorapp.entity.GroupMembershipRole;
 import com.seniorapp.entity.Project;
+import com.seniorapp.entity.ProjectCommittee;
+import com.seniorapp.entity.ProjectCommitteeProfessor;
+import com.seniorapp.entity.ProjectGroupAssignment;
 import com.seniorapp.entity.ProjectTemplate;
+import com.seniorapp.entity.TemplateCommittee;
+import com.seniorapp.entity.TemplateCommitteeProfessor;
 import com.seniorapp.entity.Role;
 import com.seniorapp.entity.User;
 import com.seniorapp.entity.UserGroup;
 import com.seniorapp.entity.UserGroupMember;
+import com.seniorapp.repository.ProjectCommitteeRepository;
 import com.seniorapp.repository.ProjectGroupAssignmentRepository;
+import com.seniorapp.repository.ProjectCommitteeProfessorRepository;
 import com.seniorapp.repository.ProjectRepository;
 import com.seniorapp.repository.ProjectTemplateRepository;
 import com.seniorapp.repository.TemplateCommitteeProfessorRepository;
+import com.seniorapp.repository.TemplateCommitteeRepository;
 import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserGroupRepository;
 import com.seniorapp.repository.UserRepository;
@@ -35,6 +44,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,29 +53,38 @@ public class GroupService {
     private final UserGroupRepository userGroupRepository;
     private final UserGroupMemberRepository userGroupMemberRepository;
     private final UserRepository userRepository;
+    private final ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository;
+    private final ProjectCommitteeRepository projectCommitteeRepository;
     private final ProjectGroupAssignmentRepository projectGroupAssignmentRepository;
     private final ProjectRepository projectRepository;
     private final ProjectTemplateRepository projectTemplateRepository;
     private final TemplateCommitteeProfessorRepository templateCommitteeProfessorRepository;
+    private final TemplateCommitteeRepository templateCommitteeRepository;
     private final ProjectService projectService;
     private final IntegrationCredentialCryptoService cryptoService;
 
     public GroupService(UserGroupRepository userGroupRepository,
                         UserGroupMemberRepository userGroupMemberRepository,
                         UserRepository userRepository,
+                        ProjectCommitteeProfessorRepository projectCommitteeProfessorRepository,
+                        ProjectCommitteeRepository projectCommitteeRepository,
                         ProjectGroupAssignmentRepository projectGroupAssignmentRepository,
                         ProjectRepository projectRepository,
                         ProjectTemplateRepository projectTemplateRepository,
                         TemplateCommitteeProfessorRepository templateCommitteeProfessorRepository,
+                        TemplateCommitteeRepository templateCommitteeRepository,
                         ProjectService projectService,
                         IntegrationCredentialCryptoService cryptoService) {
         this.userGroupRepository = userGroupRepository;
         this.userGroupMemberRepository = userGroupMemberRepository;
         this.userRepository = userRepository;
+        this.projectCommitteeProfessorRepository = projectCommitteeProfessorRepository;
+        this.projectCommitteeRepository = projectCommitteeRepository;
         this.projectGroupAssignmentRepository = projectGroupAssignmentRepository;
         this.projectRepository = projectRepository;
         this.projectTemplateRepository = projectTemplateRepository;
         this.templateCommitteeProfessorRepository = templateCommitteeProfessorRepository;
+        this.templateCommitteeRepository = templateCommitteeRepository;
         this.projectService = projectService;
         this.cryptoService = cryptoService;
     }
@@ -148,6 +167,7 @@ public class GroupService {
         boolean isLeader = group.getTeamLeader() != null && group.getTeamLeader().getId().equals(currentUserId);
         boolean isTargetStudent = targetUser.getRole() == Role.STUDENT;
         boolean isCurrentUserStudent = currentUser.getRole() == Role.STUDENT;
+        boolean isTargetAdvisor = targetUser.getRole() == Role.PROFESSOR || targetUser.getRole() == Role.COORDINATOR;
 
         if (isTargetStudent && !isLeader && !isProfessorOrCoordinator) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only Team Leader can invite students.");
@@ -156,6 +176,18 @@ public class GroupService {
         // Students can invite professors, professors can invite students
         if (isCurrentUserStudent && !isTargetStudent && !isLeader) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only Team Leader can invite professors.");
+        }
+        if (isTargetAdvisor) {
+            ProjectGroupAssignment assignment = projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "Advisor invite is available only after the group is assigned to a project."));
+            Long projectId = assignment.getProject() != null ? assignment.getProject().getId() : null;
+            if (projectId == null || !isAdvisorInTemplateCommittees(projectId, targetUser.getId())) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Selected advisor is not in this project's committees.");
+            }
         }
 
         if (userGroupMemberRepository.existsByGroupIdAndUserIdAndStatus(groupId, studentUserId, GroupInviteStatus.ACCEPTED)) {
@@ -179,21 +211,224 @@ public class GroupService {
         userGroupMemberRepository.save(invite);
     }
 
-    public void respondInvite(Long inviteId, String action, Long currentUserId) {
+    @Transactional
+    public GroupInviteRespondResultDto respondInvite(Long inviteId, String action, Long committeeId, Long currentUserId) {
         UserGroupMember invite = userGroupMemberRepository.findByIdAndUserId(inviteId, currentUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found."));
         if (invite.getStatus() != GroupInviteStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite already processed.");
         }
+        GroupInviteRespondResultDto result = new GroupInviteRespondResultDto();
         if ("ACCEPT".equalsIgnoreCase(action)) {
+            if (invite.getUser().getRole() == Role.PROFESSOR || invite.getUser().getRole() == Role.COORDINATOR) {
+                return processAdvisorAccept(invite, committeeId);
+            }
             invite.setStatus(GroupInviteStatus.ACCEPTED);
+            result.setMessage("Invite accepted.");
         } else if ("DECLINE".equalsIgnoreCase(action)) {
             invite.setStatus(GroupInviteStatus.DECLINED);
+            result.setMessage("Invite declined.");
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid action. Use ACCEPT or DECLINE.");
         }
         invite.setRespondedAt(java.time.LocalDateTime.now());
         userGroupMemberRepository.save(invite);
+        return result;
+    }
+
+    private GroupInviteRespondResultDto processAdvisorAccept(UserGroupMember invite, Long committeeId) {
+        GroupInviteRespondResultDto result = new GroupInviteRespondResultDto();
+        Long groupId = invite.getGroup().getId();
+        Long advisorUserId = invite.getUser().getId();
+        ProjectGroupAssignment assignment = projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Group is not assigned to any active project."));
+        Long projectId = assignment.getProject() != null ? assignment.getProject().getId() : null;
+        if (projectId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project not found for this group.");
+        }
+
+        Long templateId = resolveTemplateIdForProject(projectId);
+        if (templateId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Template not found for this project.");
+        }
+        List<TemplateCommittee> templateCommitteeMemberships = templateCommitteeRepository
+                .findByTemplateIdOrderByIdAsc(templateId).stream()
+                .filter(c -> c.getProfessors().stream()
+                        .anyMatch(member -> member.getProfessor() != null
+                                && Objects.equals(member.getProfessor().getId(), advisorUserId)))
+                .toList();
+        if (templateCommitteeMemberships.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Advisor is not a member of any committee in this project's template.");
+        }
+
+        TemplateCommittee resolvedTemplateCommittee;
+        if (templateCommitteeMemberships.size() == 1) {
+            resolvedTemplateCommittee = templateCommitteeMemberships.get(0);
+            result.setAutoAssigned(true);
+        } else {
+            if (committeeId == null) {
+                result.setSelectionRequired(true);
+                result.setMessage("Committee selection required.");
+                result.setCommitteeOptions(templateCommitteeMemberships.stream()
+                        .map(c -> toTemplateCommitteeOption(c, projectId))
+                        .toList());
+                return result;
+            }
+            resolvedTemplateCommittee = templateCommitteeMemberships.stream()
+                    .filter(c -> Objects.equals(c.getId(), committeeId))
+                    .findFirst()
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "Selected template committee is not valid for this advisor."));
+        }
+        ProjectCommittee resolvedCommittee = ensureProjectCommitteeFromTemplate(
+                assignment.getProject(), resolvedTemplateCommittee, advisorUserId);
+
+        invite.setStatus(GroupInviteStatus.ACCEPTED);
+        invite.setRespondedAt(java.time.LocalDateTime.now());
+        userGroupMemberRepository.save(invite);
+
+        assignment.setCommittee(resolvedCommittee);
+        projectGroupAssignmentRepository.save(assignment);
+
+        UserGroup group = invite.getGroup();
+        group.setAdvisor(invite.getUser());
+        userGroupRepository.save(group);
+
+        List<UserGroupMember> pendingForSameGroup =
+                userGroupMemberRepository.findByUserIdAndGroupIdAndStatus(advisorUserId, groupId, GroupInviteStatus.PENDING);
+        for (UserGroupMember pendingInvite : pendingForSameGroup) {
+            if (!Objects.equals(pendingInvite.getId(), invite.getId())) {
+                pendingInvite.setStatus(GroupInviteStatus.DECLINED);
+                pendingInvite.setRespondedAt(java.time.LocalDateTime.now());
+                userGroupMemberRepository.save(pendingInvite);
+            }
+        }
+
+        result.setAssignedCommitteeId(resolvedCommittee.getId());
+        result.setAssignedCommitteeName(resolvedCommittee.getName());
+        result.setMessage("Invite accepted and committee assigned.");
+        return result;
+    }
+
+    private GroupInviteRespondResultDto.CommitteeOption toTemplateCommitteeOption(TemplateCommittee committee, Long projectId) {
+        GroupInviteRespondResultDto.CommitteeOption option = new GroupInviteRespondResultDto.CommitteeOption();
+        option.setCommitteeId(committee.getId());
+        option.setCommitteeName(committee.getName());
+        Long assignedGroupCount = 0L;
+        if (projectId != null) {
+            var mappedProjectCommittee = projectCommitteeRepository.findByProjectIdOrderByIdAsc(projectId).stream()
+                    .filter(c -> c.getName() != null && c.getName().equalsIgnoreCase(committee.getName()))
+                    .findFirst()
+                    .orElse(null);
+            if (mappedProjectCommittee != null && mappedProjectCommittee.getId() != null) {
+                assignedGroupCount = projectGroupAssignmentRepository.countByProjectIdAndCommittee_IdAndActiveTrue(
+                        projectId, mappedProjectCommittee.getId());
+            }
+        }
+        option.setAssignedGroupCount(assignedGroupCount);
+        return option;
+    }
+
+    private ProjectCommittee ensureProjectCommitteeFromTemplate(Project project, TemplateCommittee templateCommittee, Long advisorUserId) {
+        if (project == null || project.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project not found for assignment.");
+        }
+        ProjectCommittee projectCommittee = projectCommitteeRepository.findByProjectIdOrderByIdAsc(project.getId()).stream()
+                .filter(c -> c.getName() != null && c.getName().equalsIgnoreCase(templateCommittee.getName()))
+                .findFirst()
+                .orElseGet(() -> {
+                    ProjectCommittee c = new ProjectCommittee();
+                    c.setProject(project);
+                    c.setName(templateCommittee.getName());
+                    return projectCommitteeRepository.save(c);
+                });
+        if (projectCommittee.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Committee mapping failed.");
+        }
+        Set<Long> templateProfessorIds = templateCommittee.getProfessors().stream()
+                .map(TemplateCommitteeProfessor::getProfessor)
+                .filter(Objects::nonNull)
+                .map(User::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        if (templateProfessorIds.isEmpty()) {
+            templateProfessorIds.add(advisorUserId);
+        }
+        for (Long professorId : templateProfessorIds) {
+            boolean exists = projectCommitteeProfessorRepository
+                    .findByCommitteeIdAndProfessor_Id(projectCommittee.getId(), professorId)
+                    .isPresent();
+            if (exists) {
+                continue;
+            }
+            User professor = userRepository.findById(professorId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Advisor not found."));
+            if (professor.getRole() != Role.PROFESSOR && professor.getRole() != Role.COORDINATOR) {
+                continue;
+            }
+            ProjectCommitteeProfessor member = new ProjectCommitteeProfessor();
+            member.setCommittee(projectCommittee);
+            member.setProfessor(professor);
+            projectCommitteeProfessorRepository.save(member);
+        }
+        return projectCommittee;
+    }
+
+    private Long resolveTemplateIdForProject(Long projectId) {
+        Project project = projectRepository.findById(projectId).orElse(null);
+        if (project == null || project.getTemplate() == null) {
+            return null;
+        }
+        return project.getTemplate().getId();
+    }
+
+    private boolean isAdvisorInTemplateCommittees(Long projectId, Long advisorUserId) {
+        Long templateId = resolveTemplateIdForProject(projectId);
+        if (templateId == null) {
+            return false;
+        }
+        return templateCommitteeProfessorRepository.existsByCommittee_Template_IdAndProfessor_Id(templateId, advisorUserId);
+    }
+
+    public List<StudentOptionDto> listAdvisorOptions(Long groupId, Long currentUserId) {
+        UserGroup group = userGroupRepository.findById(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
+        boolean isMember = userGroupMemberRepository.existsByGroupIdAndUserIdAndStatusIn(
+                groupId, currentUserId, List.of(GroupInviteStatus.ACCEPTED, GroupInviteStatus.PENDING));
+        if (!isMember && (group.getTeamLeader() == null || !group.getTeamLeader().getId().equals(currentUserId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed for this team.");
+        }
+        ProjectGroupAssignment assignment = projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Advisor invite is available only after the group is assigned to a project."));
+        Long projectId = assignment.getProject() != null ? assignment.getProject().getId() : null;
+        if (projectId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Assigned project not found for this group.");
+        }
+        Long templateId = resolveTemplateIdForProject(projectId);
+        if (templateId == null) {
+            return List.of();
+        }
+        Set<Long> advisorUserIds = new java.util.LinkedHashSet<>(
+                templateCommitteeProfessorRepository.findDistinctProfessorIdsByTemplateId(templateId)
+        );
+        return advisorUserIds.stream()
+                .map(userRepository::findById)
+                .filter(java.util.Optional::isPresent)
+                .map(java.util.Optional::get)
+                .map(user -> {
+                    StudentOptionDto dto = new StudentOptionDto();
+                    dto.setUserId(user.getId());
+                    dto.setFullName(user.getFullName());
+                    dto.setEmail(user.getEmail());
+                    return dto;
+                }).toList();
     }
 
     public List<TeamDto> getMyTeams(Long currentUserId) {
@@ -224,54 +459,6 @@ public class GroupService {
         }).toList();
     }
 
-    public List<StudentOptionDto> listAdvisorOptions(Long groupId, Long currentUserId) {
-        UserGroup group = userGroupRepository.findById(groupId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found."));
-        boolean isMember = userGroupMemberRepository.existsByGroupIdAndUserIdAndStatusIn(
-                groupId, currentUserId, List.of(GroupInviteStatus.ACCEPTED, GroupInviteStatus.PENDING));
-        if (!isMember && (group.getTeamLeader() == null || !group.getTeamLeader().getId().equals(currentUserId))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed for this team.");
-        }
-        var assignment = projectGroupAssignmentRepository.findByGroupIdAndActiveTrue(groupId);
-        if (assignment.isPresent()) {
-            Project project = assignment.get().getProject();
-            if (project != null && project.getTemplate() != null && project.getTemplate().getId() != null) {
-                Long templateId = project.getTemplate().getId();
-                Set<Long> advisorUserIds = new java.util.LinkedHashSet<>(
-                        templateCommitteeProfessorRepository.findDistinctProfessorIdsByTemplateId(templateId)
-                );
-                userRepository.findByRole(Role.COORDINATOR).stream().map(User::getId).forEach(advisorUserIds::add);
-                userRepository.findByRole(Role.PROFESSOR).stream().map(User::getId).forEach(advisorUserIds::add);
-                return advisorUserIds.stream()
-                        .map(userRepository::findById)
-                        .filter(java.util.Optional::isPresent)
-                        .map(java.util.Optional::get)
-                        .map(user -> {
-                            StudentOptionDto dto = new StudentOptionDto();
-                            dto.setUserId(user.getId());
-                            dto.setFullName(user.getFullName());
-                            dto.setEmail(user.getEmail());
-                            return dto;
-                        }).toList();
-            }
-        }
-        
-        // Fallback: If no project assignment, show all COORDINATOR and PROFESSOR users
-        Set<Long> advisorUserIds = new java.util.LinkedHashSet<>();
-        userRepository.findByRole(Role.COORDINATOR).stream().map(User::getId).forEach(advisorUserIds::add);
-        userRepository.findByRole(Role.PROFESSOR).stream().map(User::getId).forEach(advisorUserIds::add);
-        return advisorUserIds.stream()
-                .map(userRepository::findById)
-                .filter(java.util.Optional::isPresent)
-                .map(java.util.Optional::get)
-                .map(user -> {
-                    StudentOptionDto dto = new StudentOptionDto();
-                    dto.setUserId(user.getId());
-                    dto.setFullName(user.getFullName());
-                    dto.setEmail(user.getEmail());
-                    return dto;
-                }).toList();
-    }
 
     public List<InviteItem> getMyInvites(Long currentUserId) {
         return userGroupMemberRepository.findByUserIdAndStatusOrderByCreatedAtDesc(currentUserId, GroupInviteStatus.PENDING)
@@ -316,6 +503,9 @@ public class GroupService {
         dto.setGroupId(group.getId());
         dto.setGroupName(group.getGroupName());
         dto.setLeaderUserId(group.getTeamLeader() != null ? group.getTeamLeader().getId() : null);
+        dto.setAdvisorUserId(group.getAdvisor() != null ? group.getAdvisor().getId() : null);
+        dto.setAdvisorName(group.getAdvisor() != null ? group.getAdvisor().getFullName() : null);
+        dto.setAdvisorEmail(group.getAdvisor() != null ? group.getAdvisor().getEmail() : null);
         dto.setCurrentUserLeader(group.getTeamLeader() != null && group.getTeamLeader().getId().equals(currentUserId));
 
         List<UserGroupMember> allMembers = userGroupMemberRepository.findByGroupIdOrderByCreatedAtAsc(group.getId());

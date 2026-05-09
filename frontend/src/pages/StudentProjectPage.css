@@ -519,6 +519,39 @@
   margin-bottom: 8px;
 }
 .spp-submit-block--full { max-width: 100%; }
+.spp-deliverable-view-switch {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.spp-submit-block--grade-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fcfcff;
+}
+.spp-grade-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.spp-grade-summary-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+.spp-grade-summary-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+.spp-grade-summary-value {
+  font-size: 1rem;
+  color: #111827;
+}
 
 .spp-no-upload-required {
   font-size: 0.82rem;
@@ -979,4 +1012,5 @@
   .spp-project-title { font-size: 1.5rem; }
   .spp-deliverable-top { flex-direction: column; gap: 8px; }
   .spp-actions-row { flex-wrap: wrap; }
+  .spp-grade-summary-grid { grid-template-columns: 1fr; }
 }

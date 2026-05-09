@@ -24,6 +24,9 @@ public class CreateProjectTemplateRequest {
 
     @NotNull
     private JsonNode sprints;
+    private Boolean createGithubRepo;
+    private Boolean createJiraWorkspace;
+    private String jiraSiteUrl;
 
     public String getName() {
         return name;
@@ -63,5 +66,29 @@ public class CreateProjectTemplateRequest {
 
     public void setProjectStartDate(String projectStartDate) {
         this.projectStartDate = projectStartDate;
+    }
+
+    public Boolean getCreateGithubRepo() {
+        return createGithubRepo;
+    }
+
+    public void setCreateGithubRepo(Boolean createGithubRepo) {
+        this.createGithubRepo = createGithubRepo;
+    }
+
+    public Boolean getCreateJiraWorkspace() {
+        return createJiraWorkspace;
+    }
+
+    public void setCreateJiraWorkspace(Boolean createJiraWorkspace) {
+        this.createJiraWorkspace = createJiraWorkspace;
+    }
+
+    public String getJiraSiteUrl() {
+        return jiraSiteUrl;
+    }
+
+    public void setJiraSiteUrl(String jiraSiteUrl) {
+        this.jiraSiteUrl = jiraSiteUrl;
     }
 }
