@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getProjectPullRequestReview } from '../services/api';
+import SplitPaneComparison from '../components/comparison/SplitPaneComparison';
 import './PullRequestReviewPage.css';
 
 function extractTextFromAdfNode(node) {
@@ -71,6 +72,24 @@ function AiWidget({ widget }) {
   );
 }
 
+function buildFeedbackFromWidget(widget, severity) {
+  if (!widget) return [];
+  const title = widget.title || 'AI Feedback';
+  const discrepancyItems = (widget.discrepancies || []).map((item, idx) => ({
+    id: `${title}-d-${idx}`,
+    severity,
+    title,
+    message: item,
+  }));
+  const evidenceItems = (widget.evidence || []).map((item, idx) => ({
+    id: `${title}-e-${idx}`,
+    severity: 'info',
+    title: `${title} (Evidence)`,
+    message: item,
+  }));
+  return [...discrepancyItems, ...evidenceItems];
+}
+
 export default function PullRequestReviewPage() {
   const { projectId } = useParams();
   const [search] = useSearchParams();
@@ -104,6 +123,22 @@ export default function PullRequestReviewPage() {
     () => toReadableIssueDescription(issue?.description),
     [issue?.description],
   );
+  const comparisonRequirement = useMemo(() => ({
+    key: issue?.key || '—',
+    summary: issue?.title || 'Issue',
+    description: readableIssueDescription,
+    assignee: issue?.assignee || '—',
+    status: data?.prNumber ? `PR #${data.prNumber}` : undefined,
+    priority: issue?.storyPoints != null ? `Story points: ${issue.storyPoints}` : undefined,
+    acceptanceCriteria: [
+      ...((data?.reviewProcessAi?.discrepancies || []).map((item) => `Review process: ${item}`)),
+      ...((data?.implementationAi?.discrepancies || []).map((item) => `Implementation: ${item}`)),
+    ],
+  }), [issue?.key, issue?.title, issue?.assignee, issue?.storyPoints, readableIssueDescription, data?.prNumber, data?.reviewProcessAi?.discrepancies, data?.implementationAi?.discrepancies]);
+  const comparisonFeedback = useMemo(() => ([
+    ...buildFeedbackFromWidget(data?.reviewProcessAi, 'warning'),
+    ...buildFeedbackFromWidget(data?.implementationAi, 'error'),
+  ]), [data?.reviewProcessAi, data?.implementationAi]);
 
   return (
     <div className="prr-page">
@@ -121,27 +156,25 @@ export default function PullRequestReviewPage() {
 
       {!loading && !error && data && (
         <div className="prr-layout">
-          <aside className="prr-left">
-            <section className="prr-widget">
-              <h3>Issue Overview</h3>
-              <p><strong>Key:</strong> {issue?.key || '—'}</p>
-              <p><strong>Title:</strong> {issue?.title || '—'}</p>
-              <p><strong>Assignee:</strong> {issue?.assignee || '—'}</p>
-              <p><strong>Story points:</strong> {issue?.storyPoints ?? '—'}</p>
-              <p><strong>Description:</strong></p>
-              <div className="prr-issue-description">{readableIssueDescription}</div>
-            </section>
+          <div className="prr-diff-head">
+            <h2>{data.prTitle || `PR #${data.prNumber}`}</h2>
+            <span>{data.baseBranch || '-'} ← {data.headBranch || '-'}</span>
+          </div>
+          <div className="prr-splitpane-wrap">
+            <SplitPaneComparison
+              requirement={comparisonRequirement}
+              diff={data.diff || ''}
+              feedback={comparisonFeedback}
+              highlightedLines={[]}
+              loading={false}
+              error={null}
+              fileName={`${data.headBranch || 'pull-request'}.diff`}
+            />
+          </div>
+          <div className="prr-ai-widgets">
             <AiWidget widget={data.reviewProcessAi} />
             <AiWidget widget={data.implementationAi} />
-          </aside>
-
-          <main className="prr-right">
-            <div className="prr-diff-head">
-              <h2>{data.prTitle || `PR #${data.prNumber}`}</h2>
-              <span>{data.baseBranch || '-'} ← {data.headBranch || '-'}</span>
-            </div>
-            <pre className="prr-diff">{data.diff || 'No diff content.'}</pre>
-          </main>
+          </div>
         </div>
       )}
     </div>

@@ -132,6 +132,7 @@ public class ProjectService {
         project.setStatus(ProjectStatus.DRAFT);
         project.setCreatedByUserId(createdByUserId);
         project.setSprints(buildProjectSprints(project, sprintsNode));
+        enforceDeliverableUploadPolicy(project);
 
         Project saved = projectRepository.save(project);
         if (request.getGroupId() != null) {
@@ -162,6 +163,7 @@ public class ProjectService {
         assignmentRepository.findByGroupIdAndActiveTrue(groupId).ifPresent(existing -> {
             throw new IllegalArgumentException("Group is already assigned to another active project.");
         });
+        enforceDeliverableUploadPolicy(project);
         project.setGroupId(groupId);
         projectRepository.save(project);
 
@@ -507,13 +509,26 @@ public class ProjectService {
             deliverable.setTitle(node.path("title").asText("Deliverable " + (index + 1)));
             deliverable.setDescription(node.path("description").asText(""));
             deliverable.setWeight(node.path("weight").asInt(0));
-            deliverable.setFileUploadDeliverable(node.path("fileUploadDeliverable").asBoolean(false));
+            // File upload policy is enforced at entity level (ProjectDeliverable @PrePersist/@PreUpdate).
+            deliverable.setFileUploadDeliverable(true);
             deliverable.setAutoAddToAllSprints(node.path("autoAddToAllSprints").asBoolean(false));
             deliverable.setRubrics(buildDeliverableRubrics(deliverable, node.path("rubrics")));
             deliverables.add(deliverable);
             index++;
         }
         return deliverables;
+    }
+
+    private void enforceDeliverableUploadPolicy(Project project) {
+        if (project == null || project.getSprints() == null) return;
+        for (ProjectSprint sprint : project.getSprints()) {
+            if (sprint == null || sprint.getDeliverables() == null) continue;
+            for (ProjectDeliverable deliverable : sprint.getDeliverables()) {
+                if (deliverable == null) continue;
+                // Entity lifecycle callback enforces demo/non-demo final value.
+                deliverable.setFileUploadDeliverable(true);
+            }
+        }
     }
 
     private List<ProjectDeliverableRubric> buildDeliverableRubrics(ProjectDeliverable deliverable, JsonNode rubricsNode) {
@@ -738,7 +753,9 @@ public class ProjectService {
         dto.setTitle(deliverable.getTitle());
         dto.setDescription(deliverable.getDescription());
         dto.setWeight(deliverable.getWeight());
-        dto.setFileUploadDeliverable(deliverable.isFileUploadDeliverable());
+        // Hard rule: only demo/demonstration deliverables are text-only.
+        // Compute from semantic fields to avoid stale persisted values.
+        dto.setFileUploadDeliverable(!isDemoDeliverableDeliverable(deliverable));
         dto.setAutoAddToAllSprints(deliverable.isAutoAddToAllSprints());
         List<ProjectDeliverableRubric> rubricEntities;
         if (rubricsFromDb != null && deliverable.getId() != null) {
@@ -751,6 +768,18 @@ public class ProjectService {
                 .map(this::toRubricDto)
                 .toList());
         return dto;
+    }
+
+    private boolean isDemoDeliverableDeliverable(ProjectDeliverable deliverable) {
+        if (deliverable == null) return false;
+        String type = deliverable.getType();
+        String title = deliverable.getTitle();
+        String normalizedType = type == null ? "" : type.trim().toLowerCase(Locale.ROOT);
+        String normalizedTitle = title == null ? "" : title.trim().toLowerCase(Locale.ROOT);
+        return normalizedType.contains("demo")
+                || normalizedType.contains("demonstration")
+                || normalizedTitle.contains("demo")
+                || normalizedTitle.contains("demonstration");
     }
 
     private EvaluationDto toEvaluationDto(
@@ -923,12 +952,11 @@ public class ProjectService {
         return null;
     }
 
-    private String resolveTemplateCreatorJiraToken(Project project) {
+    private User resolveTemplateCreatorUser(Project project) {
         ProjectTemplate template = project.getTemplate();
         Long creatorUserId = template != null ? template.getCreatedByUserId() : null;
         if (creatorUserId == null) return null;
-        User creator = userRepository.findById(creatorUserId).orElse(null);
-        return creator != null ? creator.getJiraApiTokenEncrypted() : null;
+        return userRepository.findById(creatorUserId).orElse(null);
     }
 
     private String resolveTemplateJiraSiteUrl(Project project) {
@@ -949,15 +977,17 @@ public class ProjectService {
             return;
         }
         String templateJiraSiteUrl = resolveTemplateJiraSiteUrl(project);
-        String encryptedApiToken = resolveTemplateCreatorJiraToken(project);
+        User templateCreator = resolveTemplateCreatorUser(project);
         if (templateJiraSiteUrl == null || templateJiraSiteUrl.isBlank()
-                || encryptedApiToken == null || encryptedApiToken.isBlank()) {
+                || templateCreator == null
+                || templateCreator.getJiraApiTokenEncrypted() == null
+                || templateCreator.getJiraApiTokenEncrypted().isBlank()) {
             throw new IllegalArgumentException(
                     "Template Jira domain or Jira OAuth connection is missing.");
         }
         try {
             JiraProvisioningService.JiraProvisioningResult result =
-                    jiraProvisioningService.provisionProject(project, groupId, templateJiraSiteUrl, encryptedApiToken);
+                    jiraProvisioningService.provisionProject(project, groupId, templateJiraSiteUrl, templateCreator);
             project.setJiraProjectKey(result.getProjectKey());
             project.setJiraProjectId(result.getProjectId());
             project.setJiraBoardId(result.getBoardId());

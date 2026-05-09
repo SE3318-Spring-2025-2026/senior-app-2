@@ -10,8 +10,16 @@ import com.seniorapp.entity.User;
 import com.seniorapp.entity.UserGroupMember;
 import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserGroupRepository;
+import com.seniorapp.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -22,26 +30,56 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class JiraProvisioningService {
     private final SecureOutboundApiService secureOutboundApiService;
     private final UserGroupMemberRepository userGroupMemberRepository;
     private final UserGroupRepository userGroupRepository;
+    private final UserRepository userRepository;
+    private final IntegrationCredentialCryptoService cryptoService;
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${jira.oauth.client.id:}")
+    private String jiraClientId;
+
+    @Value("${jira.oauth.client.secret:}")
+    private String jiraClientSecret;
 
     public JiraProvisioningService(
             SecureOutboundApiService secureOutboundApiService,
             UserGroupMemberRepository userGroupMemberRepository,
             UserGroupRepository userGroupRepository,
+            UserRepository userRepository,
+            IntegrationCredentialCryptoService cryptoService,
             ObjectMapper objectMapper) {
         this.secureOutboundApiService = secureOutboundApiService;
         this.userGroupMemberRepository = userGroupMemberRepository;
         this.userGroupRepository = userGroupRepository;
+        this.userRepository = userRepository;
+        this.cryptoService = cryptoService;
         this.objectMapper = objectMapper;
     }
 
-    public JiraProvisioningResult provisionProject(Project project, Long groupId, String jiraSiteUrlInput, String encryptedApiToken) throws Exception {
+    public JiraProvisioningResult provisionProject(Project project, Long groupId, String jiraSiteUrlInput, User tokenOwner) throws Exception {
+        if (tokenOwner == null || tokenOwner.getJiraApiTokenEncrypted() == null || tokenOwner.getJiraApiTokenEncrypted().isBlank()) {
+            throw new IllegalArgumentException("Template Jira OAuth connection is missing.");
+        }
+        String encryptedApiToken = tokenOwner.getJiraApiTokenEncrypted();
+        try {
+            return runProvisioning(project, groupId, jiraSiteUrlInput, encryptedApiToken);
+        } catch (Exception ex) {
+            if (!isUnauthorized(ex) || !refreshJiraAccessToken(tokenOwner)) {
+                throw ex;
+            }
+            return runProvisioning(project, groupId, jiraSiteUrlInput, tokenOwner.getJiraApiTokenEncrypted());
+        }
+    }
+
+    private JiraProvisioningResult runProvisioning(Project project, Long groupId, String jiraSiteUrlInput, String encryptedApiToken) throws Exception {
         String jiraSiteUrl = normalizeSiteUrl(jiraSiteUrlInput);
         String jiraApiBaseUrl = resolveJiraApiBaseUrl(jiraSiteUrl, encryptedApiToken);
         String projectKey = buildProjectKey(project);
@@ -58,6 +96,53 @@ public class JiraProvisioningService {
         result.setProjectKey(jiraProjectKey);
         result.setBoardId(jiraBoardId);
         return result;
+    }
+
+    private boolean isUnauthorized(Exception ex) {
+        String msg = ex.getMessage();
+        if (msg == null) return false;
+        String lower = msg.toLowerCase(Locale.ROOT);
+        return lower.contains("unauthorized") || lower.contains("\"code\":401");
+    }
+
+    private boolean refreshJiraAccessToken(User user) {
+        try {
+            if (user == null || user.getJiraRefreshTokenEncrypted() == null || user.getJiraRefreshTokenEncrypted().isBlank()) {
+                return false;
+            }
+            String refreshToken = cryptoService.decrypt(user.getJiraRefreshTokenEncrypted());
+            if (refreshToken == null || refreshToken.isBlank()
+                    || jiraClientId == null || jiraClientId.isBlank()
+                    || jiraClientSecret == null || jiraClientSecret.isBlank()) {
+                return false;
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, Object> tokenBody = Map.of(
+                    "grant_type", "refresh_token",
+                    "client_id", jiraClientId,
+                    "client_secret", jiraClientSecret,
+                    "refresh_token", refreshToken
+            );
+            ResponseEntity<Map<String, Object>> tokenRes = restTemplate.exchange(
+                    "https://auth.atlassian.com/oauth/token",
+                    Objects.requireNonNull(HttpMethod.POST),
+                    new HttpEntity<>(tokenBody, headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+            Map<String, Object> tokenMap = tokenRes.getBody();
+            if (tokenMap == null || !(tokenMap.get("access_token") instanceof String accessToken) || accessToken.isBlank()) {
+                return false;
+            }
+            user.setJiraApiTokenEncrypted(cryptoService.encrypt(accessToken));
+            if (tokenMap.get("refresh_token") instanceof String newRefresh && !newRefresh.isBlank()) {
+                user.setJiraRefreshTokenEncrypted(cryptoService.encrypt(newRefresh));
+            }
+            userRepository.save(user);
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
     private JsonNode createJiraProject(Project project, String siteUrl, String encryptedApiToken,

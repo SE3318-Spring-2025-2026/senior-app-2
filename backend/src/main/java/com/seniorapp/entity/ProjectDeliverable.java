@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Entity
 @Table(name = "project_deliverables")
@@ -38,6 +39,24 @@ public class ProjectDeliverable {
     @OneToMany(mappedBy = "deliverable", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectDeliverableRubric> rubrics = new ArrayList<>();
 
+    @PrePersist
+    @PreUpdate
+    private void enforceFileUploadPolicy() {
+        // Hard rule in code:
+        // - Demo/Demonstration deliverables => file upload disabled
+        // - All other deliverables => file upload enabled
+        this.fileUploadDeliverable = !isDemoDeliverable();
+    }
+
+    private boolean isDemoDeliverable() {
+        String normalizedType = type == null ? "" : type.trim().toLowerCase(Locale.ROOT);
+        String normalizedTitle = title == null ? "" : title.trim().toLowerCase(Locale.ROOT);
+        return normalizedType.contains("demo")
+                || normalizedType.contains("demonstration")
+                || normalizedTitle.contains("demo")
+                || normalizedTitle.contains("demonstration");
+    }
+
     public Long getId() {
         return id;
     }
@@ -60,6 +79,7 @@ public class ProjectDeliverable {
 
     public void setType(String type) {
         this.type = type;
+        this.fileUploadDeliverable = !isDemoDeliverable();
     }
 
     public String getTitle() {
@@ -68,6 +88,7 @@ public class ProjectDeliverable {
 
     public void setTitle(String title) {
         this.title = title;
+        this.fileUploadDeliverable = !isDemoDeliverable();
     }
 
     public String getDescription() {
@@ -87,7 +108,8 @@ public class ProjectDeliverable {
     }
 
     public boolean isFileUploadDeliverable() {
-        return fileUploadDeliverable;
+        // Runtime source of truth: only demo/demonstration deliverables are text-only.
+        return !isDemoDeliverable();
     }
 
     public void setFileUploadDeliverable(boolean fileUploadDeliverable) {

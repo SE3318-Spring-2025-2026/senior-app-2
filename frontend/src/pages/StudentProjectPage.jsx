@@ -743,7 +743,13 @@ function DeliverableCard({
   currentUserId,
   graders,
 }) {
-  const isFileType = !!deliverable.fileUploadDeliverable;
+  const normalizedType = (deliverable?.type || '').trim().toLowerCase();
+  const normalizedTitle = (deliverable?.title || '').trim().toLowerCase();
+  const isDemoDeliverable = normalizedType.includes('demo')
+    || normalizedType.includes('demonstration')
+    || normalizedTitle.includes('demo')
+    || normalizedTitle.includes('demonstration');
+  const isFileType = !isDemoDeliverable;
   const hasExisting = !!existingSubmission && Object.keys(existingSubmission).length > 0;
   const feedback = localState.feedback;
   const isGraded = existingSubmission?.status === 'GRADED';

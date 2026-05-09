@@ -6,6 +6,7 @@ import {
   getProjects,
   getProjectSubmissions,
   getProjectCommittees,
+  getProjectPullRequests,
   downloadSubmissionFile,
   downloadSubmissionLatestFile,
 } from '../services/api';
@@ -40,7 +41,13 @@ function InspectorDeliverableCard({
   currentUserId,
   allowGrading,
 }) {
-  const isFileType = !!deliverable.fileUploadDeliverable;
+  const normalizedType = (deliverable?.type || '').trim().toLowerCase();
+  const normalizedTitle = (deliverable?.title || '').trim().toLowerCase();
+  const isDemoDeliverable = normalizedType.includes('demo')
+    || normalizedType.includes('demonstration')
+    || normalizedTitle.includes('demo')
+    || normalizedTitle.includes('demonstration');
+  const isFileType = !isDemoDeliverable;
   const hasExisting = !!submission && Object.keys(submission).length > 0;
   const uploadedFiles = Array.isArray(submission?.files) ? submission.files : [];
   const rubrics = Array.isArray(deliverable.rubrics) ? deliverable.rubrics : [];
@@ -255,6 +262,7 @@ export default function ProjectInspection() {
   const [assignCommitteeId, setAssignCommitteeId] = useState(null);
   const [assigningCommittee, setAssigningCommittee] = useState(false);
   const [assignCommitteeError, setAssignCommitteeError] = useState('');
+  const [allPullRequests, setAllPullRequests] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -332,6 +340,7 @@ export default function ProjectInspection() {
   useEffect(() => {
     if (!selectedProjectId) {
       setProjectDetail(null);
+      setAllPullRequests([]);
       return;
     }
     setLoadingDetail(true);
@@ -339,6 +348,20 @@ export default function ProjectInspection() {
       .then((res) => setProjectDetail(res?.data ?? res ?? null))
       .catch((e) => setError(e.message || 'Proje detayı yüklenemedi.'))
       .finally(() => setLoadingDetail(false));
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setAllPullRequests([]);
+      return;
+    }
+    getProjectPullRequests(selectedProjectId)
+      .then((res) => {
+        // Keep parsing exactly aligned with StudentProjectPage response handling.
+        const rows = Array.isArray(res?.data ?? res) ? (res?.data ?? res) : [];
+        setAllPullRequests(rows);
+      })
+      .catch(() => setAllPullRequests([]));
   }, [selectedProjectId]);
 
   const selectedSummary = projects.find((p) => p.projectId === selectedProjectId);
@@ -773,6 +796,52 @@ export default function ProjectInspection() {
                       </div>
                     </div>
                   )}
+                  <div style={{ marginTop: 18 }}>
+                    <h4 style={{ marginBottom: 8 }}>All GitHub PRs</h4>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="spp-match-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'left', padding: 8 }}>PR</th>
+                            <th style={{ textAlign: 'left', padding: 8 }}>Head branch</th>
+                            <th style={{ textAlign: 'left', padding: 8 }}>State</th>
+                            <th style={{ textAlign: 'left', padding: 8 }}>Issue match</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allPullRequests.length === 0 && (
+                            <tr>
+                              <td colSpan={4} style={{ padding: 8 }}>No pull requests found.</td>
+                            </tr>
+                          )}
+                          {allPullRequests.map((pr, idx) => {
+                            const prefix = getPrefix(pr.headRef || '');
+                            const matchedIssue = (jiraGithubMatches || []).find((m) => getPrefix(m.issueTitle || m.issueKey) === prefix);
+                            return (
+                              <tr key={`${pr.number}-${idx}`}>
+                                <td style={{ padding: 8 }}>
+                                  {pr.number ? (
+                                    <button
+                                      type="button"
+                                      className="spp-btn-load"
+                                      onClick={() => navigate(
+                                        `/panel/pr-review/${selectedProjectId}?prNumber=${encodeURIComponent(String(pr.number))}&issueKey=${encodeURIComponent((matchedIssue?.issueKey || ''))}`,
+                                      )}
+                                    >
+                                      PR #{pr.number} {pr.title ? `- ${pr.title}` : ''}
+                                    </button>
+                                  ) : '—'}
+                                </td>
+                                <td style={{ padding: 8 }}>{pr.headRef || '—'}</td>
+                                <td style={{ padding: 8 }}>{pr.state || '—'}{pr.merged ? ' (merged)' : ''}</td>
+                                <td style={{ padding: 8 }}>{matchedIssue?.issueTitle || matchedIssue?.issueKey || '—'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               ) : currentSprint && (
                 <div className="spp-sprint-content">

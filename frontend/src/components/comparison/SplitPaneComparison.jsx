@@ -42,8 +42,12 @@ function SplitPaneComparison({
   const dividerRef = useRef(null);
 
   // Normalize loading and error states
-  const loadingState = typeof loading === 'boolean' ? { all: loading } : loading;
-  const errorState = typeof error === 'string' ? { all: error } : error;
+  const loadingState = loading == null
+    ? {}
+    : (typeof loading === 'boolean' ? { all: loading } : loading);
+  const errorState = error == null
+    ? {}
+    : (typeof error === 'string' ? { all: error } : error);
 
   // Mouse move handler for divider dragging
   useEffect(() => {
