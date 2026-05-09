@@ -2,18 +2,20 @@ package com.seniorapp.service;
 
 import com.seniorapp.dto.GradeSubmitRequest;
 import com.seniorapp.entity.DeliverableSubmission;
+import com.seniorapp.entity.GroupInviteStatus;
 import com.seniorapp.entity.ProjectDeliverable;
+import com.seniorapp.entity.Role;
 import com.seniorapp.entity.SubmissionGrade;
 import com.seniorapp.entity.User;
 import com.seniorapp.repository.DeliverableSubmissionRepository;
 import com.seniorapp.repository.ProjectDeliverableRepository;
 import com.seniorapp.repository.SubmissionGradeRepository;
+import com.seniorapp.repository.UserGroupMemberRepository;
 import com.seniorapp.repository.UserRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -24,6 +26,7 @@ public class GradeService {
     private final DeliverableSubmissionService deliverableSubmissionService;
     private final ProjectCommitteeGradeAccessService committeeGradeAccessService;
     private final ProjectDeliverableRepository projectDeliverableRepository;
+    private final UserGroupMemberRepository userGroupMemberRepository;
 
     public GradeService(
             SubmissionGradeRepository gradeRepository,
@@ -31,13 +34,15 @@ public class GradeService {
             UserRepository userRepository,
             DeliverableSubmissionService deliverableSubmissionService,
             ProjectCommitteeGradeAccessService committeeGradeAccessService,
-            ProjectDeliverableRepository projectDeliverableRepository) {
+            ProjectDeliverableRepository projectDeliverableRepository,
+            UserGroupMemberRepository userGroupMemberRepository) {
         this.gradeRepository = gradeRepository;
         this.submissionRepository = submissionRepository;
         this.userRepository = userRepository;
         this.deliverableSubmissionService = deliverableSubmissionService;
         this.committeeGradeAccessService = committeeGradeAccessService;
         this.projectDeliverableRepository = projectDeliverableRepository;
+        this.userGroupMemberRepository = userGroupMemberRepository;
     }
 
     /**
@@ -47,17 +52,20 @@ public class GradeService {
         if (graderPrincipal == null) {
             throw new IllegalArgumentException("Oturum açmanız gerekir.");
         }
+        Long safeGraderId = Objects.requireNonNull(graderPrincipal.getId(), "grader id is required");
 
         DeliverableSubmission submission = submissionRepository
                 .findByIdWithProjectChain(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found with ID: " + submissionId));
 
-        User grader = userRepository.findById(graderPrincipal.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Grader not found with ID: " + graderPrincipal.getId()));
+        User grader = userRepository.findById(safeGraderId)
+                .orElseThrow(() -> new IllegalArgumentException("Grader not found with ID: " + safeGraderId));
 
-        Long projectId = submission.getDeliverable().getSprint().getProject().getId();
+        Long projectId = Objects.requireNonNull(submission.getDeliverable().getSprint().getProject().getId(), "projectId is required");
         committeeGradeAccessService.requireGraderOnCommitteeForProject(grader, projectId);
-        committeeGradeAccessService.requireGroupAssignedToProject(submission.getGroupId(), projectId);
+        if (grader.getRole() != Role.ADMIN && grader.getRole() != Role.COORDINATOR) {
+            committeeGradeAccessService.requireGroupAssignedToProject(submission.getGroupId(), projectId);
+        }
 
         Optional<SubmissionGrade> existing = gradeRepository.findBySubmission_IdAndGrader_IdAndRubricId(
                 submissionId, grader.getId(), request.getRubricId());
@@ -83,15 +91,18 @@ public class GradeService {
         if (graderPrincipal == null) {
             throw new IllegalArgumentException("Oturum açmanız gerekir.");
         }
-        User grader = userRepository.findById(graderPrincipal.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Grader not found with ID: " + graderPrincipal.getId()));
+        Long safeGraderId = Objects.requireNonNull(graderPrincipal.getId(), "grader id is required");
+        User grader = userRepository.findById(safeGraderId)
+                .orElseThrow(() -> new IllegalArgumentException("Grader not found with ID: " + safeGraderId));
 
         ProjectDeliverable deliverable = projectDeliverableRepository
                 .findByIdWithProjectChain(deliverableId)
                 .orElseThrow(() -> new IllegalArgumentException("Deliverable bulunamadı: " + deliverableId));
-        Long projectId = deliverable.getSprint().getProject().getId();
+        Long projectId = Objects.requireNonNull(deliverable.getSprint().getProject().getId(), "projectId is required");
         committeeGradeAccessService.requireGraderOnCommitteeForProject(grader, projectId);
-        committeeGradeAccessService.requireGroupAssignedToProject(groupId, projectId);
+        if (grader.getRole() != Role.ADMIN && grader.getRole() != Role.COORDINATOR) {
+            committeeGradeAccessService.requireGroupAssignedToProject(groupId, projectId);
+        }
 
         DeliverableSubmission submission = deliverableSubmissionService.ensureGradingPlaceholder(
                 deliverableId, groupId, graderPrincipal.getId());
@@ -102,14 +113,26 @@ public class GradeService {
         if (viewer == null) {
             throw new IllegalArgumentException("Oturum açmanız gerekir.");
         }
+        Long safeViewerId = Objects.requireNonNull(viewer.getId(), "viewer id is required");
         DeliverableSubmission submission = submissionRepository
                 .findByIdWithProjectChain(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found with ID: " + submissionId));
-        User grader = userRepository.findById(viewer.getId())
+        User grader = userRepository.findById(safeViewerId)
                 .orElseThrow(() -> new IllegalArgumentException("Kullanıcı bulunamadı."));
-        Long projectId = submission.getDeliverable().getSprint().getProject().getId();
-        committeeGradeAccessService.requireGraderOnCommitteeForProject(grader, projectId);
-        committeeGradeAccessService.requireGroupAssignedToProject(submission.getGroupId(), projectId);
+        Long projectId = Objects.requireNonNull(submission.getDeliverable().getSprint().getProject().getId(), "projectId is required");
+        Long safeSubmissionGroupId = Objects.requireNonNull(submission.getGroupId(), "submission groupId is required");
+        if (grader.getRole() == Role.STUDENT) {
+            boolean inGroup = userGroupMemberRepository.existsByGroupIdAndUserIdAndStatus(
+                    safeSubmissionGroupId, grader.getId(), GroupInviteStatus.ACCEPTED);
+            if (!inGroup) {
+                throw new org.springframework.security.access.AccessDeniedException("Bu notları görüntüleme yetkiniz yok.");
+            }
+        } else {
+            committeeGradeAccessService.requireGraderOnCommitteeForProject(grader, projectId);
+            if (grader.getRole() != Role.ADMIN && grader.getRole() != Role.COORDINATOR) {
+                committeeGradeAccessService.requireGroupAssignedToProject(safeSubmissionGroupId, projectId);
+            }
+        }
         return gradeRepository.findAllForSubmission(submissionId);
     }
 
@@ -117,16 +140,28 @@ public class GradeService {
         if (viewer == null) {
             throw new IllegalArgumentException("Oturum açmanız gerekir.");
         }
-        User grader = userRepository.findById(viewer.getId())
+        Long safeViewerId = Objects.requireNonNull(viewer.getId(), "viewer id is required");
+        User grader = userRepository.findById(safeViewerId)
                 .orElseThrow(() -> new IllegalArgumentException("Kullanıcı bulunamadı."));
         ProjectDeliverable deliverable = projectDeliverableRepository
                 .findByIdWithProjectChain(deliverableId)
                 .orElseThrow(() -> new IllegalArgumentException("Deliverable bulunamadı: " + deliverableId));
-        Long projectId = deliverable.getSprint().getProject().getId();
-        committeeGradeAccessService.requireGraderOnCommitteeForProject(grader, projectId);
-        committeeGradeAccessService.requireGroupAssignedToProject(groupId, projectId);
+        Long projectId = Objects.requireNonNull(deliverable.getSprint().getProject().getId(), "projectId is required");
+        Long safeGroupId = Objects.requireNonNull(groupId, "groupId is required");
+        if (grader.getRole() == Role.STUDENT) {
+            boolean inGroup = userGroupMemberRepository.existsByGroupIdAndUserIdAndStatus(
+                    safeGroupId, grader.getId(), GroupInviteStatus.ACCEPTED);
+            if (!inGroup) {
+                throw new org.springframework.security.access.AccessDeniedException("Bu notları görüntüleme yetkiniz yok.");
+            }
+        } else {
+            committeeGradeAccessService.requireGraderOnCommitteeForProject(grader, projectId);
+            if (grader.getRole() != Role.ADMIN && grader.getRole() != Role.COORDINATOR) {
+                committeeGradeAccessService.requireGroupAssignedToProject(safeGroupId, projectId);
+            }
+        }
         return submissionRepository
-                .findByDeliverableIdAndGroupId(deliverableId, groupId)
+                .findByDeliverableIdAndGroupId(deliverableId, safeGroupId)
                 .map(s -> gradeRepository.findAllForSubmission(s.getId()))
                 .orElseGet(List::of);
     }

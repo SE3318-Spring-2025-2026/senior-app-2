@@ -21,12 +21,13 @@ public class ProjectGroupStoryPointController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<StoryPointsListResponse> list(
             @PathVariable Long projectId,
             @PathVariable Long groupId,
+            @RequestParam Integer sprintNo,
             @AuthenticationPrincipal User principal) {
-        return ResponseEntity.ok(projectStoryPointService.list(projectId, groupId, principal));
+        return ResponseEntity.ok(projectStoryPointService.list(projectId, groupId, sprintNo, principal));
     }
 
     @PutMapping
@@ -34,8 +35,19 @@ public class ProjectGroupStoryPointController {
     public ResponseEntity<StoryPointsListResponse> save(
             @PathVariable Long projectId,
             @PathVariable Long groupId,
+            @RequestParam Integer sprintNo,
             @Valid @RequestBody SaveStoryPointsRequest body,
             @AuthenticationPrincipal User principal) {
-        return ResponseEntity.ok(projectStoryPointService.save(projectId, groupId, principal, body));
+        return ResponseEntity.ok(projectStoryPointService.save(projectId, groupId, sprintNo, principal, body));
+    }
+
+    @PostMapping("/accept")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    public ResponseEntity<StoryPointsListResponse> accept(
+            @PathVariable Long projectId,
+            @PathVariable Long groupId,
+            @RequestParam Integer sprintNo,
+            @AuthenticationPrincipal User principal) {
+        return ResponseEntity.ok(projectStoryPointService.accept(projectId, groupId, sprintNo, principal));
     }
 }

@@ -6,6 +6,7 @@ import com.seniorapp.dto.project.ProjectDtos.*;
 
 import com.seniorapp.entity.User;
 
+import com.seniorapp.service.PullRequestReviewService;
 import com.seniorapp.service.ProjectService;
 
 import jakarta.validation.Valid;
@@ -39,12 +40,14 @@ public class ProjectController {
 
 
     private final ProjectService projectService;
+    private final PullRequestReviewService pullRequestReviewService;
 
 
 
-    public ProjectController(ProjectService projectService) {
+    public ProjectController(ProjectService projectService, PullRequestReviewService pullRequestReviewService) {
 
         this.projectService = projectService;
+        this.pullRequestReviewService = pullRequestReviewService;
 
     }
 
@@ -140,6 +143,34 @@ public class ProjectController {
 
     }
 
+    @GetMapping("/{projectId}/pull-requests/review")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> getPullRequestReview(
+            @PathVariable Long projectId,
+            @RequestParam(required = false) String issueKey,
+            @RequestParam(required = false) Integer prNumber,
+            @AuthenticationPrincipal User principal) throws Exception {
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+        // Authorization and visibility check through existing project detail guard.
+        projectService.getProjectDetail(projectId, user.getId(), user.getRole());
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "data", pullRequestReviewService.getReview(projectId, issueKey, prNumber)
+        ));
+    }
+
+    @GetMapping("/{projectId}/pull-requests")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    public ResponseEntity<PullRequestListResponse> listPullRequests(
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal User principal) {
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+        return ResponseEntity.ok(new PullRequestListResponse(
+                "success",
+                projectService.listPullRequests(projectId, user.getId(), user.getRole())
+        ));
+    }
+
     @GetMapping("/advisor/live-grades")
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADVISOR', 'COORDINATOR', 'ADMIN')")
     public ResponseEntity<AdvisorLiveGradesResponse> getAdvisorLiveGrades(@AuthenticationPrincipal User principal) {
@@ -163,9 +194,14 @@ public class ProjectController {
 
     @GetMapping("/{projectId}/committees")
 
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
 
-    public ResponseEntity<CommitteeListResponse> listCommittees(@PathVariable Long projectId) {
+    public ResponseEntity<CommitteeListResponse> listCommittees(
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal User principal) {
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+        // Reuse project detail access check to ensure students can only view accessible projects.
+        projectService.getProjectDetail(projectId, user.getId(), user.getRole());
 
         return ResponseEntity.ok(new CommitteeListResponse("success", projectService.listCommittees(projectId)));
 
@@ -213,6 +249,23 @@ public class ProjectController {
 
         return ResponseEntity.ok(Map.of("status", "success", "data", committee));
 
+    }
+
+    @PostMapping("/{projectId}/groups/{groupId}/committee")
+    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> assignGroupCommittee(
+            @PathVariable Long projectId,
+            @PathVariable Long groupId,
+            @Valid @RequestBody AssignGroupCommitteeRequest request,
+            @AuthenticationPrincipal User principal) {
+        User user = Objects.requireNonNull(principal, "Not authenticated");
+        CommitteeDto committee = projectService.assignGroupCommittee(
+                projectId,
+                groupId,
+                request.getCommitteeId(),
+                user.getId(),
+                user.getRole());
+        return ResponseEntity.ok(Map.of("status", "success", "data", committee));
     }
 
 

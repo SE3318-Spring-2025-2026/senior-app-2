@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
+  assignProjectGroupCommittee,
   getProjectDetail,
   getProjects,
   getProjectSubmissions,
   getProjectCommittees,
-  getTemplateCommittees,
   downloadSubmissionFile,
   downloadSubmissionLatestFile,
 } from '../services/api';
@@ -36,14 +36,32 @@ function InspectorDeliverableCard({
   onDownloadFile,
   onDownloadLatest,
   onGradesSaved,
-  viewGraderId,
-  viewGraderName,
+  graders,
+  currentUserId,
   allowGrading,
 }) {
   const isFileType = !!deliverable.fileUploadDeliverable;
   const hasExisting = !!submission && Object.keys(submission).length > 0;
   const uploadedFiles = Array.isArray(submission?.files) ? submission.files : [];
   const rubrics = Array.isArray(deliverable.rubrics) ? deliverable.rubrics : [];
+  const [localGraderId, setLocalGraderId] = useState(null);
+  const [cardView, setCardView] = useState('grade');
+  useEffect(() => {
+    if (!Array.isArray(graders) || graders.length === 0) {
+      setLocalGraderId(null);
+      return;
+    }
+    setLocalGraderId((prev) => {
+      if (prev != null && graders.some((g) => Number(g.userId) === Number(prev))) return Number(prev);
+      const mine = currentUserId != null ? graders.find((g) => Number(g.userId) === Number(currentUserId)) : null;
+      return mine ? Number(mine.userId) : Number(graders[0].userId);
+    });
+  }, [graders, currentUserId]);
+  const selectedGrader = Array.isArray(graders)
+    ? graders.find((g) => Number(g.userId) === Number(localGraderId)) || null
+    : null;
+  const viewGraderId = allowGrading ? localGraderId : undefined;
+  const viewGraderName = selectedGrader ? (selectedGrader.fullName || selectedGrader.email || '') : undefined;
 
   const submissionContent = (
     <div className="spp-submit-block">
@@ -93,7 +111,7 @@ function InspectorDeliverableCard({
         <div className="spp-deliverable-info">
           {viewGraderName && (
             <div className="insp-deliverable-eval-caption">
-              Rubric değerlendirmesi — <strong>{viewGraderName}</strong>
+              <strong>{viewGraderName}</strong>
             </div>
           )}
           <h4>
@@ -111,48 +129,107 @@ function InspectorDeliverableCard({
             )}
           </div>
         </div>
+        <button
+          type="button"
+          className="spp-btn-load spp-deliverable-view-switch"
+          onClick={() => setCardView((prev) => (prev === 'grade' ? 'deliverable' : 'grade'))}
+        >
+          {cardView === 'grade' ? 'Switch to Deliverable View' : 'Switch to Grade View'}
+        </button>
       </div>
 
-      {isFileType ? (
-        <div className="spp-dual-submit-area">
-          <div className="spp-submit-block">
-            <div className="spp-submit-block-title">Rubric değerlendirme</div>
-            {allowGrading ? (
-              <InspectorRubricGradePanel
-                mode="deliverableContext"
-                groupId={groupId}
-                deliverableId={deliverable.id}
-                rubrics={rubrics}
-                viewGraderId={viewGraderId}
-                graderDisplayName={viewGraderName}
-                onSaved={onGradesSaved}
-              />
-            ) : (
-              <p className="insp-readonly-empty">Proje veya şablon komitesinde değilsiniz; rubric puanı veremezsiniz.</p>
-            )}
-          </div>
-          {submissionContent}
+      {cardView === 'grade' ? (
+        <div className="spp-submit-block">
+          <div className="spp-submit-block-title">Rubric değerlendirme</div>
+          {allowGrading && Array.isArray(graders) && graders.length > 1 && (
+            <InspectorCommitteeGraderTabs
+              graders={graders}
+              selectedGraderId={localGraderId}
+              onSelect={(id) => setLocalGraderId(id)}
+            />
+          )}
+          {allowGrading ? (
+            <InspectorRubricGradePanel
+              mode="deliverableContext"
+              groupId={groupId}
+              deliverableId={deliverable.id}
+              rubrics={rubrics}
+              viewGraderId={viewGraderId}
+              graderDisplayName={viewGraderName}
+              onSaved={onGradesSaved}
+            />
+          ) : (
+            <p className="insp-readonly-empty">Proje veya şablon komitesinde değilsiniz; rubric puanı veremezsiniz.</p>
+          )}
         </div>
       ) : (
-        <div className="spp-dual-submit-area">
-          <div className="spp-submit-block">
-            <div className="spp-submit-block-title">Rubric değerlendirme</div>
-            {allowGrading ? (
-              <InspectorRubricGradePanel
-                mode="deliverableContext"
-                groupId={groupId}
-                deliverableId={deliverable.id}
-                rubrics={rubrics}
-                viewGraderId={viewGraderId}
-                graderDisplayName={viewGraderName}
-                onSaved={onGradesSaved}
-              />
-            ) : (
-              <p className="insp-readonly-empty">Proje veya şablon komitesinde değilsiniz; rubric puanı veremezsiniz.</p>
-            )}
-          </div>
-          {submissionContent}
-        </div>
+        submissionContent
+      )}
+    </div>
+  );
+}
+
+function InspectorEvaluationCard({
+  evaluation,
+  index,
+  groupId,
+  allowGrading,
+  graders,
+  currentUserId,
+  onSaved,
+}) {
+  const [localGraderId, setLocalGraderId] = useState(null);
+  useEffect(() => {
+    if (!Array.isArray(graders) || graders.length === 0) {
+      setLocalGraderId(null);
+      return;
+    }
+    setLocalGraderId((prev) => {
+      if (prev != null && graders.some((g) => Number(g.userId) === Number(prev))) return Number(prev);
+      const mine = currentUserId != null ? graders.find((g) => Number(g.userId) === Number(currentUserId)) : null;
+      return mine ? Number(mine.userId) : Number(graders[0].userId);
+    });
+  }, [graders, currentUserId]);
+
+  const selectedGrader = Array.isArray(graders)
+    ? graders.find((g) => Number(g.userId) === Number(localGraderId)) || null
+    : null;
+  const viewGraderId = allowGrading ? localGraderId : undefined;
+  const viewGraderName = selectedGrader ? (selectedGrader.fullName || selectedGrader.email || '') : undefined;
+
+  return (
+    <div className="spp-eval-card insp-eval-card">
+      <div className="spp-eval-header">
+        <span className="spp-eval-title">{evaluation.title || `Değerlendirme ${index + 1}`}</span>
+        <span className="spp-eval-status">{evaluation.weight != null ? `${evaluation.weight}%` : '—'}</span>
+      </div>
+      {evaluation.autoAddToAllSprints && <div className="spp-eval-meta">Tüm sprintlere eklenir</div>}
+      {Array.isArray(evaluation.rubrics) && evaluation.rubrics.length > 0 && evaluation.id != null ? (
+        <>
+          <div className="spp-submit-block-title insp-eval-rubric-title">Rubric değerlendirme</div>
+          {allowGrading && Array.isArray(graders) && graders.length > 1 && (
+            <InspectorCommitteeGraderTabs
+              graders={graders}
+              selectedGraderId={localGraderId}
+              onSelect={(id) => setLocalGraderId(id)}
+            />
+          )}
+          {allowGrading ? (
+            <InspectorRubricGradePanel
+              mode="evaluation"
+              groupId={groupId}
+              evaluationId={evaluation.id}
+              rubrics={evaluation.rubrics}
+              viewGraderId={viewGraderId}
+              graderDisplayName={viewGraderName}
+              onSaved={onSaved}
+            />
+          ) : (
+            <p className="insp-readonly-empty">Proje veya şablon komitesinde değilsiniz; sprint değerlendirme notu veremezsiniz.</p>
+          )}
+        </>
+      ) : (
+        <div className="spp-eval-waiting">Rubric tanımı yok veya değerlendirme kimliği eksik</div>
       )}
     </div>
   );
@@ -160,17 +237,24 @@ function InspectorDeliverableCard({
 
 export default function ProjectInspection() {
   const { templateId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [projectCommittees, setProjectCommittees] = useState([]);
   const [committeeGraders, setCommitteeGraders] = useState([]);
-  const [selectedGraderId, setSelectedGraderId] = useState(null);
   const [projectDetail, setProjectDetail] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [activeSprint, setActiveSprint] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState('');
+  const [integrationView, setIntegrationView] = useState('grades');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [selectedIssue, setSelectedIssue] = useState(null);
+  const [assignCommitteeId, setAssignCommitteeId] = useState(null);
+  const [assigningCommittee, setAssigningCommittee] = useState(false);
+  const [assignCommitteeError, setAssignCommitteeError] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -192,59 +276,58 @@ export default function ProjectInspection() {
   }, [templateId]);
 
   useEffect(() => {
-    if (!selectedProjectId || templateId == null || templateId === '') {
+    if (!selectedProjectId) {
+      setProjectCommittees([]);
       setCommitteeGraders([]);
       return;
     }
     let cancelled = false;
-    const tid = Number(templateId);
-    Promise.all([getProjectCommittees(selectedProjectId), getTemplateCommittees(tid)])
-      .then(([projRes, tmplRes]) => {
+    getProjectCommittees(selectedProjectId)
+      .then((projRes) => {
         if (cancelled) return;
+        const activeCommitteeId = projectDetail?.activeCommitteeId != null
+          ? Number(projectDetail.activeCommitteeId)
+          : null;
+        const committees = Array.isArray(projRes?.data) ? projRes.data : [];
+        setProjectCommittees(committees);
+        const scopedCommittees = activeCommitteeId == null
+          ? []
+          : committees.filter((c) => Number(c?.committeeId) === activeCommitteeId);
         const map = new Map();
-        const ingest = (committees) => {
-          for (const c of Array.isArray(committees) ? committees : []) {
-            for (const p of c.professors || []) {
-              const uid = p.userId != null ? Number(p.userId) : null;
-              if (uid == null || !Number.isFinite(uid)) continue;
-              if (!map.has(uid)) {
-                map.set(uid, {
-                  userId: uid,
-                  fullName: (p.fullName || '').trim() || p.email || `Hoca #${uid}`,
-                  email: p.email,
-                });
-              }
+        for (const c of scopedCommittees) {
+          for (const p of c.professors || []) {
+            const uid = p.userId != null ? Number(p.userId) : null;
+            if (uid == null || !Number.isFinite(uid)) continue;
+            if (!map.has(uid)) {
+              map.set(uid, {
+                userId: uid,
+                fullName: (p.fullName || '').trim() || p.email || `Hoca #${uid}`,
+                email: p.email,
+              });
             }
           }
-        };
-        ingest(projRes?.data);
-        ingest(tmplRes?.data);
+        }
         const list = [...map.values()].sort((a, b) =>
           (a.fullName || '').localeCompare(b.fullName || '', 'tr', { sensitivity: 'base' }),
         );
         setCommitteeGraders(list);
+        if (activeCommitteeId == null && committees.length > 0) {
+          setAssignCommitteeId((prev) => {
+            if (prev != null && committees.some((c) => Number(c?.committeeId) === Number(prev))) return prev;
+            return committees[0]?.committeeId ?? null;
+          });
+        }
       })
       .catch(() => {
-        if (!cancelled) setCommitteeGraders([]);
+        if (!cancelled) {
+          setProjectCommittees([]);
+          setCommitteeGraders([]);
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [selectedProjectId, templateId]);
-
-  useEffect(() => {
-    if (!committeeGraders.length) {
-      setSelectedGraderId(null);
-      return;
-    }
-    const myId = user?.id != null ? Number(user.id) : null;
-    setSelectedGraderId((prev) => {
-      const prevOk = prev != null && committeeGraders.some((g) => Number(g.userId) === Number(prev));
-      if (prevOk) return Number(prev);
-      const mine = myId != null ? committeeGraders.find((g) => Number(g.userId) === myId) : null;
-      return mine ? mine.userId : committeeGraders[0].userId;
-    });
-  }, [committeeGraders, user?.id]);
+  }, [selectedProjectId, projectDetail?.activeCommitteeId]);
 
   useEffect(() => {
     if (!selectedProjectId) {
@@ -319,12 +402,32 @@ export default function ProjectInspection() {
   const ongoingSprintIndex = getOngoingSprintIndex(sprints);
   const currentSprint = sprints[activeSprint];
 
-  const selectedCommitteeGrader = useMemo(
-    () => committeeGraders.find((g) => Number(g.userId) === Number(selectedGraderId)) || null,
-    [committeeGraders, selectedGraderId],
-  );
-
   const myUserId = user?.id != null ? Number(user.id) : null;
+  const assignableCommittees = useMemo(() => {
+    const all = Array.isArray(projectCommittees) ? projectCommittees : [];
+    if (user?.role === 'PROFESSOR' && myUserId != null) {
+      return all.filter((c) =>
+        Array.isArray(c?.professors) && c.professors.some((p) => Number(p?.userId) === myUserId),
+      );
+    }
+    return all;
+  }, [projectCommittees, user?.role, myUserId]);
+
+  const handleAssignCommittee = async () => {
+    if (!selectedProjectId || !groupId || !assignCommitteeId) return;
+    setAssignCommitteeError('');
+    setAssigningCommittee(true);
+    try {
+      await assignProjectGroupCommittee(selectedProjectId, groupId, Number(assignCommitteeId));
+      const detailRes = await getProjectDetail(selectedProjectId);
+      setProjectDetail(detailRes?.data ?? detailRes ?? null);
+    } catch (e) {
+      setAssignCommitteeError(e?.message || 'Committee atanamadı.');
+    } finally {
+      setAssigningCommittee(false);
+    }
+  };
+
   /** Proje komitesi veya şablon komitesi (Manage Comitees) — ikisi de burada birleştirildi. */
   const allowCommitteeGrading =
     user?.role === 'ADMIN' ||
@@ -332,12 +435,71 @@ export default function ProjectInspection() {
       Number.isFinite(myUserId) &&
       committeeGraders.some((g) => Number(g.userId) === myUserId));
 
-  const useCommitteeTabs = allowCommitteeGrading && committeeGraders.length > 0;
-  const viewGraderIdProp = useCommitteeTabs ? selectedGraderId : undefined;
-  const viewGraderNameProp =
-    useCommitteeTabs && selectedCommitteeGrader
-      ? selectedCommitteeGrader.fullName || selectedCommitteeGrader.email || ''
-      : undefined;
+  const jiraGithubMatches = Array.isArray(projectDetail?.jiraGithubMatches) ? projectDetail.jiraGithubMatches : [];
+  const selectedSprintNo = currentSprint?.sprintNo ?? null;
+  const sprintScopedMatches = selectedSprintNo == null
+    ? jiraGithubMatches
+    : jiraGithubMatches.filter((m) => {
+      const sprintNo = m?.sprintNo;
+      if (sprintNo == null) return false;
+      return Number(sprintNo) === Number(selectedSprintNo);
+    });
+  const assigneeOptions = [...new Set(sprintScopedMatches.map((m) => (m.jiraAssignee || '').trim()).filter(Boolean))];
+  const getPrefix = (value) => (value || '').split('/')[0].trim().toLowerCase();
+  const candidateBranches = [...new Set([...(projectDetail?.githubBranches || []), ...sprintScopedMatches.map((m) => m.branchName)].filter(Boolean))];
+  const selectedSprintPrefixes = new Set(
+    sprintScopedMatches
+      .map((m) => getPrefix(m.issueTitle || m.issueKey))
+      .filter(Boolean),
+  );
+  const allBranches = selectedSprintNo == null
+    ? candidateBranches
+    : candidateBranches.filter((branch) => {
+      const prefix = getPrefix(branch);
+      if (selectedSprintPrefixes.has(prefix)) return true;
+      return sprintScopedMatches.some((m) => (m.branchName || '').trim() === (branch || '').trim());
+    });
+  const matchRows = [];
+  const usedBranches = new Set();
+  sprintScopedMatches.forEach((issue) => {
+    const issuePrefix = getPrefix(issue.issueTitle || issue.issueKey);
+    const matchedBranches = allBranches.filter((b) => getPrefix(b) === issuePrefix);
+    if (matchedBranches.length === 0) {
+      matchRows.push({
+        branchName: null,
+        issueKey: issue.issueKey,
+        issueTitle: issue.issueTitle,
+        issueDescription: issue.issueDescription,
+        storyPoints: issue.storyPoints,
+        jiraAssignee: issue.jiraAssignee,
+        prNumber: issue.prNumber,
+        prMerged: issue.prMerged,
+      });
+      return;
+    }
+    matchedBranches.forEach((branch) => {
+      usedBranches.add(branch);
+      matchRows.push({
+        branchName: branch,
+        issueKey: issue.issueKey,
+        issueTitle: issue.issueTitle,
+        issueDescription: issue.issueDescription,
+        storyPoints: issue.storyPoints,
+        jiraAssignee: issue.jiraAssignee,
+        prNumber: issue.prNumber,
+        prMerged: issue.prMerged,
+      });
+    });
+  });
+  allBranches.forEach((branch) => {
+    if (!usedBranches.has(branch)) {
+      matchRows.push({ branchName: branch, issueKey: null, issueTitle: null, jiraAssignee: null, prNumber: null, prMerged: null });
+    }
+  });
+  const filteredMatches = matchRows.filter((row) => {
+    if (!assigneeFilter) return true;
+    return (row.jiraAssignee || '').trim() === assigneeFilter;
+  });
 
   return (
     <div className="insp-page">
@@ -380,14 +542,59 @@ export default function ProjectInspection() {
                   </p>
                 </div>
               </div>
-
-              {useCommitteeTabs && groupId && (
-                <InspectorCommitteeGraderTabs
-                  graders={committeeGraders}
-                  selectedGraderId={selectedGraderId}
-                  onSelect={(id) => setSelectedGraderId(id)}
-                />
+              {projectDetail.repoFullName && (
+                <div className="spp-card" style={{ marginBottom: 16 }}>
+                  <h3>See GitHub</h3>
+                  <p>
+                    Repository: <a href={projectDetail.repoHtmlUrl} target="_blank" rel="noreferrer">{projectDetail.repoFullName}</a>
+                  </p>
+                  <p>Default branch: {projectDetail.repoDefaultBranch || '-'}</p>
+                  {projectDetail.jiraProjectUrl && (
+                    <p>
+                      Jira: <a href={projectDetail.jiraProjectUrl} target="_blank" rel="noreferrer">{projectDetail.jiraProjectKey || 'Open Jira project'}</a>
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="spp-btn-load"
+                    onClick={() => setIntegrationView((prev) => (prev === 'grades' ? 'jira' : 'grades'))}
+                  >
+                    {integrationView === 'grades'
+                      ? 'Switch to Github/Jira view'
+                      : 'Switch to Deliverable/Grade view'}
+                  </button>
+                </div>
               )}
+              {groupId &&
+                !projectDetail.activeCommitteeId &&
+                ['PROFESSOR', 'COORDINATOR', 'ADMIN'].includes(user?.role || '') && (
+                  <div className="spp-card" style={{ marginBottom: 16 }}>
+                    <h3>Assign Committee</h3>
+                    <p>Bu gruba henüz komite atanmamış.</p>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select
+                        value={assignCommitteeId ?? ''}
+                        onChange={(e) => setAssignCommitteeId(e.target.value ? Number(e.target.value) : null)}
+                      >
+                        {(assignableCommittees || []).map((c) => (
+                          <option key={c.committeeId} value={c.committeeId}>{c.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="spp-btn-submit"
+                        disabled={assigningCommittee || !assignCommitteeId}
+                        onClick={handleAssignCommittee}
+                      >
+                        {assigningCommittee ? 'Assigning...' : 'Assign committee'}
+                      </button>
+                    </div>
+                    {assignCommitteeError && (
+                      <p className="insp-error" style={{ marginTop: 8 }}>{assignCommitteeError}</p>
+                    )}
+                  </div>
+                )}
+
               {projectDetail &&
                 groupId &&
                 !allowCommitteeGrading &&
@@ -457,7 +664,117 @@ export default function ProjectInspection() {
                 </div>
               )}
 
-              {currentSprint && (
+              {integrationView === 'jira' ? (
+                <div className="spp-card" style={{ marginTop: 16 }}>
+                  <div style={{ marginBottom: 12 }}>
+                    <label htmlFor="jira-assignee-filter-inspector" style={{ marginRight: 8 }}>Assignee</label>
+                    <select
+                      id="jira-assignee-filter-inspector"
+                      value={assigneeFilter}
+                      onChange={(e) => setAssigneeFilter(e.target.value)}
+                    >
+                      <option value="">All</option>
+                      {assigneeOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="spp-match-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: 'left', padding: 8 }}>GitHub branch</th>
+                          <th style={{ textAlign: 'left', padding: 8 }}>Jira issue</th>
+                          <th style={{ textAlign: 'left', padding: 8 }}>Assignee</th>
+                          <th style={{ textAlign: 'left', padding: 8 }}>PR</th>
+                          <th style={{ textAlign: 'left', padding: 8 }}>PR merged</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredMatches.length === 0 && (
+                          <tr>
+                            <td colSpan={5} style={{ padding: 8 }}>No rows yet.</td>
+                          </tr>
+                        )}
+                        {filteredMatches.map((row, idx) => (
+                          <tr key={`${row.branchName}-${row.issueKey}-${row.issueTitle}-${idx}`}>
+                            <td style={{ padding: 8 }}>
+                              {row.branchName && projectDetail.repoHtmlUrl ? (
+                                <a
+                                  href={`${projectDetail.repoHtmlUrl}/tree/${row.branchName.split('/').map(encodeURIComponent).join('/')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {row.branchName}
+                                </a>
+                              ) : '—'}
+                            </td>
+                            <td style={{ padding: 8 }}>
+                              {row.issueTitle || row.issueKey ? (
+                                <button
+                                  type="button"
+                                  className="spp-btn-load"
+                                  onClick={() => setSelectedIssue({
+                                    title: row.issueTitle || row.issueKey,
+                                    description: row.issueDescription,
+                                    assignee: row.jiraAssignee,
+                                    storyPoints: row.storyPoints,
+                                  })}
+                                >
+                                  {row.issueTitle || row.issueKey}
+                                </button>
+                              ) : '—'}
+                            </td>
+                            <td style={{ padding: 8 }}>{row.jiraAssignee || '—'}</td>
+                            <td style={{ padding: 8 }}>
+                              {row.prNumber ? (
+                                <button
+                                  type="button"
+                                  className="spp-btn-load"
+                                  onClick={() => navigate(
+                                    `/panel/pr-review/${selectedProjectId}?prNumber=${encodeURIComponent(String(row.prNumber))}&issueKey=${encodeURIComponent(row.issueKey || '')}`,
+                                  )}
+                                >
+                                  PR #{row.prNumber}
+                                </button>
+                              ) : '—'}
+                            </td>
+                            <td style={{ padding: 8 }}>{row.prMerged == null ? '—' : row.prMerged ? 'Yes' : 'No'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {selectedIssue && (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                      }}
+                      onClick={() => setSelectedIssue(null)}
+                    >
+                      <div
+                        style={{ background: '#fff', borderRadius: 12, padding: 20, minWidth: 360, maxWidth: 560 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <h3 style={{ marginTop: 0 }}>{selectedIssue.title}</h3>
+                        <p><strong>Assignee:</strong> {selectedIssue.assignee || '—'}</p>
+                        <p><strong>Story points:</strong> {selectedIssue.storyPoints ?? '—'}</p>
+                        <p><strong>Description:</strong></p>
+                        <div style={{ maxHeight: 220, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+                          {selectedIssue.description || '—'}
+                        </div>
+                        <div style={{ marginTop: 12, textAlign: 'right' }}>
+                          <button type="button" className="spp-btn-load" onClick={() => setSelectedIssue(null)}>Close</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : currentSprint && (
                 <div className="spp-sprint-content">
                   <div className="spp-main-col">
                     <div className="spp-deliverables-header">
@@ -480,8 +797,8 @@ export default function ProjectInspection() {
                           onDownloadFile={handleDownloadFile}
                           onDownloadLatest={handleDownloadLatest}
                           onGradesSaved={refreshSubmissions}
-                          viewGraderId={viewGraderIdProp}
-                          viewGraderName={viewGraderNameProp}
+                          graders={committeeGraders}
+                          currentUserId={myUserId}
                           allowGrading={allowCommitteeGrading}
                         />
                       ))
@@ -494,38 +811,16 @@ export default function ProjectInspection() {
                     ) : (
                       <div className="spp-sidebar-evaluations">
                         {currentSprint.evaluations.map((ev, idx) => (
-                          <div key={ev.id != null ? ev.id : `ev-${idx}-${ev.title || ''}`} className="spp-eval-card insp-eval-card">
-                            <div className="spp-eval-header">
-                              <span className="spp-eval-title">{ev.title || `Değerlendirme ${idx + 1}`}</span>
-                              <span className="spp-eval-status">{ev.weight != null ? `${ev.weight}%` : '—'}</span>
-                            </div>
-                            {ev.autoAddToAllSprints && <div className="spp-eval-meta">Tüm sprintlere eklenir</div>}
-                            {Array.isArray(ev.rubrics) && ev.rubrics.length > 0 && ev.id != null ? (
-                              <>
-                                <div className="spp-submit-block-title insp-eval-rubric-title">Rubric değerlendirme</div>
-                                {allowCommitteeGrading && viewGraderNameProp && (
-                                  <div className="insp-eval-by-caption">
-                                    Görünüm — <strong>{viewGraderNameProp}</strong>
-                                  </div>
-                                )}
-                                {allowCommitteeGrading ? (
-                                  <InspectorRubricGradePanel
-                                    mode="evaluation"
-                                    groupId={groupId}
-                                    evaluationId={ev.id}
-                                    rubrics={ev.rubrics}
-                                    viewGraderId={viewGraderIdProp}
-                                    graderDisplayName={viewGraderNameProp}
-                                    onSaved={refreshSubmissions}
-                                  />
-                                ) : (
-                                  <p className="insp-readonly-empty">Proje veya şablon komitesinde değilsiniz; sprint değerlendirme notu veremezsiniz.</p>
-                                )}
-                              </>
-                            ) : (
-                              <div className="spp-eval-waiting">Rubric tanımı yok veya değerlendirme kimliği eksik</div>
-                            )}
-                          </div>
+                          <InspectorEvaluationCard
+                            key={ev.id != null ? ev.id : `ev-${idx}-${ev.title || ''}`}
+                            evaluation={ev}
+                            index={idx}
+                            groupId={groupId}
+                            allowGrading={allowCommitteeGrading}
+                            graders={committeeGraders}
+                            currentUserId={myUserId}
+                            onSaved={refreshSubmissions}
+                          />
                         ))}
                       </div>
                     )}
@@ -534,7 +829,11 @@ export default function ProjectInspection() {
               )}
 
               {groupId && selectedProjectId && (
-                <InspectorTeamStoryPoints projectId={selectedProjectId} groupId={groupId} />
+                <InspectorTeamStoryPoints
+                  projectId={selectedProjectId}
+                  groupId={groupId}
+                  sprintNo={currentSprint?.sprintNo ?? null}
+                />
               )}
             </div>
           )}

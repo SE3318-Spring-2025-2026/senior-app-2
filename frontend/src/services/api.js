@@ -204,6 +204,18 @@ export function getProjectDetail(projectId) {
   return request(`/projects/${projectId}`);
 }
 
+export function getProjectPullRequestReview(projectId, { issueKey, prNumber } = {}) {
+  const query = new URLSearchParams();
+  if (issueKey) query.set('issueKey', issueKey);
+  if (prNumber != null) query.set('prNumber', String(prNumber));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/projects/${projectId}/pull-requests/review${suffix}`);
+}
+
+export function getProjectPullRequests(projectId) {
+  return request(`/projects/${projectId}/pull-requests`);
+}
+
 export function getProjectGithubOverview(projectId) {
   return request(`/projects/${projectId}`);
 }
@@ -243,6 +255,13 @@ export function deleteProjectCommittee(projectId, committeeId) {
 export function removeProfessorFromCommittee(projectId, committeeId, professorUserId) {
   return request(`/projects/${projectId}/committees/${committeeId}/professors/${professorUserId}`, {
     method: 'DELETE',
+  });
+}
+
+export function assignProjectGroupCommittee(projectId, groupId, committeeId) {
+  return request(`/projects/${projectId}/groups/${groupId}/committee`, {
+    method: 'POST',
+    body: JSON.stringify({ committeeId }),
   });
 }
 
@@ -456,14 +475,21 @@ export function getProjectSubmissions(projectId, groupId) {
 }
 
 /** Komite veya grup koordinatörü: takım öğrencileri ve manuel story point alanları (403 yönlendirmez). */
-export function getProjectGroupStoryPoints(projectId, groupId) {
-  return request(`/projects/${projectId}/groups/${groupId}/story-points`, { redirectOn403: false });
+export function getProjectGroupStoryPoints(projectId, groupId, sprintNo) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points?sprintNo=${encodeURIComponent(String(sprintNo))}`, { redirectOn403: false });
 }
 
-export function putProjectGroupStoryPoints(projectId, groupId, entries) {
-  return request(`/projects/${projectId}/groups/${groupId}/story-points`, {
+export function putProjectGroupStoryPoints(projectId, groupId, sprintNo, entries) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points?sprintNo=${encodeURIComponent(String(sprintNo))}`, {
     method: 'PUT',
     body: JSON.stringify({ entries }),
+    redirectOn403: false,
+  });
+}
+
+export function acceptProjectGroupStoryPoints(projectId, groupId, sprintNo) {
+  return request(`/projects/${projectId}/groups/${groupId}/story-points/accept?sprintNo=${encodeURIComponent(String(sprintNo))}`, {
+    method: 'POST',
     redirectOn403: false,
   });
 }

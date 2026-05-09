@@ -253,6 +253,12 @@ public class ProjectService {
         }
 
         ProjectDetail detail = toDetail(project, deliverableRubricsFromDb, evaluationRubricsFromDb);
+        assignmentRepository.findByProjectIdAndActiveTrue(safeProjectId).ifPresent(a -> {
+            if (a.getCommittee() != null) {
+                detail.setActiveCommitteeId(a.getCommittee().getId());
+                detail.setActiveCommitteeName(a.getCommittee().getName());
+            }
+        });
         Long gid = project.getGroupId();
         if (gid != null && gid > 0) {
             detail.setGradingSummary(pdfGradingEngineService.buildSummary(project, gid));
@@ -303,6 +309,56 @@ public class ProjectService {
         return projectCommitteeRepository.findByProjectIdOrderByIdAsc(safeProjectId).stream()
                 .map(this::toCommitteeDto)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectPullRequestDto> listPullRequests(Long projectId, Long requesterUserId, Role requesterRole) {
+        Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        // Reuse existing visibility rules.
+        getProjectDetail(safeProjectId, requesterUserId, requesterRole);
+        Project project = projectRepository.findById(safeProjectId)
+                .orElseThrow(() -> new NoSuchElementException("Project not found: " + projectId));
+        if (project.getRepoFullName() == null || project.getRepoFullName().isBlank()) {
+            return List.of();
+        }
+        String encryptedPat = resolveTemplateCreatorPat(project);
+        if (encryptedPat == null || encryptedPat.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<ProjectPullRequestDto> result = new ArrayList<>();
+            int page = 1;
+            while (true) {
+                String endpoint = "https://api.github.com/repos/" + project.getRepoFullName()
+                        + "/pulls?state=all&per_page=100&page=" + page;
+                String body = secureOutboundApiService.executeGitHubApiCall(
+                        encryptedPat, endpoint, null, HttpMethod.GET).getBody();
+                JsonNode arr = objectMapper.readTree(body);
+                if (!arr.isArray() || arr.isEmpty()) {
+                    break;
+                }
+                for (JsonNode pr : arr) {
+                    ProjectPullRequestDto dto = new ProjectPullRequestDto();
+                    dto.setNumber(pr.path("number").isNumber() ? pr.path("number").asInt() : null);
+                    dto.setTitle(pr.path("title").asText(null));
+                    dto.setState(pr.path("state").asText(null));
+                    dto.setMerged(!pr.path("merged_at").isNull());
+                    dto.setHtmlUrl(pr.path("html_url").asText(null));
+                    dto.setHeadRef(pr.path("head").path("ref").asText(null));
+                    dto.setBaseRef(pr.path("base").path("ref").asText(null));
+                    dto.setAuthor(pr.path("user").path("login").asText(null));
+                    result.add(dto);
+                }
+                if (arr.size() < 100) {
+                    break;
+                }
+                page++;
+            }
+            return result;
+        } catch (Exception ex) {
+            log.warn("Could not fetch PR list for project {}: {}", safeProjectId, ex.getMessage());
+            return List.of();
+        }
     }
 
     @Transactional
@@ -369,6 +425,45 @@ public class ProjectService {
         );
         ProjectCommittee saved = projectCommitteeRepository.save(committee);
         return toCommitteeDto(saved);
+    }
+
+    @Transactional
+    public CommitteeDto assignGroupCommittee(Long projectId, Long groupId, Long committeeId, Long requesterUserId, Role requesterRole) {
+        Long safeProjectId = Objects.requireNonNull(projectId, "projectId is required.");
+        Long safeGroupId = Objects.requireNonNull(groupId, "groupId is required.");
+        Long safeCommitteeId = Objects.requireNonNull(committeeId, "committeeId is required.");
+        Long safeRequesterUserId = Objects.requireNonNull(requesterUserId, "requesterUserId is required.");
+        Role safeRequesterRole = Objects.requireNonNull(requesterRole, "requesterRole is required.");
+
+        ProjectGroupAssignment assignment = assignmentRepository.findByGroupIdAndActiveTrue(safeGroupId)
+                .orElseThrow(() -> new NoSuchElementException("Active assignment not found for group: " + groupId));
+        if (assignment.getProject() == null || !Objects.equals(assignment.getProject().getId(), safeProjectId)) {
+            throw new IllegalArgumentException("Group is not assigned to this project.");
+        }
+
+        ProjectCommittee committee = projectCommitteeRepository.findById(safeCommitteeId)
+                .orElseThrow(() -> new NoSuchElementException("Committee not found: " + committeeId));
+        if (committee.getProject() == null || !Objects.equals(committee.getProject().getId(), safeProjectId)) {
+            throw new IllegalArgumentException("Committee does not belong to this project.");
+        }
+
+        boolean allowed;
+        if (safeRequesterRole == Role.ADMIN || safeRequesterRole == Role.COORDINATOR) {
+            allowed = true;
+        } else if (safeRequesterRole == Role.PROFESSOR) {
+            allowed = projectCommitteeProfessorRepository
+                    .findByCommitteeIdAndProfessor_Id(safeCommitteeId, safeRequesterUserId)
+                    .isPresent();
+        } else {
+            allowed = false;
+        }
+        if (!allowed) {
+            throw new IllegalArgumentException("You are not allowed to assign this committee.");
+        }
+
+        assignment.setCommittee(committee);
+        assignmentRepository.save(assignment);
+        return toCommitteeDto(committee);
     }
 
     @Transactional(readOnly = true)
@@ -540,6 +635,7 @@ public class ProjectService {
                     dto.setStoryPoints(snapshot.getStoryPoints());
                     dto.setSprintNo(snapshot.getSprintNo());
                     dto.setJiraAssignee(snapshot.getAssignee());
+                    dto.setPrNumber(snapshot.getPrNumber());
                     dto.setPrMerged(snapshot.getPrMerged());
                     return dto;
                 })

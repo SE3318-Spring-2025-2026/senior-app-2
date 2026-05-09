@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getProjectDetail,
+  getProjectPullRequests,
+  getProjectCommittees,
   getProjectSubmissions,
   uploadDeliverableFile,
   submitDeliverableText,
@@ -11,17 +13,23 @@ import {
   deleteDeliverableSubmission,
   getMyGroupRole,
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import InspectorCommitteeGraderTabs from '../components/InspectorCommitteeGraderTabs';
+import InspectorRubricGradePanel from '../components/InspectorRubricGradePanel';
 import './StudentProjectPage.css';
+import './ProjectInspection.css';
 import {
   resolveCurrentSprintIndex,
   getOngoingSprintIndex,
   isSprintCompletedByDate,
   formatSprintDate,
 } from '../utils/sprintView';
+import InspectorTeamStoryPoints from '../components/InspectorTeamStoryPoints';
 
 function StudentProjectPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +41,8 @@ function StudentProjectPage() {
   const [integrationView, setIntegrationView] = useState('github');
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [selectedIssue, setSelectedIssue] = useState(null);
+  const [committeeGraders, setCommitteeGraders] = useState([]);
+  const [allPullRequests, setAllPullRequests] = useState([]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -67,6 +77,57 @@ function StudentProjectPage() {
       .then((res) => setIsTeamLead(res?.role === 'LEADER'))
       .catch(() => setIsTeamLead(false));
   }, [groupId]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setAllPullRequests([]);
+      return;
+    }
+    getProjectPullRequests(projectId)
+      .then((res) => setAllPullRequests(Array.isArray(res?.data ?? res) ? (res?.data ?? res) : []))
+      .catch(() => setAllPullRequests([]));
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setCommitteeGraders([]);
+      return;
+    }
+    let cancelled = false;
+    getProjectCommittees(projectId)
+      .then((res) => {
+        if (cancelled) return;
+        const committees = Array.isArray(res?.data ?? res) ? (res?.data ?? res) : [];
+        const activeCommitteeId = project?.activeCommitteeId != null ? Number(project.activeCommitteeId) : null;
+        const scoped = activeCommitteeId == null
+          ? committees
+          : committees.filter((c) => Number(c?.committeeId) === activeCommitteeId);
+        const map = new Map();
+        scoped.forEach((c) => {
+          (c?.professors || []).forEach((p) => {
+            const uid = p?.userId != null ? Number(p.userId) : null;
+            if (uid == null || !Number.isFinite(uid)) return;
+            if (!map.has(uid)) {
+              map.set(uid, {
+                userId: uid,
+                fullName: (p.fullName || '').trim() || p.email || `Hoca #${uid}`,
+                email: p.email || '',
+              });
+            }
+          });
+        });
+        const list = [...map.values()].sort((a, b) =>
+          (a.fullName || '').localeCompare(b.fullName || '', 'tr', { sensitivity: 'base' }),
+        );
+        setCommitteeGraders(list);
+      })
+      .catch(() => {
+        if (!cancelled) setCommitteeGraders([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, project?.activeCommitteeId]);
 
   const csForClosed = project ? (project.sprints || [])[activeSprint] : null;
   const sprintClosed = !!(project && csForClosed && isSprintCompletedByDate(csForClosed));
@@ -239,6 +300,7 @@ function StudentProjectPage() {
         issueDescription: issue.issueDescription,
         storyPoints: issue.storyPoints,
         jiraAssignee: issue.jiraAssignee,
+        prNumber: issue.prNumber,
         prMerged: issue.prMerged
       });
       return;
@@ -252,13 +314,14 @@ function StudentProjectPage() {
         issueDescription: issue.issueDescription,
         storyPoints: issue.storyPoints,
         jiraAssignee: issue.jiraAssignee,
+        prNumber: issue.prNumber,
         prMerged: issue.prMerged
       });
     });
   });
   allBranches.forEach((branch) => {
     if (!usedBranches.has(branch)) {
-      rows.push({ branchName: branch, issueKey: null, issueTitle: null, jiraAssignee: null, prMerged: null });
+      rows.push({ branchName: branch, issueKey: null, issueTitle: null, jiraAssignee: null, prNumber: null, prMerged: null });
     }
   });
   const filteredMatches = rows.filter((row) => {
@@ -381,13 +444,14 @@ function StudentProjectPage() {
                   <th style={{ textAlign: 'left', padding: 8 }}>GitHub branch</th>
                   <th style={{ textAlign: 'left', padding: 8 }}>Jira issue</th>
                   <th style={{ textAlign: 'left', padding: 8 }}>Assignee</th>
+                  <th style={{ textAlign: 'left', padding: 8 }}>PR</th>
                   <th style={{ textAlign: 'left', padding: 8 }}>PR merged</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredMatches.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: 8 }}>No rows yet.</td>
+                    <td colSpan={5} style={{ padding: 8 }}>No rows yet.</td>
                   </tr>
                 )}
                 {filteredMatches.map((row, idx) => (
@@ -420,6 +484,19 @@ function StudentProjectPage() {
                       ) : '—'}
                     </td>
                     <td style={{ padding: 8 }}>{row.jiraAssignee || '—'}</td>
+                    <td style={{ padding: 8 }}>
+                      {row.prNumber ? (
+                        <button
+                          type="button"
+                          className="spp-btn-load"
+                          onClick={() => navigate(
+                            `/panel/pr-review/${projectId}?prNumber=${encodeURIComponent(String(row.prNumber))}&issueKey=${encodeURIComponent(row.issueKey || '')}`,
+                          )}
+                        >
+                          PR #{row.prNumber}
+                        </button>
+                      ) : '—'}
+                    </td>
                     <td style={{ padding: 8 }}>{row.prMerged == null ? '—' : row.prMerged ? 'Yes' : 'No'}</td>
                   </tr>
                 ))}
@@ -456,6 +533,52 @@ function StudentProjectPage() {
               </div>
             </div>
           )}
+          <div style={{ marginTop: 18 }}>
+            <h4 style={{ marginBottom: 8 }}>All GitHub PRs</h4>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="spp-match-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: 8 }}>PR</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Head branch</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>State</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Issue match</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allPullRequests.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ padding: 8 }}>No pull requests found.</td>
+                    </tr>
+                  )}
+                  {allPullRequests.map((pr, idx) => {
+                    const prefix = getPrefix(pr.headRef || '');
+                    const matchedIssue = (jiraGithubMatches || []).find((m) => getPrefix(m.issueTitle || m.issueKey) === prefix);
+                    return (
+                      <tr key={`${pr.number}-${idx}`}>
+                        <td style={{ padding: 8 }}>
+                          {pr.number ? (
+                            <button
+                              type="button"
+                              className="spp-btn-load"
+                              onClick={() => navigate(
+                                `/panel/pr-review/${projectId}?prNumber=${encodeURIComponent(String(pr.number))}&issueKey=${encodeURIComponent((matchedIssue?.issueKey || ''))}`,
+                              )}
+                            >
+                              PR #{pr.number} {pr.title ? `- ${pr.title}` : ''}
+                            </button>
+                          ) : '—'}
+                        </td>
+                        <td style={{ padding: 8 }}>{pr.headRef || '—'}</td>
+                        <td style={{ padding: 8 }}>{pr.state || '—'}{pr.merged ? ' (merged)' : ''}</td>
+                        <td style={{ padding: 8 }}>{matchedIssue?.issueTitle || matchedIssue?.issueKey || '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       ) : currentSprint && (
         <div className="spp-sprint-content">
@@ -474,6 +597,7 @@ function StudentProjectPage() {
                     key={del.id}
                     deliverable={del}
                     existingSubmission={submissionForDel}
+                    groupId={groupId}
                     localState={getDelState(del.id)}
                     setLocalState={(u) => setDelState(del.id, u)}
                     onFileSelect={(f) => handleFileSelect(del.id, f)}
@@ -486,6 +610,8 @@ function StudentProjectPage() {
                     isTeamLead={isTeamLead}
                     sprintClosed={sprintClosed}
                     teamGradingLine={delGradingById[del.id]}
+                    currentUserId={user?.id}
+                    graders={committeeGraders}
                   />
                 );
               })
@@ -498,32 +624,101 @@ function StudentProjectPage() {
             ) : (
               <div className="spp-sidebar-evaluations">
                 {currentSprint.evaluations.map((ev, idx) => (
-                  <div key={ev.id != null ? ev.id : `ev-${idx}-${ev.title || ''}`} className="spp-eval-card">
-                    <div className="spp-eval-header">
-                      <span className="spp-eval-title">{ev.title || `Evaluation ${idx + 1}`}</span>
-                      <span className="spp-eval-status">{ev.weight != null ? `${ev.weight}%` : '—'}</span>
-                    </div>
-                    {ev.autoAddToAllSprints && (
-                      <div className="spp-eval-meta">Tüm sprintlere eklenir</div>
-                    )}
-                    {Array.isArray(ev.rubrics) && ev.rubrics.length > 0 ? (
-                      <ul className="spp-eval-rubric-list">
-                        {ev.rubrics.map((r, j) => (
-                          <li key={j} className="spp-eval-rubric">
-                            <span className="spp-eval-rubric-title">{r.title}</span>
-                            {r.criteriaType && <span className="spp-eval-rubric-type">{r.criteriaType}</span>}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="spp-eval-waiting">Rubric tanımı yok</div>
-                    )}
-                  </div>
+                  <StudentEvaluationCard
+                    key={ev.id != null ? ev.id : `ev-${idx}-${ev.title || ''}`}
+                    evaluation={ev}
+                    index={idx}
+                    groupId={groupId}
+                    currentUserId={user?.id}
+                    graders={committeeGraders}
+                  />
                 ))}
               </div>
             )}
           </aside>
         </div>
+      )}
+
+      {groupId && projectId && currentSprint?.sprintNo && (
+        <InspectorTeamStoryPoints
+          projectId={projectId}
+          groupId={groupId}
+          sprintNo={currentSprint.sprintNo}
+        />
+      )}
+    </div>
+  );
+}
+
+function StudentEvaluationCard({ evaluation, index, groupId, currentUserId, graders }) {
+  const [cardView, setCardView] = useState('deliverable');
+  const [localGraderId, setLocalGraderId] = useState(null);
+
+  useEffect(() => {
+    if (!Array.isArray(graders) || graders.length === 0) {
+      setLocalGraderId(null);
+      return;
+    }
+    setLocalGraderId((prev) => {
+      if (prev != null && graders.some((g) => Number(g.userId) === Number(prev))) return Number(prev);
+      const mine = currentUserId != null ? graders.find((g) => Number(g.userId) === Number(currentUserId)) : null;
+      return mine ? Number(mine.userId) : Number(graders[0].userId);
+    });
+  }, [graders, currentUserId]);
+
+  const selectedGrader = Array.isArray(graders)
+    ? graders.find((g) => Number(g.userId) === Number(localGraderId)) || null
+    : null;
+
+  return (
+    <div className="spp-eval-card">
+      <div className="spp-eval-header">
+        <span className="spp-eval-title">{evaluation.title || `Evaluation ${index + 1}`}</span>
+        <span className="spp-eval-status">{evaluation.weight != null ? `${evaluation.weight}%` : '—'}</span>
+      </div>
+      <button
+        type="button"
+        className="spp-btn-load spp-deliverable-view-switch"
+        onClick={() => setCardView((prev) => (prev === 'grade' ? 'deliverable' : 'grade'))}
+      >
+        {cardView === 'grade' ? 'Switch to Deliverable View' : 'Switch to Grade View'}
+      </button>
+      {evaluation.autoAddToAllSprints && (
+        <div className="spp-eval-meta">Tüm sprintlere eklenir</div>
+      )}
+      {cardView === 'grade' ? (
+        <>
+          {Array.isArray(graders) && graders.length > 1 && (
+            <InspectorCommitteeGraderTabs
+              graders={graders}
+              selectedGraderId={localGraderId}
+              onSelect={(id) => setLocalGraderId(id)}
+            />
+          )}
+          {groupId && evaluation?.id && Array.isArray(evaluation.rubrics) && evaluation.rubrics.length > 0 ? (
+            <InspectorRubricGradePanel
+              mode="evaluation"
+              groupId={groupId}
+              evaluationId={evaluation.id}
+              rubrics={evaluation.rubrics}
+              viewGraderId={localGraderId}
+              graderDisplayName={selectedGrader?.fullName || selectedGrader?.email || ''}
+            />
+          ) : (
+            <div className="spp-eval-waiting">Rubric tanımı yok</div>
+          )}
+        </>
+      ) : Array.isArray(evaluation.rubrics) && evaluation.rubrics.length > 0 ? (
+        <ul className="spp-eval-rubric-list">
+          {evaluation.rubrics.map((r, j) => (
+            <li key={j} className="spp-eval-rubric">
+              <span className="spp-eval-rubric-title">{r.title}</span>
+              {r.criteriaType && <span className="spp-eval-rubric-type">{r.criteriaType}</span>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="spp-eval-waiting">Rubric tanımı yok</div>
       )}
     </div>
   );
@@ -532,6 +727,7 @@ function StudentProjectPage() {
 function DeliverableCard({
   deliverable,
   existingSubmission,
+  groupId,
   localState,
   setLocalState,
   onFileSelect,
@@ -544,6 +740,8 @@ function DeliverableCard({
   isTeamLead,
   sprintClosed,
   teamGradingLine,
+  currentUserId,
+  graders,
 }) {
   const isFileType = !!deliverable.fileUploadDeliverable;
   const hasExisting = !!existingSubmission && Object.keys(existingSubmission).length > 0;
@@ -551,6 +749,22 @@ function DeliverableCard({
   const isGraded = existingSubmission?.status === 'GRADED';
   const uploadedFiles = Array.isArray(existingSubmission?.files) ? existingSubmission.files : [];
   const [cardDragging, setCardDragging] = useState(false);
+  const [cardView, setCardView] = useState('deliverable');
+  const [localGraderId, setLocalGraderId] = useState(null);
+  useEffect(() => {
+    if (!Array.isArray(graders) || graders.length === 0) {
+      setLocalGraderId(null);
+      return;
+    }
+    setLocalGraderId((prev) => {
+      if (prev != null && graders.some((g) => Number(g.userId) === Number(prev))) return Number(prev);
+      const mine = currentUserId != null ? graders.find((g) => Number(g.userId) === Number(currentUserId)) : null;
+      return mine ? Number(mine.userId) : Number(graders[0].userId);
+    });
+  }, [graders, currentUserId]);
+  const selectedGrader = Array.isArray(graders)
+    ? graders.find((g) => Number(g.userId) === Number(localGraderId)) || null
+    : null;
 
   const handleCardDrop = (e) => {
     if (!isFileType || sprintClosed) return;
@@ -592,6 +806,13 @@ function DeliverableCard({
             <span className="spp-tag spp-tag-weight">Weight: {deliverable.weight}%</span>
           </div>
         </div>
+        <button
+          type="button"
+          className="spp-btn-load spp-deliverable-view-switch"
+          onClick={() => setCardView((prev) => (prev === 'grade' ? 'deliverable' : 'grade'))}
+        >
+          {cardView === 'grade' ? 'Switch to Deliverable View' : 'Switch to Grade View'}
+        </button>
         {isGraded && existingSubmission.grade != null ? (
           <div className="spp-grade-display">
             <span className="spp-grade-value">{existingSubmission.grade}</span>
@@ -607,7 +828,56 @@ function DeliverableCard({
         )}
       </div>
 
-      {isFileType ? (
+      {cardView === 'grade' ? (
+        <div className="spp-submit-block spp-submit-block--grade-view">
+          <div className="spp-submit-block-title">Grade details</div>
+          <div className="spp-grade-summary-grid">
+            <div className="spp-grade-summary-item">
+              <span className="spp-grade-summary-label">Final grade</span>
+              <strong className="spp-grade-summary-value">
+                {existingSubmission?.grade != null ? existingSubmission.grade : '—'}
+              </strong>
+            </div>
+            <div className="spp-grade-summary-item">
+              <span className="spp-grade-summary-label">Committee average</span>
+              <strong className="spp-grade-summary-value">
+                {teamGradingLine?.rawSuccessGrade != null
+                  ? (typeof teamGradingLine.rawSuccessGrade === 'number'
+                    ? teamGradingLine.rawSuccessGrade.toFixed(1)
+                    : teamGradingLine.rawSuccessGrade)
+                  : '—'}
+              </strong>
+            </div>
+            <div className="spp-grade-summary-item">
+              <span className="spp-grade-summary-label">Scaled team grade</span>
+              <strong className="spp-grade-summary-value">
+                {teamGradingLine?.scaledGrade != null
+                  ? (typeof teamGradingLine.scaledGrade === 'number'
+                    ? teamGradingLine.scaledGrade.toFixed(1)
+                    : teamGradingLine.scaledGrade)
+                  : '—'}
+              </strong>
+            </div>
+          </div>
+          {Array.isArray(graders) && graders.length > 1 && (
+            <InspectorCommitteeGraderTabs
+              graders={graders}
+              selectedGraderId={localGraderId}
+              onSelect={(id) => setLocalGraderId(id)}
+            />
+          )}
+          {groupId && Array.isArray(deliverable.rubrics) && deliverable.rubrics.length > 0 && (
+            <InspectorRubricGradePanel
+              mode="deliverableContext"
+              groupId={groupId}
+              deliverableId={deliverable.id}
+              rubrics={deliverable.rubrics}
+              viewGraderId={localGraderId}
+              graderDisplayName={selectedGrader?.fullName || selectedGrader?.email || ''}
+            />
+          )}
+        </div>
+      ) : isFileType ? (
         <div className="spp-dual-submit-area">
           <div className="spp-submit-block">
             <div className="spp-submit-block-title">Text submission</div>

@@ -42,6 +42,11 @@ public class UserGroup {
     @JoinColumn(name = "team_leader_id", referencedColumnName = "id")
     private User teamLeader;
 
+    /** Grup advisoru (professor/coordinator). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "advisor_id", referencedColumnName = "id")
+    private User advisor;
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserGroupMember> memberships;
 
@@ -81,6 +86,14 @@ public class UserGroup {
 
     public void setTeamLeader(User teamLeader) {
         this.teamLeader = teamLeader;
+    }
+
+    public User getAdvisor() {
+        return advisor;
+    }
+
+    public void setAdvisor(User advisor) {
+        this.advisor = advisor;
     }
 
     public List<UserGroupMember> getMemberships() {

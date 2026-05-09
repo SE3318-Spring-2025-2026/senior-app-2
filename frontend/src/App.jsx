@@ -22,6 +22,7 @@ import CodeReviewComparison from './pages/CodeReviewComparison';
 import GitHubProfile from './pages/GitHubProfile';
 import StudentList from './pages/StudentList';
 import Profile from './pages/Profile';
+import PullRequestReviewPage from './pages/PullRequestReviewPage';
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
         {/* Code Review Comparison */}
         <Route path="review/:projectId" element={<CodeReviewComparison />} />
         <Route path="review" element={<CodeReviewComparison />} />
+        <Route path="pr-review/:projectId" element={<PullRequestReviewPage />} />
         
         {/* GitHub Profile */}
         <Route path="github-profile" element={<GitHubProfile />} />

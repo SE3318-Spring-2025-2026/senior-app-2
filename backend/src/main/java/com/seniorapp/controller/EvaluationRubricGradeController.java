@@ -36,7 +36,7 @@ public class EvaluationRubricGradeController {
     }
 
     @GetMapping("/group/{groupId}/evaluations/{evaluationId}")
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<List<EvaluationGradeResponse>> listForEvaluation(
             @PathVariable Long groupId,
             @PathVariable Long evaluationId,

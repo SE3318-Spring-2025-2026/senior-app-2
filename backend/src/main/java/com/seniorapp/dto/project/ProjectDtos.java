@@ -86,6 +86,18 @@ public final class ProjectDtos {
         }
     }
 
+    public static class AssignGroupCommitteeRequest {
+        private Long committeeId;
+
+        public Long getCommitteeId() {
+            return committeeId;
+        }
+
+        public void setCommitteeId(Long committeeId) {
+            this.committeeId = committeeId;
+        }
+    }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class IdResponse {
         private String status;
@@ -199,6 +211,19 @@ public final class ProjectDtos {
         public List<CommitteeDto> getData() {
             return data;
         }
+    }
+
+    public static class PullRequestListResponse {
+        private String status;
+        private List<ProjectPullRequestDto> data;
+
+        public PullRequestListResponse(String status, List<ProjectPullRequestDto> data) {
+            this.status = status;
+            this.data = data;
+        }
+
+        public String getStatus() { return status; }
+        public List<ProjectPullRequestDto> getData() { return data; }
     }
 
     public static class ProfessorListResponse {
@@ -398,6 +423,8 @@ public final class ProjectDtos {
         private String status;
         private Long createdByUserId;
         private Long activeGroupId;
+        private Long activeCommitteeId;
+        private String activeCommitteeName;
         private String repoFullName;
         private String repoHtmlUrl;
         private String repoDefaultBranch;
@@ -468,6 +495,22 @@ public final class ProjectDtos {
 
         public void setActiveGroupId(Long activeGroupId) {
             this.activeGroupId = activeGroupId;
+        }
+
+        public Long getActiveCommitteeId() {
+            return activeCommitteeId;
+        }
+
+        public void setActiveCommitteeId(Long activeCommitteeId) {
+            this.activeCommitteeId = activeCommitteeId;
+        }
+
+        public String getActiveCommitteeName() {
+            return activeCommitteeName;
+        }
+
+        public void setActiveCommitteeName(String activeCommitteeName) {
+            this.activeCommitteeName = activeCommitteeName;
         }
 
         public String getRepoFullName() {
@@ -837,6 +880,7 @@ public final class ProjectDtos {
         private Double storyPoints;
         private Integer sprintNo;
         private String jiraAssignee;
+        private Integer prNumber;
         private Boolean prMerged;
 
         public String getBranchName() {
@@ -895,6 +939,14 @@ public final class ProjectDtos {
             this.jiraAssignee = jiraAssignee;
         }
 
+        public Integer getPrNumber() {
+            return prNumber;
+        }
+
+        public void setPrNumber(Integer prNumber) {
+            this.prNumber = prNumber;
+        }
+
         public Boolean getPrMerged() {
             return prMerged;
         }
@@ -902,6 +954,34 @@ public final class ProjectDtos {
         public void setPrMerged(Boolean prMerged) {
             this.prMerged = prMerged;
         }
+    }
+
+    public static class ProjectPullRequestDto {
+        private Integer number;
+        private String title;
+        private String state;
+        private Boolean merged;
+        private String htmlUrl;
+        private String headRef;
+        private String baseRef;
+        private String author;
+
+        public Integer getNumber() { return number; }
+        public void setNumber(Integer number) { this.number = number; }
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        public String getState() { return state; }
+        public void setState(String state) { this.state = state; }
+        public Boolean getMerged() { return merged; }
+        public void setMerged(Boolean merged) { this.merged = merged; }
+        public String getHtmlUrl() { return htmlUrl; }
+        public void setHtmlUrl(String htmlUrl) { this.htmlUrl = htmlUrl; }
+        public String getHeadRef() { return headRef; }
+        public void setHeadRef(String headRef) { this.headRef = headRef; }
+        public String getBaseRef() { return baseRef; }
+        public void setBaseRef(String baseRef) { this.baseRef = baseRef; }
+        public String getAuthor() { return author; }
+        public void setAuthor(String author) { this.author = author; }
     }
 
     public static class AdvisorLiveGradesResponse {

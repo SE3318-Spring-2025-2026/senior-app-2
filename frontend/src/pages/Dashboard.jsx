@@ -60,8 +60,9 @@ function Dashboard() {
     setInviteProcessing((prev) => ({ ...prev, [inviteId]: action }));
     try {
       const res = await respondGroupInvite(inviteId, action, committeeId);
-      const payload = res?.data || {};
-      if (action === 'ACCEPT' && payload.selectionRequired) {
+      const payload = res?.data?.data || res?.data || {};
+      const hasCommitteeChoices = Array.isArray(payload.committeeOptions) && payload.committeeOptions.length > 1;
+      if (action === 'ACCEPT' && (payload.selectionRequired || (committeeId == null && hasCommitteeChoices))) {
         setCommitteeSelection({
           inviteId,
           options: Array.isArray(payload.committeeOptions) ? payload.committeeOptions : [],
@@ -254,6 +255,7 @@ function Dashboard() {
                 <strong>{team.groupName}</strong>
                 <span>Group #{team.groupId}</span>
                 <span>{team.project ? `Project: ${team.project.title}` : 'No linked project yet'}</span>
+                <span>{team.advisorName ? `Advisor: ${team.advisorName}` : 'Advisor: -'}</span>
               </div>
             ))}
           </section>

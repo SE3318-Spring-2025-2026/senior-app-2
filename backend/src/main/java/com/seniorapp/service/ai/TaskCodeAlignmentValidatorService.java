@@ -2,6 +2,7 @@ package com.seniorapp.service.ai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.seniorapp.dto.comparison.ComparisonDtos;
@@ -14,8 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.*;
 
 @Service
@@ -40,14 +41,32 @@ public class TaskCodeAlignmentValidatorService {
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             @Value("${openai.api-key:}") String openAiApiKey,
+            @Value("${open.api.key:}") String legacyOpenApiKey,
             @Value("${openai.model:gpt-4.1-mini}") String openAiModel,
             @Value("${ai.request-timeout-ms:30000}") long timeoutMs
     ) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
-        this.openAiApiKey = openAiApiKey;
+        this.openAiApiKey = firstNonBlank(
+                openAiApiKey,
+                legacyOpenApiKey,
+                System.getenv("OPENAI_API_KEY"),
+                System.getenv("OPEN_API_KEY"),
+                System.getProperty("openai.api-key"),
+                System.getProperty("open.api.key")
+        );
         this.openAiModel = openAiModel;
         this.timeoutMs = timeoutMs;
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     public ComparisonDtos.AIFeedbackItemList validate(
@@ -98,16 +117,15 @@ public class TaskCodeAlignmentValidatorService {
         ObjectNode inputRoot = objectMapper.createObjectNode();
         inputRoot.put("model", openAiModel);
 
-        // Provide strict JSON schema via response_format
-        ObjectNode responseFormat = objectMapper.createObjectNode();
-        responseFormat.put("type", "json_schema");
-
-        ObjectNode jsonSchema = objectMapper.createObjectNode();
-        jsonSchema.put("name", "task_code_alignment_audit");
-        jsonSchema.put("strict", true);
+        // Responses API strict schema is now configured via text.format.
+        ObjectNode textFormat = objectMapper.createObjectNode();
+        textFormat.put("type", "json_schema");
+        textFormat.put("name", "task_code_alignment_audit");
+        textFormat.put("strict", true);
 
         ObjectNode schema = objectMapper.createObjectNode();
         schema.put("type", "object");
+        schema.put("additionalProperties", false);
         ObjectNode props = objectMapper.createObjectNode();
 
         // accuracyScore
@@ -120,13 +138,13 @@ public class TaskCodeAlignmentValidatorService {
         // discrepancies
         ObjectNode discrepancies = objectMapper.createObjectNode();
         discrepancies.put("type", "array");
-        discrepancies.put("items", objectMapper.createObjectNode().put("type", "string"));
+        discrepancies.set("items", objectMapper.createObjectNode().put("type", "string"));
         props.set("discrepancies", discrepancies);
 
         // evidence
         ObjectNode evidence = objectMapper.createObjectNode();
         evidence.put("type", "array");
-        evidence.put("items", objectMapper.createObjectNode().put("type", "string"));
+        evidence.set("items", objectMapper.createObjectNode().put("type", "string"));
         props.set("evidence", evidence);
 
         // summary
@@ -143,10 +161,10 @@ public class TaskCodeAlignmentValidatorService {
         required.add("summary");
         schema.set("required", required);
 
-        jsonSchema.set("schema", schema);
-        responseFormat.set("json_schema", jsonSchema);
-
-        inputRoot.set("response_format", responseFormat);
+        textFormat.set("schema", schema);
+        ObjectNode textNode = objectMapper.createObjectNode();
+        textNode.set("format", textFormat);
+        inputRoot.set("text", textNode);
 
         // Top-level instructions
         ObjectNode system = objectMapper.createObjectNode();
@@ -167,12 +185,13 @@ public class TaskCodeAlignmentValidatorService {
         messages.add(system);
         messages.add(user);
 
-        inputRoot.set("input", objectMapper.createObjectNode().set("messages", messages));
+        inputRoot.set("input", messages);
 
         ObjectNode request = inputRoot;
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(openAiApiKey);
+        String safeApiKey = Objects.requireNonNull(openAiApiKey, "openAiApiKey is required");
+        headers.setBearerAuth(safeApiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         RequestEntity<String> req = RequestEntity
@@ -182,11 +201,11 @@ public class TaskCodeAlignmentValidatorService {
 
         ResponseEntity<String> resp = restTemplate.exchange(req, String.class);
 
-        JsonNode root = objectMapper.readTree(resp.getBody());
+        String responseBody = Objects.requireNonNull(resp.getBody(), "OpenAI response body is empty");
+        JsonNode root = objectMapper.readTree(responseBody);
 
         // Responses API returns output in a content array. We'll locate first JSON object-like text.
         // This is provider-dependent; we still keep parsing robust.
-        JsonNode output = root.at("/output");
         JsonNode content = root.at("/output/0/content/0/text");
         String text = content.isMissingNode() ? null : content.asText();
         if (text == null || text.isBlank()) {
@@ -205,10 +224,10 @@ public class TaskCodeAlignmentValidatorService {
         result.setAccuracyScore((float) json.path("accuracyScore").asDouble(0.0));
 
         ArrayNode disc = (ArrayNode) json.path("discrepancies");
-        result.setDiscrepancies(objectMapper.convertValue(disc, List.class));
+        result.setDiscrepancies(objectMapper.convertValue(disc, new TypeReference<List<String>>() {}));
 
         ArrayNode ev = (ArrayNode) json.path("evidence");
-        result.setEvidence(objectMapper.convertValue(ev, List.class));
+        result.setEvidence(objectMapper.convertValue(ev, new TypeReference<List<String>>() {}));
 
         result.setSummary(json.path("summary").asText(""));
 

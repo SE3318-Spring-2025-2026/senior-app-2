@@ -35,7 +35,7 @@ public class GradeController {
     }
 
     @GetMapping("/{submissionId}/grades")
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<List<GradeResponse>> getGrades(
             @PathVariable Long submissionId, @AuthenticationPrincipal User principal) {
         List<SubmissionGrade> grades = gradeService.getGradesForSubmission(submissionId, principal);
@@ -58,7 +58,7 @@ public class GradeController {
     }
 
     @GetMapping("/context/group/{groupId}/deliverable/{deliverableId}/grades")
-    @PreAuthorize("hasAnyRole('COORDINATOR', 'PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'COORDINATOR', 'PROFESSOR', 'ADMIN')")
     public ResponseEntity<List<GradeResponse>> getGradesByDeliverableContext(
             @PathVariable Long groupId,
             @PathVariable Long deliverableId,

@@ -131,16 +131,25 @@ public class JiraGithubDailySyncService {
             }
             String issueKey = issue.path("key").asText(null);
             if (issueKey == null || issueKey.isBlank()) continue;
-            String matchedBranch = branchNames.stream()
-                    .filter(b -> b.toUpperCase().startsWith(issueKey.toUpperCase()))
-                    .findFirst().orElse(null);
+            String issuePrefix = extractPrefix(issueKey);
+            List<String> candidateBranches = branchNames.stream()
+                    .filter(b -> {
+                        String branchPrefix = extractPrefix(b);
+                        return issuePrefix != null && issuePrefix.equalsIgnoreCase(branchPrefix);
+                    })
+                    .toList();
+            String matchedBranch = candidateBranches.isEmpty() ? null : candidateBranches.get(0);
             Integer prNumber = null;
             Boolean prMerged = null;
-            if (matchedBranch != null && owner != null) {
-                JsonNode pr = fetchRelatedPr(project.getRepoFullName(), owner, matchedBranch, creator.getGithubPatEncrypted());
-                if (pr != null) {
-                    prNumber = pr.path("number").isNumber() ? pr.path("number").asInt() : null;
-                    prMerged = !pr.path("merged_at").isNull();
+            if (!candidateBranches.isEmpty() && owner != null) {
+                for (String candidateBranch : candidateBranches) {
+                    JsonNode pr = fetchRelatedPr(project.getRepoFullName(), owner, candidateBranch, creator.getGithubPatEncrypted());
+                    if (pr != null) {
+                        matchedBranch = candidateBranch;
+                        prNumber = pr.path("number").isNumber() ? pr.path("number").asInt() : null;
+                        prMerged = !pr.path("merged_at").isNull();
+                        break;
+                    }
                 }
             }
 
@@ -422,6 +431,13 @@ public class JiraGithubDailySyncService {
             return response.get(0);
         }
         return null;
+    }
+
+    private String extractPrefix(String value) {
+        if (value == null || value.isBlank()) return null;
+        int idx = value.indexOf('/');
+        if (idx <= 0) return value.trim();
+        return value.substring(0, idx).trim();
     }
 
     private String normalizeSiteUrl(String value) {

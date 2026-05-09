@@ -221,17 +221,8 @@ export default function InspectorRubricGradePanel({
     );
   }
 
-  const readonlyBanner =
-    !isEditable && graderDisplayName ? (
-      <p className="insp-rubric-readonly-banner">
-        <strong>{graderDisplayName}</strong> için girilmiş notları görüntülüyorsunuz. Puan eklemek veya düzenlemek için
-        üstteki sekmelerden kendi adınıza geçin.
-      </p>
-    ) : null;
-
   return (
     <form className="insp-rubric-form" onSubmit={handleSubmit}>
-      {readonlyBanner}
       <table className="insp-rubric-table">
         <thead>
           <tr>

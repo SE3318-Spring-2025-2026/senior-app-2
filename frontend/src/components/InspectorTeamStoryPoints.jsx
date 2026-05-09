@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { getProjectGroupStoryPoints, putProjectGroupStoryPoints } from '../services/api';
+import {
+  acceptProjectGroupStoryPoints,
+  getProjectGroupStoryPoints,
+  putProjectGroupStoryPoints,
+} from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 function parseSpInput(raw) {
   const t = String(raw ?? '').trim();
@@ -9,23 +14,30 @@ function parseSpInput(raw) {
   return n;
 }
 
-export default function InspectorTeamStoryPoints({ projectId, groupId }) {
+export default function InspectorTeamStoryPoints({ projectId, groupId, sprintNo }) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [editable, setEditable] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [acceptEnabled, setAcceptEnabled] = useState(false);
+  const [advisorUserId, setAdvisorUserId] = useState(null);
   const [rows, setRows] = useState([]);
   const [draft, setDraft] = useState({});
 
   const load = useCallback(() => {
-    if (!projectId || !groupId) return;
+    if (!projectId || !groupId || !sprintNo) return;
     setLoading(true);
     setError(null);
-    getProjectGroupStoryPoints(projectId, groupId)
+    getProjectGroupStoryPoints(projectId, groupId, sprintNo)
       .then((res) => {
         const data = res?.data ?? res;
         const list = Array.isArray(data?.rows) ? data.rows : [];
         setEditable(!!data?.editable);
+        setAccepted(!!data?.accepted);
+        setAcceptEnabled(!!data?.acceptEnabled);
+        setAdvisorUserId(data?.advisorUserId != null ? Number(data.advisorUserId) : null);
         setRows(list);
         const next = {};
         for (const r of list) {
@@ -38,10 +50,13 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
       .catch((e) => {
         setRows([]);
         setEditable(false);
+        setAccepted(false);
+        setAcceptEnabled(false);
+        setAdvisorUserId(null);
         setError(e.message || 'Story point listesi yüklenemedi.');
       })
       .finally(() => setLoading(false));
-  }, [projectId, groupId]);
+  }, [projectId, groupId, sprintNo]);
 
   useEffect(() => {
     load();
@@ -52,7 +67,7 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
   };
 
   const handleSave = () => {
-    if (!editable || !projectId || !groupId) return;
+    if (!editable || !projectId || !groupId || !sprintNo) return;
     const entries = [];
     for (const r of rows) {
       const id = r.studentUserId;
@@ -66,11 +81,13 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
     }
     setSaving(true);
     setError(null);
-    putProjectGroupStoryPoints(projectId, groupId, entries)
+    putProjectGroupStoryPoints(projectId, groupId, sprintNo, entries)
       .then((res) => {
         const data = res?.data ?? res;
         const list = Array.isArray(data?.rows) ? data.rows : [];
         setEditable(!!data?.editable);
+        setAccepted(!!data?.accepted);
+        setAcceptEnabled(!!data?.acceptEnabled);
         setRows(list);
         const next = {};
         for (const r of list) {
@@ -86,19 +103,48 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
       .finally(() => setSaving(false));
   };
 
-  if (!projectId || !groupId) {
+  const handleAccept = () => {
+    if (!canAccept || !projectId || !groupId || !sprintNo) return;
+    setSaving(true);
+    setError(null);
+    acceptProjectGroupStoryPoints(projectId, groupId, sprintNo)
+      .then((res) => {
+        const data = res?.data ?? res;
+        const list = Array.isArray(data?.rows) ? data.rows : [];
+        setEditable(!!data?.editable);
+        setAccepted(!!data?.accepted);
+        setAcceptEnabled(!!data?.acceptEnabled);
+        setRows(list);
+        const next = {};
+        for (const r of list) {
+          const id = r.studentUserId;
+          if (id == null) continue;
+          next[id] = r.storyPoints != null && r.storyPoints !== '' ? String(r.storyPoints) : '';
+        }
+        setDraft(next);
+      })
+      .catch((e) => {
+        setError(e.message || 'Accept işlemi başarısız.');
+      })
+      .finally(() => setSaving(false));
+  };
+
+  if (!projectId || !groupId || !sprintNo) {
     return null;
   }
+
+  const currentUserId = user?.id != null ? Number(user.id) : null;
+  const isAdvisorUser = currentUserId != null && advisorUserId != null && Number(currentUserId) === Number(advisorUserId);
+  const canEdit = editable && isAdvisorUser;
+  const canAccept = acceptEnabled && isAdvisorUser;
 
   return (
     <section className="insp-story-points" aria-labelledby="insp-story-points-title">
       <h3 id="insp-story-points-title" className="insp-story-points-title">
-        Öğrenci story point (manuel)
+        Öğrenci story point
       </h3>
-      <p className="insp-story-points-help">
-        Grading / PDF tarafında eksik kalan bireysel story point değerlerini buradan girebilirsiniz. Kayıt, proje ve
-        öğrenci bazında saklanır.
-      </p>
+      <p className="insp-story-points-help">Sprint: {sprintNo}</p>
+      {accepted && <p className="insp-story-points-muted">Bu sprint için değerler ACCEPT edildi ve kilitlendi.</p>}
       {loading && <p className="insp-story-points-muted">Yükleniyor…</p>}
       {error && <p className="insp-story-points-error">{error}</p>}
       {!loading && rows.length === 0 && !error && (
@@ -127,7 +173,7 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
                         type="text"
                         inputMode="decimal"
                         className="insp-story-points-input"
-                        disabled={!editable || saving}
+                        disabled={!canEdit || saving || accepted}
                         value={draft[r.studentUserId] ?? ''}
                         onChange={(e) => onChangeField(r.studentUserId, e.target.value)}
                         placeholder="—"
@@ -139,14 +185,24 @@ export default function InspectorTeamStoryPoints({ projectId, groupId }) {
               </tbody>
             </table>
           </div>
-          {editable ? (
+          {canEdit ? (
             <div className="insp-story-points-actions">
               <button type="button" className="insp-story-points-save" disabled={saving} onClick={handleSave}>
                 {saving ? 'Kaydediliyor…' : 'Story pointleri kaydet'}
               </button>
+              <button
+                type="button"
+                className="insp-story-points-save"
+                disabled={saving || !canAccept}
+                onClick={handleAccept}
+              >
+                {saving ? 'İşleniyor…' : 'Accept'}
+              </button>
             </div>
           ) : (
-            <p className="insp-story-points-muted">Bu bölümü düzenleme yetkiniz yok.</p>
+            <p className="insp-story-points-muted">
+              {accepted ? 'Accept edildiği için düzenleme kapalı.' : 'Bu bölümü düzenleme yetkiniz yok.'}
+            </p>
           )}
         </>
       )}
